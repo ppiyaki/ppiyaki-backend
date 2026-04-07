@@ -4,6 +4,8 @@ WORKDIR /app
 COPY build.gradle settings.gradle /app/
 RUN gradle dependencies --no-daemon
 
+COPY config /app/config
+
 COPY src /app/src
 RUN gradle clean build -x test -x checkstyleMain -x checkstyleTest --no-daemon
 
