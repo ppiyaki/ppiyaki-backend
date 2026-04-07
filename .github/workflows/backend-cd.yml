@@ -65,3 +65,16 @@ jobs:
             
             echo "Cleaning up old images..."
             docker image prune -f
+
+      - name: Discord Notification
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: ${{ job.status }}
+          content: "🚀 **ppiyaki-server** 배포 결과"
+          title: "Backend Deployment"
+          description: "배포 상태: ${{ job.status }}\n커밋 메시지: ${{ github.event.head_commit.message }}"
+          color: 0x00ff00
+          username: "삐약이🐥"
+
