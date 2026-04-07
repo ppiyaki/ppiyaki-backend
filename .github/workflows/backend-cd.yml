@@ -29,7 +29,6 @@ jobs:
           push: true
           tags: ${{ secrets.NCP_REGISTRY }}/my-app:latest
 
-      # 2. NCP 서버에 접속하여 배포 실행
       - name: SSH Remote Commands
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -38,16 +37,12 @@ jobs:
           password: ${{ secrets.REMOTE_PASSWORD }}
           port: 22
           script: |
-            # 컨테이너 레지스트리 로그인
             docker login ${{ secrets.NCP_REGISTRY }} -u ${{ secrets.NCP_ACCESS_KEY }} -p ${{ secrets.NCP_SECRET_KEY }}
             
-            # 기존 컨테이너 중지 및 삭제
             docker stop my-app || true
             docker rm my-app || true
             
-            # 새 이미지 Pull 및 실행
             docker pull ${{ secrets.NCP_REGISTRY }}/my-app:latest
             docker run -d --name my-app -p 80:8080 ${{ secrets.NCP_REGISTRY }}/my-app:latest
             
-            # 사용하지 않는 이미지 정리
             docker image prune -f
