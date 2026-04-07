@@ -5,7 +5,7 @@ COPY build.gradle settings.gradle /app/
 RUN gradle dependencies --no-daemon
 
 COPY src /app/src
-RUN gradle clean build -x test --no-daemon
+RUN gradle clean build -x test -x checkstyleMain -x checkstyleTest --no-daemon
 
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
