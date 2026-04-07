@@ -1,15 +1,15 @@
 package com.ppiyaki.user;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.ppiyaki.common.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
-import com.ppiyaki.common.entity.BaseTimeEntity;
 
 @Entity
 @Getter
@@ -29,10 +29,10 @@ public class CaregiverSeniorMapping extends BaseTimeEntity {
 
     @Column(name = "invite_code")
     private String inviteCode;
-    
+
     public CaregiverSeniorMapping(
-            final Long seniorId, 
-            final Long caregiverId, 
+            final Long seniorId,
+            final Long caregiverId,
             final String inviteCode
     ) {
         this.seniorId = seniorId;

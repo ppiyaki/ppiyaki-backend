@@ -1,5 +1,6 @@
 package com.ppiyaki.prescription;
 
+import com.ppiyaki.common.entity.CreatedTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -9,7 +10,6 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import com.ppiyaki.common.entity.CreatedTimeEntity;
 
 @Entity
 @Getter

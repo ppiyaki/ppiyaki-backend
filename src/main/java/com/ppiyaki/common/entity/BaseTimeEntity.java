@@ -17,4 +17,3 @@ public abstract class BaseTimeEntity extends CreatedTimeEntity {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }
-
