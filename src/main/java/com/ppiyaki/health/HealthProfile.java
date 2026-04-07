@@ -1,15 +1,15 @@
 package com.ppiyaki.health;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.ppiyaki.common.entity.CreatedTimeEntity;
 import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.AccessLevel;
-import com.ppiyaki.common.entity.CreatedTimeEntity;
 
 @Entity
 @Getter
@@ -35,12 +35,12 @@ public class HealthProfile extends CreatedTimeEntity {
 
     @Column(name = "drinking_status")
     private Boolean drinkingStatus;
-    
+
     public HealthProfile(
-            final Long seniorId, 
-            final String dietHabits, 
-            final String allergies, 
-            final Boolean smokingStatus, 
+            final Long seniorId,
+            final String dietHabits,
+            final String allergies,
+            final Boolean smokingStatus,
             final Boolean drinkingStatus
     ) {
         this.seniorId = seniorId;

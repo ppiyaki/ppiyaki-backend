@@ -22,7 +22,7 @@ repositories {
 
 spotless {
     java {
-        eclipse().configFile("config/formatter/eclipse-java-routie-style.xml")
+        eclipse().configFile("config/formatter/eclipse-java-ppiyaki-style.xml")
         importOrder()
         removeUnusedImports()
         trimTrailingWhitespace()
