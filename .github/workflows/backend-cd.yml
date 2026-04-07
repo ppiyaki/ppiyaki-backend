@@ -13,6 +13,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -28,7 +35,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.NCP_REGISTRY }}/my-app:latest
+          tags: ${{ secrets.NCP_REGISTRY }}/ppiyaki-server:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: SSH Remote Commands
         uses: appleboy/ssh-action@v1.0.3
@@ -40,10 +49,19 @@ jobs:
           script: |
             docker login ${{ secrets.NCP_REGISTRY }} -u ${{ secrets.NCP_ACCESS_KEY }} -p ${{ secrets.NCP_SECRET_KEY }}
             
-            docker stop my-app || true
-            docker rm my-app || true
+            echo "Stopping and removing old container..."
+            docker stop ppiyaki-server || true
+            docker rm ppiyaki-server || true
             
-            docker pull ${{ secrets.NCP_REGISTRY }}/my-app:latest
-            docker run -d --name my-app -p 80:8080 ${{ secrets.NCP_REGISTRY }}/my-app:latest
+            echo "Pulling latest image..."
+            docker pull ${{ secrets.NCP_REGISTRY }}/ppiyaki-server:latest
             
+            echo "Starting new container..."
+            docker run -d \
+              --name ppiyaki-server \
+              -p 8080:8080 \
+              --restart always \
+              ${{ secrets.NCP_REGISTRY }}/ppiyaki-server:latest
+            
+            echo "Cleaning up old images..."
             docker image prune -f
