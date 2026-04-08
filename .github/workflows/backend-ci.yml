@@ -2,7 +2,7 @@ name: Backend CI - ppiyaki
 
 on:
   pull_request:
-    branches: [ "develop" ]
+    branches: [ "develop", "main" ]
     types: [ opened, synchronize, reopened ]
     paths:
       - '**/*.java'
