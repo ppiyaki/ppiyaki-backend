@@ -15,6 +15,11 @@
 - `docs/ai-harness/04-security-policy.md`: 민감정보/시크릿/금지행위 정책
 - `docs/ai-harness/05-prompt-ops.md`: 프롬프트 버전관리/승인/롤백 운영
 
+## 3-1) 관련 자산
+- `prompts/`: 재사용 프롬프트 저장소 (운영 규칙은 `05-prompt-ops.md`)
+- `scripts/setup-labels.sh`: GitHub 라벨 일괄 생성 스크립트 (`gh` 필요)
+- `.github/PULL_REQUEST_TEMPLATE.md`, `.github/ISSUE_TEMPLATE/task.md`: PR/이슈 템플릿
+
 ## 4) 정책 우선순위
 1. 법/규제 및 보안 정책
 2. 이 문서 세트

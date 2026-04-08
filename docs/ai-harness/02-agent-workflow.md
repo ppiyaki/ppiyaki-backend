@@ -61,6 +61,3 @@ feat: 제목 (필수)
 ## 7) 핸드오프 체크리스트
 - AI 작업 PR의 핸드오프 체크리스트는 `.github/PULL_REQUEST_TEMPLATE.md`의 `AI Agent 전용 체크리스트`를 single source of truth로 사용한다.
 - 사람 작성 PR은 `AS-IS`/`TO-BE`만 채우면 되며, AI 체크리스트 블록은 비워둔다.
-
-
-

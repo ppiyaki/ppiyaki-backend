@@ -16,6 +16,12 @@
 ## 리뷰어 참고 포인트
 - 특히 봐주면 좋은 포인트를 적어주세요.
 
+## 라벨 부여 확인
+- [ ] `type:*` 라벨 1개 부여 완료
+- [ ] `scope:*` 라벨 1개 부여 완료
+- [ ] (AI 작성 시) `ai-generated` 라벨 부여 완료
+- [ ] (보호 영역 변경 시) `needs-human-review` 라벨 부여 완료
+
 <details>
 <summary>AI Agent 전용 체크리스트 (해당 시 작성)</summary>
 
