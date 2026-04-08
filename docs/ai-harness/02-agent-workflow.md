@@ -61,3 +61,42 @@ feat: 제목 (필수)
 ## 7) 핸드오프 체크리스트
 - AI 작업 PR의 핸드오프 체크리스트는 `.github/PULL_REQUEST_TEMPLATE.md`의 `AI Agent 전용 체크리스트`를 single source of truth로 사용한다.
 - 사람 작성 PR은 `AS-IS`/`TO-BE`만 채우면 되며, AI 체크리스트 블록은 비워둔다.
+
+## 8) 릴리즈 (develop → main)
+릴리즈는 `develop`에 누적된 squash 커밋들을 `main`에 한 번에 반영하는 절차다.
+
+### 8-1) 변경 점검
+```bash
+git fetch origin
+git log origin/main..origin/develop --oneline
+```
+릴리즈에 포함될 커밋 목록을 확인한다.
+
+### 8-2) 릴리즈 PR 생성 (base: `main`, head: `develop`)
+- 제목 형식: `release: vX.Y.Z` 또는 `release: YYYY-MM-DD`
+- 본문에 changelog를 type별(`feat` / `fix` / `chore` / `docs` 등)로 그룹핑해 기록
+- 라벨: `type:chore`, `scope:infra`, (AI 작성 시) `ai-generated`
+
+### 8-3) CI 재검증
+- `.github/workflows/backend-ci.yml`이 `main` 대상 PR도 트리거하므로 게이트가 자동 실행된다.
+- 통과 후 다음 단계로 진행한다.
+
+### 8-4) 리뷰 및 머지
+- 리뷰 1명 승인 후 머지한다.
+- **머지 방식: Merge commit (Squash 금지)**
+  ```bash
+  gh pr merge <num> --merge
+  ```
+- 이유: `develop`의 개별 squash 커밋 히스토리를 `main`에 보존해 추적과 롤백이 용이하다. 머지 커밋이 릴리즈 경계가 되어 전체 롤백이 1커밋 revert로 가능하다.
+- ⚠️ `develop` 브랜치는 영속 브랜치이므로 **삭제하지 않는다**.
+
+### 8-5) 태그 + GitHub Release
+```bash
+git checkout main && git pull
+git tag -a vX.Y.Z -m "release vX.Y.Z"
+git push origin vX.Y.Z
+gh release create vX.Y.Z --generate-notes
+```
+
+### 8-6) 핫픽스 정책
+- 핫픽스 정책은 첫 사례 발생 시 본 문서에 추가한다 (현재는 미정의).
