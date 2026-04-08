@@ -1,0 +1,23 @@
+# 보호 영역 자동 리뷰 요청
+# 정의: docs/ai-harness/01-harness-spec.md §6 "AI 작업 보호 영역"
+# 아래 경로가 변경된 PR은 @ppiyaki/backend 팀에 자동으로 리뷰 요청이 간다.
+
+# CI/CD 워크플로우
+/.github/workflows/      @ppiyaki/backend
+/.github/CODEOWNERS      @ppiyaki/backend
+
+# DB 마이그레이션
+**/db/migration/         @ppiyaki/backend
+**/resources/db/         @ppiyaki/backend
+
+# 시크릿/환경 설정
+**/application*.yml         @ppiyaki/backend
+**/application*.properties  @ppiyaki/backend
+.env*                       @ppiyaki/backend
+
+# 빌드 스크립트
+build.gradle*       @ppiyaki/backend
+settings.gradle*    @ppiyaki/backend
+/gradle/            @ppiyaki/backend
+Dockerfile          @ppiyaki/backend
+docker-compose*.yml @ppiyaki/backend
