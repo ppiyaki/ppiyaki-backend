@@ -9,9 +9,16 @@
 ## 2) PR 라이프사이클
 1. 작업 브랜치에서 변경
 2. PR 생성 (base: `develop`)
-3. `type` 라벨 지정 (`feat`, `refactor`, `fix`, `chore` 등)
+3. **PR 생성 직후 즉시(같은 작업 단계에서) 아래를 모두 수행한다. 이 단계를 건너뛴 PR은 리뷰 대상이 아니다.**
+   - [ ] `type:*` 라벨 1개 부여 (`type:feat` `type:fix` `type:refactor` `type:chore` `type:docs` `type:test` `type:style`)
+   - [ ] `scope:*` 라벨 1개 부여 (화이트리스트: `user` `pet` `prescription` `medicine` `medication` `health` `infra`)
+   - [ ] AI가 작성/보조한 PR이면 `ai-generated` 라벨 부여
+   - [ ] 보호 영역(`docs/ai-harness/01-harness-spec.md` §6) 변경 시 `needs-human-review` 라벨 부여
+   - [ ] PR 본문이 `.github/PULL_REQUEST_TEMPLATE.md`를 덮어쓴 경우 AI 체크리스트 블록을 수동으로 다시 채워 넣는다 (`gh pr create --body`는 템플릿을 무시함).
 4. 리뷰 1명 승인
 5. Squash merge
+
+> **AI 에이전트 자기 점검:** PR을 만든 직후 위 4개 체크박스를 머릿속에 떠올렸는가? 떠올리지 않았다면 PR 생성이 끝난 것이 아니다. 라벨 부여까지가 "PR 생성" 단계다.
 
 ## 3) PR 작성 규칙
 - 제목 형식(고정): `type(scope): 제목`
