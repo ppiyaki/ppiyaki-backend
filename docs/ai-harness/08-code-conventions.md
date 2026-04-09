@@ -35,7 +35,8 @@ public record MedicineCreateRequest(
 @Getter
 @Entity
 @Table(name = "medicines")
-@NoArgsConstructor(access = AccessLevel.PACKAGE)
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Medicine extends CreatedTimeEntity { ... }
 ```
 
@@ -86,8 +87,13 @@ final MemberCreateResponse resp = memberService.createMember(request);
 ## 4) 엔티티
 
 ### 4-1) 생성자 접근 제한
-- `@NoArgsConstructor(access = AccessLevel.PACKAGE)` 사용 (**package-private**).
-- 기존 코드의 `AccessLevel.PROTECTED`는 점진적으로 `PACKAGE`로 마이그레이션한다. 추적: §7 오픈 항목.
+- 다음 두 어노테이션을 **함께** 사용한다.
+  ```java
+  @AllArgsConstructor(access = AccessLevel.PACKAGE)
+  @NoArgsConstructor(access = AccessLevel.PROTECTED)
+  ```
+- `@NoArgsConstructor`는 **`PROTECTED`** 여야 한다. Hibernate가 lazy loading을 위해 엔티티를 상속한 프록시 클래스를 런타임에 생성하는데, 프록시는 일반적으로 다른 패키지/클래스로더에서 만들어지므로 package-private 기본 생성자에는 접근할 수 없다. `PROTECTED`여야 프록시 서브클래스가 `super()`를 호출할 수 있다.
+- `@AllArgsConstructor`는 **`PACKAGE`** 로 좁혀, 외부 패키지에서 임의 생성을 막고 같은 패키지의 정적 팩토리 메서드(`Member.create(...)`)만 전체 필드 생성자를 호출하도록 한다.
 
 ### 4-2) 도메인 메서드
 - 상태 전이는 반드시 **엔티티 내부의 도메인 메서드**로 캡슐화한다 (`softDelete()`, `markSent()` 등).
@@ -97,7 +103,7 @@ final MemberCreateResponse resp = memberService.createMember(request);
 
 ### 5-1) 적극 사용 가능
 - `@Getter` — 엔티티/DTO/도메인 객체
-- `@NoArgsConstructor(access = AccessLevel.PACKAGE)` — JPA 엔티티
+- `@NoArgsConstructor(access = AccessLevel.PROTECTED)` — JPA 엔티티 (프록시 호환). `@AllArgsConstructor(access = AccessLevel.PACKAGE)`와 함께 사용. 자세한 내용은 §4-1.
 - `@RequiredArgsConstructor` — Service/Repository 주입
 - `@Slf4j` — 로거
 
@@ -133,7 +139,7 @@ public static Member create(final String loginId, final String nickname) {
 
 | # | 주제 | 상태 |
 |---|---|---|
-| C1 | 기존 엔티티의 `AccessLevel.PROTECTED` → `PACKAGE` 마이그레이션 | 후속 PR로 일괄 처리 |
+| C1 | ~~기존 엔티티의 `AccessLevel.PROTECTED` → `PACKAGE` 마이그레이션~~ | **철회** — Hibernate 프록시가 package-private 생성자에 접근 불가. `@NoArgsConstructor`는 `PROTECTED` 유지, `@AllArgsConstructor(PACKAGE)`로 전체 필드 생성을 좁힌다 (§4-1) |
 | C2 | `@ToString`, `@EqualsAndHashCode` 허용 범위 | 논의 필요 |
 | C3 | DTO 재활용 금지는 이번 스프린트 한정. 이후 스프린트 정책 재검토 시점 | 다음 스프린트 회고 |
 
