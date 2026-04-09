@@ -10,6 +10,7 @@ import com.ppiyaki.user.RefreshToken;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.controller.dto.KakaoLoginRequest;
 import com.ppiyaki.user.controller.dto.LoginResponse;
+import com.ppiyaki.user.controller.dto.TokenResponse;
 import com.ppiyaki.user.repository.OAuthIdentityRepository;
 import com.ppiyaki.user.repository.RefreshTokenRepository;
 import com.ppiyaki.user.repository.UserRepository;
@@ -76,6 +77,42 @@ public class AuthService {
         oAuthIdentityRepository.save(new OAuthIdentity(user.getId(), OAuthProvider.KAKAO, providerUserId));
 
         return user;
+    }
+
+    @Transactional
+    public TokenResponse refresh(final String refreshTokenValue) {
+        Objects.requireNonNull(refreshTokenValue, "refreshTokenValue must not be null");
+
+        final RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenValue)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token"));
+
+        if (refreshToken.isExpired()) {
+            refreshTokenRepository.delete(refreshToken);
+            throw new IllegalArgumentException("Refresh token expired");
+        }
+
+        final Long userId = refreshToken.getUserId();
+        final String newAccessToken = jwtProvider.createAccessToken(userId);
+        final String newRefreshTokenValue = jwtProvider.createRefreshToken(userId);
+
+        final LocalDateTime newExpiresAt = LocalDateTime.now().plusSeconds(jwtProperties.refreshTokenExpiry() / 1000);
+        refreshToken.rotate(newRefreshTokenValue, newExpiresAt);
+
+        return new TokenResponse(newAccessToken, newRefreshTokenValue);
+    }
+
+    @Transactional
+    public void logout(final String refreshTokenValue) {
+        Objects.requireNonNull(refreshTokenValue, "refreshTokenValue must not be null");
+        refreshTokenRepository.findByToken(refreshTokenValue)
+                .ifPresent(refreshTokenRepository::delete);
+    }
+
+    @Transactional(readOnly = true)
+    public User findUserById(final Long userId) {
+        Objects.requireNonNull(userId, "userId must not be null");
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
     }
 
     private void saveRefreshToken(final Long userId, final String tokenValue) {
