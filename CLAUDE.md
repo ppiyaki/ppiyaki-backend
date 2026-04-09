@@ -1,0 +1,119 @@
+# CLAUDE.md
+
+> 이 파일은 Claude Code가 세션 시작 시 자동으로 읽는 레포 규칙 요약이다.
+> 상세 규정은 `docs/ai-harness/`를 참조한다. 이 파일은 "포인터 + 비협상 룰"만 둔다.
+
+## 1) 프로젝트 한 줄 요약
+시니어의 규칙적인 복약을 돕고 보호자가 복약 현황을 모니터링하는 스마트 복약 관리 서비스. Spring Boot 백엔드.
+
+## 2) 기술 스택 (운영 기준)
+- Java 21 (LTS)
+- Spring Boot 3.5.3
+- MySQL 8.4.6 (운영: NCP 매니지드, 로컬: docker-compose)
+- Gradle, GitHub Actions CI
+
+## 3) 필수 참조 문서
+변경하거나 구현하기 전에 해당 문서를 먼저 읽는다.
+
+- `docs/ai-harness/00-index.md` — 문서 인덱스
+- `docs/ai-harness/01-harness-spec.md` — 작업 단위, 결정 규칙, **AI 작업 보호 영역 §6**
+- `docs/ai-harness/02-agent-workflow.md` — 브랜치/PR/커밋/릴리즈 워크플로우
+- `docs/ai-harness/03-quality-gates.md` — 빌드/테스트 게이트, 테스트 정책, PR 사이즈
+- `docs/ai-harness/04-security-policy.md` — 민감정보/시크릿/금지행위
+- `docs/ai-harness/05-prompt-ops.md` — 프롬프트 버전관리
+- `docs/ai-harness/06-domain-model.md` — **도메인 모델 / ERD / 유비쿼터스 랭귀지 (구현 전 반드시 확인)**
+
+## 4) 비협상 룰 (어기지 말 것)
+
+### 브랜치 / PR
+- `main` 직접 푸시 금지. 모든 변경은 PR로.
+- 작업 브랜치는 `develop`에서 파생: `<type>/<요약>-#<이슈번호>` (예: `feature/ocr-result-save-#123`)
+- PR 제목 형식: `type(scope): 제목`
+  - `type`: `feat` `fix` `docs` `style` `refactor` `test` `chore`
+  - `scope` 화이트리스트(final): `user` `pet` `prescription` `medicine` `medication` `health` `infra`
+- PR 생성 **직후** 라벨을 부여한다(한 세트로): `type:*`, `scope:*`, (AI 작성 시) `ai-generated`, (보호 영역 변경 시) `needs-human-review`
+- 리뷰 1명 승인 후 **Squash merge**. 단 `develop → main` 릴리즈는 **Merge commit** (§8 참조).
+
+### AI 작업 보호 영역
+아래 경로 변경 시 사람 리뷰 필수(CODEOWNERS에 의해 자동 리뷰 요청). 가능하면 AI 단독 수정 금지.
+- `.github/workflows/**`, `.github/CODEOWNERS`
+- `**/db/migration/**`, `**/resources/db/**`
+- `**/application*.yml`, `**/application*.properties`, `.env*`
+- `build.gradle*`, `settings.gradle*`, `gradle/**`, `Dockerfile`, `docker-compose*.yml`
+
+### 품질 게이트
+- 푸시 전 반드시 통과:
+  ```bash
+  ./gradlew checkstyleMain spotlessCheck test
+  ```
+- 포맷 위반 시: `./gradlew spotlessApply`
+- CI 실패 상태로 머지 금지(기술적으로는 가능하나 팀 합의로 차단).
+
+### 도메인 / DDD
+- 새 용어는 `docs/ai-harness/06-domain-model.md §4 유비쿼터스 랭귀지`에 먼저 등재한 뒤 코드에서 사용.
+- 엔티티 변경 시 `§5 엔티티`, `§6 Mermaid ERD`를 **같은 PR**에서 갱신.
+- 계층 침범 금지 (Controller → Repository 직접 호출 등).
+- PR scope와 패키지 경로가 일치해야 함 (예: `scope:medication` ↔ `com.ppiyaki.medication.*`).
+
+### 보안 / 민감정보
+- 시크릿(API 키/토큰/비밀번호) 하드코딩 금지.
+- 의료정보(복약 기록, 건강 프로필)는 로그/코멘트/스크린샷에 원문 노출 금지.
+- 운영 DB 덤프를 로컬/공유 채널에 업로드 금지.
+
+## 5) 워크플로우 5줄 요약
+1. **이슈부터** — `.github/ISSUE_TEMPLATE/task.md`로 생성, 제목은 "동사 원형 + 목적어".
+2. **브랜치** — `develop`에서 `<type>/<요약>-#<이슈번호>` 분기.
+3. **커밋** — AngularJS 컨벤션(`type: 제목`).
+4. **푸시 전 검증** — `./gradlew checkstyleMain spotlessCheck test` 통과.
+5. **PR** — 템플릿의 `AS-IS`/`TO-BE` 채우고 라벨 부여 후 리뷰 요청 → Squash merge.
+
+## 6) 로컬 개발 명령 치트시트
+```bash
+# 로컬 MySQL 기동 (docker-compose.yml 기준 mysql:8.4.6)
+docker compose up -d
+
+# 앱 실행 (local 프로필 = docker MySQL 사용)
+./gradlew bootRun --args='--spring.profiles.active=local'
+
+# 품질 게이트 (푸시 전 필수)
+./gradlew checkstyleMain spotlessCheck test
+
+# 포맷 자동 수정
+./gradlew spotlessApply
+
+# GitHub CLI 흐름
+gh issue create --title "..." --label "task,type:*,scope:*"
+gh pr create --base develop --title "type(scope): 제목" --body "..."
+gh pr edit <num> --add-label "type:*,scope:*,ai-generated"
+gh pr merge <num> --squash --delete-branch
+```
+
+## 7) AI 에이전트 자기 점검 (PR 생성 직후)
+PR을 만든 직후 다음 4개를 머릿속으로 떠올려라. 떠올리지 않았다면 PR 생성이 끝난 것이 아니다.
+- [ ] `type:*` 라벨 1개 부여
+- [ ] `scope:*` 라벨 1개 부여
+- [ ] AI 보조/생성이면 `ai-generated` 라벨 부여
+- [ ] 보호 영역 변경 시 `needs-human-review` 라벨 부여
+- [ ] PR body를 `gh pr create --body`로 새로 쓴 경우, 템플릿의 AI 체크리스트 블록을 수동으로 채운다 (`--body`는 템플릿을 덮어씀).
+
+## 8) 릴리즈 (develop → main)
+- 릴리즈 PR 제목: `release: vX.Y.Z` 또는 `release: YYYY-MM-DD`
+- 본문 changelog는 `type`별 그룹핑
+- **Merge commit** 방식 머지 (Squash 금지). develop 히스토리를 main에 보존.
+- `develop` 브랜치는 영속 브랜치이므로 **삭제하지 않음**.
+- 머지 후: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z && gh release create vX.Y.Z --generate-notes`
+- 상세: `docs/ai-harness/02-agent-workflow.md §8`
+
+## 9) 안티패턴 (하지 말 것)
+- 요청하지 않은 리팩터링/주석/타입 힌트를 추가하는 것
+- 변경 범위 밖의 코드 "개선"
+- 시크릿/민감정보를 로그에 남기는 방어 코드를 핑계로 원문 노출
+- Controller에서 Repository 직접 호출 (계층 침범)
+- 엔티티 변경 없이 도메인 문서만 바꾸거나, 문서 갱신 없이 엔티티만 바꾸기
+- 예외 머지 후 `Post-Review`를 24시간 내 수행하지 않는 것
+- `main` 기본 브랜치 PR 없이 직접 push, `--force` 사용
+
+## 10) 불명확할 때
+- 구현 전에 **가정값을 명시하고** 사용자에게 확인 요청.
+- 설계 결정이 필요하면 `docs/ai-harness/06-domain-model.md §7 오픈 이슈`에 추가.
+- 문서와 코드가 충돌하면 **문서를 먼저 갱신**하고 구현한다 (01-harness-spec §5).
