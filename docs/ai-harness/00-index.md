@@ -15,11 +15,16 @@
 - `docs/ai-harness/04-security-policy.md`: 민감정보/시크릿/금지행위 정책
 - `docs/ai-harness/05-prompt-ops.md`: 프롬프트 버전관리/승인/롤백 운영
 - `docs/ai-harness/06-domain-model.md`: 도메인 모델/유비쿼터스 랭귀지/ERD (기능 구현의 공통 참조 기준)
+- `docs/ai-harness/07-testing-guide.md`: 레이어별 테스트 전략 및 필수 기준
+- `docs/ai-harness/08-code-conventions.md`: 코드 컨벤션 (final/어노테이션/DTO/엔티티/Lombok/null 검증 등)
 
 ## 3-1) 관련 자산
 - `prompts/`: 재사용 프롬프트 저장소 (운영 규칙은 `05-prompt-ops.md`)
 - `scripts/setup-labels.sh`: GitHub 라벨 일괄 생성 스크립트 (`gh` 필요)
 - `.github/PULL_REQUEST_TEMPLATE.md`, `.github/ISSUE_TEMPLATE/task.md`: PR/이슈 템플릿
+- `docs/features/`: 기능 단위 living 명세서 (Feature Spec). 프로세스는 `02-agent-workflow.md §9`
+- `docs/decisions/`: Architecture Decision Records (ADR). 횡단 결정의 영속 이력
+- `CLAUDE.md`: Claude Code 세션 자동 로드 룰 요약
 
 ## 4) 정책 우선순위
 1. 법/규제 및 보안 정책
