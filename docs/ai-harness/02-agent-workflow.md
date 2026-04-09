@@ -100,3 +100,38 @@ gh release create vX.Y.Z --generate-notes
 
 ### 8-6) 핫픽스 정책
 - 핫픽스 정책은 첫 사례 발생 시 본 문서에 추가한다 (현재는 미정의).
+
+## 9) Feature Spec 프로세스
+중간 규모 이상 기능은 단발 PR 계획 대신 **living document**로서의 Feature Spec을 먼저 작성·합의한 뒤 구현에 착수한다.
+
+### 9-1) 저장소
+- 위치: `docs/features/<slug>.md`
+- 템플릿: `docs/features/_template.md` 복사
+- 상세 규칙: `docs/features/README.md`
+
+### 9-2) 필수 기준
+다음 중 하나라도 해당하면 Feature Spec 필수:
+- 신규 도메인 기능 (엔티티 신설 또는 신규 API)
+- 외부 연동 도입 (OCR, OAuth, FCM, LLM 등)
+- 여러 PR에 걸쳐 구현될 중간 규모 이상 기능
+
+단순 버그 수정/리팩터링/스타일/문서-only는 spec 불필요. 애매하면 작성을 권장.
+
+### 9-3) 라이프사이클
+`draft` → `approved` → `implementing` → `shipped` → (`deprecated`)
+
+- frontmatter의 `status` 필드로 추적
+- 상태 전이는 해당 PR에서 같이 수정
+
+### 9-4) 프로세스
+1. **Spec 초안 PR** — `docs/features/<slug>.md` 신설. `type:docs` 라벨.
+2. **리뷰/합의** — PR 코멘트로 논의, 결정은 spec의 "결정 로그"에, 대기 항목은 "오픈 질문"에 기록.
+3. **머지** — status = `approved`. 구현 착수 가능.
+4. **구현 PR들** — PR 본문에 `참고: docs/features/<slug>.md` 백링크. 첫 구현 PR 머지 시 status = `implementing`.
+5. **요구사항 변경** — spec을 `type:docs` 갱신 PR로 먼저 업데이트 후 구현.
+6. **완료** — 마지막 구현 머지 시 status = `shipped`.
+
+### 9-5) AI 에이전트 의무
+- 관련 기능의 PR을 만들 때 해당 spec을 **반드시 Read**해 컨텍스트 로드.
+- spec과 코드가 충돌하면 **spec을 먼저 갱신**한 뒤 구현(01-harness-spec §5 결정 규칙).
+- 오픈 질문 중 구현에 영향을 주는 것이 남아있으면 구현 착수 금지, 사용자에게 확인.
