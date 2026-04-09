@@ -116,10 +116,11 @@ public class AuthService {
     }
 
     private void saveRefreshToken(final Long userId, final String tokenValue) {
-        refreshTokenRepository.deleteByUserId(userId);
-
         final LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(jwtProperties.refreshTokenExpiry() / 1000);
-        final RefreshToken refreshToken = new RefreshToken(userId, tokenValue, expiresAt);
-        refreshTokenRepository.save(refreshToken);
+
+        refreshTokenRepository.findByUserId(userId)
+                .ifPresentOrElse(
+                        existing -> existing.rotate(tokenValue, expiresAt),
+                        () -> refreshTokenRepository.save(new RefreshToken(userId, tokenValue, expiresAt)));
     }
 }

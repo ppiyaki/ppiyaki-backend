@@ -13,9 +13,6 @@ import org.springframework.web.client.RestClient;
 @EnableConfigurationProperties(KakaoOAuthProperties.class)
 public class KakaoOAuthClient {
 
-    private static final String TOKEN_URL = "https://kauth.kakao.com/oauth/token";
-    private static final String USER_INFO_URL = "https://kapi.kakao.com/v2/user/me";
-
     private final KakaoOAuthProperties properties;
     private final RestClient restClient;
 
@@ -36,7 +33,7 @@ public class KakaoOAuthClient {
         body.add("code", code);
 
         @SuppressWarnings("unchecked") final Map<String, Object> response = restClient.post()
-                .uri(TOKEN_URL)
+                .uri(properties.tokenUri())
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                 .body(body)
                 .retrieve()
@@ -50,7 +47,7 @@ public class KakaoOAuthClient {
         Objects.requireNonNull(accessToken, "accessToken must not be null");
 
         final Map<String, Object> response = restClient.get()
-                .uri(USER_INFO_URL)
+                .uri(properties.userInfoUri())
                 .header("Authorization", "Bearer " + accessToken)
                 .retrieve()
                 .body(Map.class);
