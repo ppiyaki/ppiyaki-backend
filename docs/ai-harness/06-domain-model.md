@@ -13,7 +13,7 @@
   → OCR(Naver Clova) + LLM 정제(Spring AI + Gemini)
   → 약물/복약 일정 등록
   → 지정 시간 알림(FCM + TTS)
-  → 카메라 행동 인식(MediaPipe) + 약 개수 검증(Vision LLM)
+  → 복약 확인 (약 개수 인식 — 세부 설계 보류)
   → 복약 기록
   → 보호자 리포트 / 삐약이 캐릭터 성장
 ```
@@ -23,17 +23,17 @@
 |---|---|
 | 시니어 (Senior) | 약을 실제로 복용하는 주 사용자. `users.role = SENIOR` |
 | 보호자 (Caregiver) | 시니어와 연동되어 처방전 등록/모니터링을 수행. `users.role = CAREGIVER` |
-| 시스템 | OCR 분석, 알림 발송, 행동 인식 판정 등 백그라운드 작업 수행 |
+| 시스템 | OCR 분석, 알림 발송, 리포트 집계 등 백그라운드 작업 수행 |
 
 ## 3) 바운디드 컨텍스트 맵
 
 | Context | PR scope | 책임 | 주요 엔티티 |
 |---|---|---|---|
-| User | `user` | 계정, 인증, 역할, 보호자-시니어 연동, 건강 프로필 | `users`, `care_relations`, `health_profiles` |
+| User | `user` | 계정, 인증, 역할, 보호자-시니어 연동, 건강 프로필, OAuth 연동 | `users`, `oauth_identities`, `care_relations`, `health_profiles` |
 | Prescription | `prescription` | 처방전 이미지, OCR 원문, 파싱/상태 | `prescriptions` |
 | Medicine | `medicine` | 약물 기본 정보, 잔량, DUR 경고 텍스트 | `medicines` |
-| Medication | `medication` | 복약 일정, 알림 발송 | `medication_schedules` (+ 알림 저장소 미정) |
-| Health | `health` | 복약 기록, 행동 인식 결과, 이행률 | `medication_logs` |
+| Medication | `medication` | 복약 일정, 알림 발송, FCM 토큰 | `medication_schedules`, `medication_reminders`, `device_tokens` |
+| Health | `health` | 복약 기록, 리포트, DUR 점검 결과 | `medication_logs`, `reports`, `dur_checks` |
 | Pet | `pet` | 게이미피케이션: 삐약이 캐릭터 성장 | `pets` |
 | Infra | `infra` | OCR/LLM/FCM/Storage 외부 연동 어댑터 | (테이블 없음) |
 
@@ -66,10 +66,9 @@
 | 복약 일정 | Medication Schedule | 특정 약물을 언제 복용할지(`scheduled_time`, `dosage`) |
 | 복약 기록 | Medication Log | 실제 복용 이행 여부 기록 (`status`, `ai_status`) |
 | 복약 이행률 | Adherence Rate | 기간 내 성공 복약 / 예정 복약 |
-| 대리 처리 | Proxy Confirmation | 보호자가 시니어 대신 복용 상태를 확정 (`is_proxy=true`) |
-| DUR 점검 | Drug Utilization Review | 약물 상호작용/중복/금기 검증 |
-| 행동 인식 | Action Recognition | MediaPipe 기반 손-입 근접 판정 |
-| 비전 검증 | Vision Verification | 약 개수/상태를 Vision LLM으로 판정 |
+| 대리 처리 | Proxy Confirmation | 보호자가 시니어 대신 복용 상태를 확정 (`is_proxy=true`, `confirmed_by_user_id != senior_id`) |
+| DUR 점검 | Drug Utilization Review | 약물 상호작용/중복/금기 검증. 결과는 `dur_checks`에 immutable 로그로 저장 |
+| 약 개수 인식 | Pill Count Recognition | 복약 확인용 비전 기반 약 개수 판정. 세부 구현 보류 |
 | 삐약이 | Ppiyaki / Pet Character | 복약 성공 시 성장하는 게이미피케이션 캐릭터 |
 | 리포트 | Report | 보호자용 복약 리포트 (스키마 미정) |
 
@@ -89,16 +88,30 @@
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK (IDENTITY) | |
-| login_id | varchar | 로그인 식별자 |
-| password | varchar | 로컬 로그인용 (카카오 전용 전환 시 nullable 검토: §7-13) |
-| role | varchar | `SENIOR` / `CAREGIVER` (후보, enum 미정) |
+| login_id | varchar | 로컬 로그인 식별자. UNIQUE |
+| password | varchar nullable | 로컬 로그인용. OAuth 전용 유저는 NULL |
+| role | varchar | DB는 varchar로 자유도 유지, Java는 `UserRole` enum(`SENIOR`/`CAREGIVER`)로 다루며 컨버터로 변환 |
 | nickname | varchar | 사용자 표시 이름 |
-| gender | varchar | 성별 (코드 체계 미정: §7-14) |
-| dob | date | 생년월일 (민감정보, 마스킹 정책: §7-15) |
-| pet | varchar | 보유 캐릭터 식별 (`pets` 테이블과의 연결 방식: §7-1) |
+| gender | varchar | DB는 varchar, Java는 `Gender` enum(`MALE`/`FEMALE`/`OTHER`/`UNKNOWN`) |
+| dob | date | 생년월일 |
+| pet | bigint | `pets.id` PK 참조 (FK 제약 선언 여부는 §7-12) |
 | created_at / updated_at | timestamp | `BaseTimeEntity` |
 
-> **코드 갭(현재 HEAD 기준)**: 코드의 `User.java`는 `nickname`, `gender`, `dob`가 없고 `pet` 대신 `ppiyaki bigint` 컬럼을 가진다. 이 문서는 **타깃 스키마**를 기술하며, 코드 갱신은 별도 PR로 진행한다. 추적: §7-16.
+> **코드 갭(현재 HEAD 기준)**: 코드의 `User.java`는 `nickname`, `gender`, `dob`가 없고 `pet` 대신 `ppiyaki bigint` 컬럼명을 사용하며 `password`가 non-null. 이 문서는 **타깃 스키마**를 기술하며, 코드 갱신은 별도 PR로 진행한다. 추적: §7-16.
+
+### oauth_identities (target: `@Table(name = "oauth_identities")`, extends `CreatedTimeEntity`)
+외부 IdP(카카오 등) 연동 정보. 하나의 `users` 계정이 여러 IdP에 연결될 수 있도록 분리.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | bigint PK | |
+| user_id | bigint | `users.id` 참조 |
+| provider | varchar | `KAKAO` 등. DB는 varchar, Java는 `OAuthProvider` enum |
+| provider_user_id | varchar | IdP 측 고유 식별자 |
+| created_at | timestamp | `CreatedTimeEntity` |
+
+> `(provider, provider_user_id)` 조합 UNIQUE 권장 (§7-12).
+> **코드 갭**: 엔티티 클래스 미구현. 추적: §7-16.
 
 ### care_relations (target: `@Table(name = "care_relations")`, extends `BaseTimeEntity`)
 보호자–시니어 관계(1:N). 해제 시 soft delete.
@@ -140,29 +153,37 @@
 | status | varchar | `UPLOADED`/`PROCESSING`/`SUCCESS`/`FAILED` (후보, enum 미정) |
 | created_at | timestamp | `CreatedTimeEntity` |
 
-### medicines (`@Table(name = "medicines")`, extends `CreatedTimeEntity`)
-처방전에서 파생된 약물. 수동 등록 경로는 오픈 이슈 §7-5.
+### medicines (target: `@Table(name = "medicines")`, extends `CreatedTimeEntity`)
+약물. 처방전에서 파생되거나 **수동 등록**으로 생성.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| prescription_id | bigint | `prescriptions.id` 참조 |
+| owner_id | bigint | `users.id` 참조. 약물의 소유 시니어. 수동 등록 시 직접 세팅 |
+| prescription_id | bigint nullable | `prescriptions.id` 참조. 수동 등록 시 NULL |
 | name | varchar | 약물명 |
 | total_amount | Integer | 처방 총량 |
 | remaining_amount | Integer | 현재 잔량 |
-| dur_warning_text | varchar | DUR 경고 요약 텍스트 |
+| dur_warning_text | varchar | DUR 경고 요약 텍스트(최근 dur_checks에서 복사된 요약) |
 | created_at | timestamp | `CreatedTimeEntity` |
 
-### medication_schedules (`@Table(name = "medication_schedules")`, extends `CreatedTimeEntity`)
-복약 일정. `medicine` 1건당 시간대별 N행으로 해석됨 (오픈 이슈 §7-6).
+> **코드 갭**: 현재 코드에는 `owner_id`가 없고 `prescription_id`는 non-null. 추적: §7-16.
+
+### medication_schedules (target: `@Table(name = "medication_schedules")`, extends `CreatedTimeEntity`)
+복약 일정. `medicine` 1건당 시간대별 N행.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
 | medicine_id | bigint | `medicines.id` 참조 |
-| scheduled_time | time (`LocalTime`) | 복용 시각 (일자 정보는 별도) |
+| scheduled_time | time (`LocalTime`) | 복용 시각 |
 | dosage | varchar | 1회 복용량 (예: `1정`) |
+| days_of_week | varchar | 요일 패턴 (예: `MON,TUE,WED,THU,FRI` 또는 `DAILY`). 7비트 마스크 대신 가독성 우선 |
+| start_date | date | 복약 시작일 |
+| end_date | date nullable | 복약 종료일. NULL이면 무기한 |
 | created_at | timestamp | `CreatedTimeEntity` |
+
+> **코드 갭**: 현재 코드에는 `days_of_week`, `start_date`, `end_date`가 없음. 추적: §7-16.
 
 ### medication_logs (`@Table(name = "medication_logs")`, extends `CreatedTimeEntity`)
 복약 이행 기록. 일자별 × 스케줄별 1행.
@@ -173,25 +194,92 @@
 | senior_id | bigint | `users.id` 참조 |
 | schedule_id | bigint | `medication_schedules.id` 참조 |
 | target_date | date (`LocalDate`) | 예정 복약 일자 |
-| taken_at | datetime (`LocalDateTime`) | 실제 확인 시각 |
-| status | varchar | 사용자 확정 상태 (후보: `TAKEN`/`MISSED`/`PENDING`) |
-| photo_url | varchar | 비전 인증 사진 |
-| ai_status | varchar | 비전 인증 판정 결과 (오픈 이슈 §7-9) |
-| is_proxy | boolean | 보호자 대리 처리 여부 |
+| taken_at | datetime (`LocalDateTime`) nullable | 실제 확인 시각 |
+| status | varchar | 사용자 확정 상태. Java는 `LogStatus` enum(`TAKEN`/`MISSED`/`PENDING`) |
+| photo_url | varchar nullable | 약 개수 인식용 사진 (복약 확인 이미지) |
+| ai_status | varchar nullable | 약 개수 인식 판정 결과 (세부 설계 보류, §7-9) |
+| is_proxy | boolean | 보호자 대리 처리 여부 (= `confirmed_by_user_id != senior_id`의 캐시) |
+| confirmed_by_user_id | bigint nullable | 실제로 상태를 확정한 사용자(`users.id` 참조). 시니어 본인일 수도, 보호자일 수도 있음 |
 | created_at | timestamp | `CreatedTimeEntity` |
 
-### pets (`@Table(name = "pets")`, **공통 시간 엔티티 상속 없음**)
-삐약이 캐릭터. 현재 최소 구현 상태 — 성장 속성은 `point` 하나.
+> `(schedule_id, target_date)` UNIQUE 권장 (§7-12).
+> **코드 갭**: 현재 코드에는 `confirmed_by_user_id`가 없음. 추적: §7-16.
+
+### pets (target: `@Table(name = "pets")`, extends `BaseTimeEntity`)
+삐약이 캐릭터. **시니어 전용** (보호자 유저에는 연결되지 않음).
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| point | bigint (`Long`) | 누적 포인트 (복약 성공 이벤트로 증가 — 오픈 이슈 §7-3) |
+| point | bigint (`Long`) | 누적 포인트. 복약 성공 이벤트로 증가 |
+| created_at / updated_at | timestamp | `BaseTimeEntity` |
 
-> `Pet.java`는 `CreatedTimeEntity`/`BaseTimeEntity`를 상속하지 않아 `created_at`/`updated_at`이 **없다**. 성장 이력을 시간순으로 추적하려면 별도 로그 테이블(`pet_growth_logs` 등) 도입을 고려 — §7-3.
+> **레벨/스테이지는 서버(도메인 로직)에서 `point`로부터 계산**한다. 예: `level = floor(sqrt(point / 10))`. 밸런스 변경 시 DB 마이그레이션 없이 재계산할 수 있어 기획 반복에 유리하다.
+> **코드 갭**: 현재 `Pet.java`는 `CreatedTimeEntity`/`BaseTimeEntity`를 상속하지 않아 `created_at`/`updated_at`이 없다. 추적: §7-18.
 
-### report (DBML 제안, 엔티티 클래스 미구현)
-보호자용 리포트. 현재 코드에는 엔티티 클래스가 없다 (DBML 초안에만 존재). 스키마 결정 전까지 별도 엔티티로 다루지 않는다. 추적: §7-4.
+### dur_checks (target: `@Table(name = "dur_checks")`, extends `CreatedTimeEntity`)
+DUR 점검 결과의 immutable 로그. 약물 정보가 시간에 따라 변할 수 있으므로 **매 호출 시 새 레코드**로 기록한다(캐시 아님).
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | bigint PK | |
+| medicine_id | bigint | `medicines.id` 참조 |
+| checked_at | datetime (`LocalDateTime`) | 외부 DUR 호출 시각 |
+| warning_level | varchar nullable | `NONE`/`INFO`/`WARN`/`BLOCK` 등 enum 후보 |
+| warning_text | text nullable | 경고 요약 텍스트 (UI 표시용) |
+| raw_response | text nullable | 외부 API 원본 응답 (감사용, 민감정보는 마스킹) |
+| created_at | timestamp | `CreatedTimeEntity` |
+
+> 가장 최근 결과가 필요하면 `(medicine_id, checked_at DESC)` 인덱스로 조회.
+> 캐싱은 도입하지 않음(약물 정보 변경 가능성 때문). 외부 API 비용이 문제되면 후속 이슈에서 TTL 캐시 검토.
+
+### device_tokens (target: `@Table(name = "device_tokens")`, extends `BaseTimeEntity`)
+FCM 등 푸시 알림을 위한 디바이스 토큰.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | bigint PK | |
+| user_id | bigint | `users.id` 참조 |
+| token | varchar | FCM 토큰. UNIQUE |
+| platform | varchar | `IOS`/`ANDROID`/`WEB`. DB varchar + Java enum |
+| is_active | boolean | 비활성 토큰은 false |
+| last_seen_at | datetime nullable | 마지막 확인 시각 |
+| created_at / updated_at | timestamp | `BaseTimeEntity` |
+
+### medication_reminders (target: `@Table(name = "medication_reminders")`, extends `BaseTimeEntity`)
+복약 알림 발송 기록/큐.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | bigint PK | |
+| schedule_id | bigint | `medication_schedules.id` 참조 |
+| senior_id | bigint | `users.id` 참조 (발송 대상) |
+| target_date | date | 예정 복약 일자 |
+| scheduled_at | datetime | 알림 예약 시각 |
+| sent_at | datetime nullable | 실제 발송 시각 |
+| delivery_status | varchar | `PENDING`/`SENT`/`FAILED`/`DELIVERED`. DB varchar + Java enum |
+| channel | varchar | `PUSH`/`TTS`/`VOICE`. DB varchar + Java enum |
+| error_message | varchar nullable | 실패 사유 |
+| created_at / updated_at | timestamp | `BaseTimeEntity` |
+
+### reports (target: `@Table(name = "reports")`, extends `CreatedTimeEntity`)
+보호자용 복약 리포트. 일간/월간 단위 집계.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | bigint PK | |
+| senior_id | bigint | `users.id` 참조 (리포트 대상 시니어) |
+| period_type | varchar | `DAILY`/`MONTHLY`. DB varchar + Java enum |
+| period_start | date | 집계 기간 시작 |
+| period_end | date | 집계 기간 종료 |
+| total_scheduled | integer | 기간 내 예정 복약 횟수 |
+| total_taken | integer | 기간 내 성공(TAKEN) 횟수 |
+| total_missed | integer | 기간 내 미복용(MISSED) 횟수 |
+| adherence_rate | decimal(5,2) | 이행률(%) = total_taken / total_scheduled × 100 |
+| created_at | timestamp | `CreatedTimeEntity` |
+
+> `(senior_id, period_type, period_start)` UNIQUE 권장 (§7-12).
+> 보호자는 `care_relations`를 통해 시니어의 리포트를 열람한다 — 리포트 자체에 `caregiver_id`는 두지 않는다.
 
 ## 6) ERD (Mermaid)
 
@@ -199,28 +287,42 @@
 
 ```mermaid
 erDiagram
+    users ||--o{ oauth_identities : "links"
     users ||--o{ care_relations : "senior"
     users ||--o{ care_relations : "caregiver"
     users ||--|| health_profiles : "has"
     users ||--o{ prescriptions : "senior"
     users ||--o{ prescriptions : "uploaded_by"
+    users ||--o{ medicines : "owns"
     prescriptions ||--o{ medicines : "contains"
     medicines ||--o{ medication_schedules : "has"
+    medicines ||--o{ dur_checks : "checked"
     medication_schedules ||--o{ medication_logs : "produces"
+    medication_schedules ||--o{ medication_reminders : "scheduled"
     users ||--o{ medication_logs : "senior"
-    users ||--o| pets : "owns"
+    users ||--o{ medication_logs : "confirmed_by"
+    users ||--o{ device_tokens : "has"
+    users ||--o{ reports : "target"
+    users ||--o| pets : "owns (senior only)"
 
     users {
         bigint id PK
-        varchar login_id
-        varchar password
+        varchar login_id UK
+        varchar password "nullable"
         varchar role
         varchar nickname
         varchar gender
         date dob
-        varchar pet
+        bigint pet FK
         timestamp created_at
         timestamp updated_at
+    }
+    oauth_identities {
+        bigint id PK
+        bigint user_id FK
+        varchar provider
+        varchar provider_user_id
+        timestamp created_at
     }
     care_relations {
         bigint id PK
@@ -251,7 +353,8 @@ erDiagram
     }
     medicines {
         bigint id PK
-        bigint prescription_id FK
+        bigint owner_id FK
+        bigint prescription_id FK "nullable"
         varchar name
         integer total_amount
         integer remaining_amount
@@ -263,6 +366,9 @@ erDiagram
         bigint medicine_id FK
         time scheduled_time
         varchar dosage
+        varchar days_of_week
+        date start_date
+        date end_date
         timestamp created_at
     }
     medication_logs {
@@ -275,36 +381,99 @@ erDiagram
         varchar photo_url
         varchar ai_status
         boolean is_proxy
+        bigint confirmed_by_user_id FK
+        timestamp created_at
+    }
+    medication_reminders {
+        bigint id PK
+        bigint schedule_id FK
+        bigint senior_id FK
+        date target_date
+        datetime scheduled_at
+        datetime sent_at
+        varchar delivery_status
+        varchar channel
+        varchar error_message
+        timestamp created_at
+        timestamp updated_at
+    }
+    device_tokens {
+        bigint id PK
+        bigint user_id FK
+        varchar token UK
+        varchar platform
+        boolean is_active
+        datetime last_seen_at
+        timestamp created_at
+        timestamp updated_at
+    }
+    dur_checks {
+        bigint id PK
+        bigint medicine_id FK
+        datetime checked_at
+        varchar warning_level
+        text warning_text
+        text raw_response
+        timestamp created_at
+    }
+    reports {
+        bigint id PK
+        bigint senior_id FK
+        varchar period_type
+        date period_start
+        date period_end
+        integer total_scheduled
+        integer total_taken
+        integer total_missed
+        decimal adherence_rate
         timestamp created_at
     }
     pets {
         bigint id PK
         bigint point
+        timestamp created_at
+        timestamp updated_at
     }
 ```
 
-## 7) 오픈 이슈 (결정 대기)
+## 7) 오픈 이슈
 
-| # | 주제 | 현상 | 결정 필요 |
+> 결정된 정책은 본문에 이미 반영되었다. 이 섹션은 **코드 갭 추적**(코드↔문서 동기화)과 **인덱스/제약 메모**로만 사용한다.
+
+### 7-A) 코드 갭 (코드 반영 대기)
+
+타깃 스키마는 §5에 기술돼 있으나 엔티티 코드는 아직 따라오지 못한 항목. 각 항목은 별도 PR로 처리한다.
+
+| # | 주제 | 갭 요약 |
+|---|---|---|
+| 7-16 | `users` 필드 확장 | 타깃: `nickname`/`gender`/`dob` 추가, `ppiyaki bigint` → `pet bigint` rename(PK 참조 유지), `password` nullable |
+| 7-17 | `caregiver_senior_mappings` → `care_relations` | 테이블 rename + `deleted_at` soft delete 도입 |
+| 7-18 | `Pet` 공통 시간 엔티티 상속 | `Pet.java`가 `BaseTimeEntity`를 상속하도록 변경해 `created_at`/`updated_at` 추가 |
+| 7-19 | 신규 엔티티 구현 | `oauth_identities`, `dur_checks`, `device_tokens`, `medication_reminders`, `reports` 엔티티 클래스 신설 |
+| 7-20 | `medication_schedules` 필드 확장 | `days_of_week`, `start_date`, `end_date` 추가 |
+| 7-21 | `medication_logs` 필드 확장 | `confirmed_by_user_id` 추가 |
+| 7-22 | `medicines` 소유 관계 | `owner_id` 추가, `prescription_id` nullable 전환 |
+
+### 7-B) 인덱스/제약 후보 (§7-12)
+
+도입 시 쓰기 성능에 명백한 악영향이 있으면 보류하고 메모만 남긴다.
+
+| 대상 | 타입 | 용도 | 상태 |
 |---|---|---|---|
-| 7-1 | `users.pet` ↔ `pets` 테이블 연결 방식 | 타깃은 `users.pet varchar`로 보유 캐릭터를 코드/이름으로 참조. 현재 코드는 `ppiyaki bigint`로 PK 참조 형태 | `users.pet`이 카탈로그(캐릭터 종류 코드)인지 인스턴스 식별(`pets.id` 매핑)인지 확정 |
-| 7-2 | `users.role` enum 정의 | varchar 자유값 | `SENIOR`/`CAREGIVER` enum 확정 및 컨버터 도입 |
-| 7-3 | `pets` 성장 모델 | 현재 `id`, `point`만 존재. 레벨/스테이지/이력 없음 | 레벨/경험치/스테이지/성장 이력 로그 테이블 필요 여부 |
-| 7-4 | `report` 스키마 | DBML에만 있고 엔티티 미구현 | 집계 대상(기간, 이행률, 실패 건수 등)과 테이블 도입 시점 |
-| 7-5 | 수동 등록 약물 | `medicines.prescription_id` NOT NULL로 보임 | "더미 처방전" vs "nullable + 소유자 직결" 중 선택 |
-| 7-6 | 요일/종료일 관리 | `medication_schedules`에 frequency/duration 없음 | 요일 비트마스크, 종료일 컬럼, 또는 별도 테이블 |
-| 7-7 | DUR 결과 영속화 | 결과 저장 테이블 없음 | `dur_checks` 테이블 신설 여부 |
-| 7-8 | 알림/FCM 토큰 | 테이블 없음 | `device_tokens`, `medication_reminders` 신설 여부 |
-| 7-9 | `status` vs `ai_status` | 의미 구분 불명확 | 사용자 확정 상태 vs 비전 판정 상태로 분리 정의 |
-| 7-10 | `is_proxy` | 보호자 대리 처리 의도로 추정 | 공식 정의와 허용 전이 상태 정의 |
-| 7-11 | `pets` 대상 | 타깃 `users.pet`이 모든 user에 붙을 수 있음 | 시니어 전용인가 보호자도 포함인가 |
-| 7-12 | 인덱스/제약 | 현재 엔티티에 unique/복합 인덱스 선언 없음 | `login_id` unique, `(target_date, schedule_id)` unique 등 |
-| 7-13 | `password` nullable | 카카오 전용이면 불필요 | nullable 여부 및 로컬 로그인 허용 여부 |
-| 7-14 | `users.gender` 코드 체계 | varchar 자유값 | `MALE`/`FEMALE`/`OTHER`/`UNKNOWN` 등 enum 확정 |
-| 7-15 | `users.dob` 마스킹 정책 | 생년월일은 민감정보 | 로그/리포트 출력 시 연도만 노출, 풀 날짜는 권한 있는 쿼리에만 허용 |
-| 7-16 | `users` 필드 확장 (코드 갭) | 타깃: `nickname`/`gender`/`dob`/`pet varchar`. 현재 코드: `ppiyaki bigint`만 존재하고 나머지 없음 | `User.java` 및 마이그레이션 PR로 코드 반영 |
-| 7-17 | `caregiver_senior_mappings` → `care_relations` (코드 갭) | 타깃: 테이블 rename + `deleted_at` soft delete. 현재 코드: 원래 이름 유지, soft delete 없음 | 엔티티 클래스 rename + 마이그레이션 PR |
-| 7-18 | `pets` 공통 시간 필드 | `Pet.java`가 `CreatedTimeEntity`를 상속하지 않음 | 생성/갱신 시각 필요성 판단 → 필요하면 상속 추가 |
+| `users.login_id` | UNIQUE | 로컬 로그인 식별자 중복 방지 | 도입 권장 |
+| `oauth_identities (provider, provider_user_id)` | UNIQUE | IdP별 식별자 중복 방지 | 도입 권장 |
+| `device_tokens.token` | UNIQUE | 토큰 중복 방지 | 도입 권장 |
+| `medication_logs (schedule_id, target_date)` | UNIQUE | 같은 일정·일자에 중복 기록 방지 | 도입 권장 |
+| `dur_checks (medicine_id, checked_at DESC)` | INDEX | 최근 점검 결과 빠른 조회 | 도입 권장 |
+| `reports (senior_id, period_type, period_start)` | UNIQUE | 같은 기간 리포트 중복 생성 방지 | 도입 권장 |
+| `medication_reminders (delivery_status, scheduled_at)` | INDEX | 발송 대기 큐 조회 | 도입 권장 |
+| `care_relations` 활성 관계 UNIQUE | UNIQUE partial | `deleted_at IS NULL`인 경우 `(senior_id, caregiver_id)` 중복 방지 | **보류** — MySQL 8 partial index 미지원. 애플리케이션 레벨로 처리하거나 generated column 검토 |
+
+### 7-C) 세부 설계 보류
+
+| # | 주제 | 현재 상태 |
+|---|---|---|
+| 7-9 | 약 개수 인식 세부 | MediaPipe 기반 행동 인식은 **제외**. 약 개수 인식으로 대체 예정이나 세부 기획 미완 → `medication_logs.photo_url`/`ai_status` 컬럼은 placeholder로 유지 |
 
 ## 8) 외부 연동 인벤토리
 
@@ -312,12 +481,12 @@ erDiagram
 |---|---|---|
 | Naver Clova OCR | 처방전 텍스트 추출 | `prescription` (via `infra` adapter) |
 | Spring AI + Gemini Flash 1.5 | OCR 결과 구조화, 챗봇 | `prescription`, (추후) 챗봇 |
-| MediaPipe | 복약 행동 인식 (손-입 근접) | `health` (클라이언트 처리 가능성 높음) |
-| Vision LLM (GPT-4o 후보) → YOLO 고도화 | 약 개수 감지 | `health` |
-| Firebase Cloud Messaging | 푸시 알림 발송 | `medication` |
+| 약 개수 인식 (구현체 미정) | 복약 확인 | `health` (세부 설계 보류, §7-9) |
+| Firebase Cloud Messaging | 푸시 알림 발송 | `medication` (`medication_reminders`, `device_tokens`) |
 | TTS (구현체 미정) | 음성 알림 | `medication` |
 | STT (구현체 미정) | 음성 입력 | (추후 챗봇) |
-| Object Storage (S3/NCP Object Storage 등, 미정) | 처방전/인증 사진 저장 | `prescription`, `health` |
+| DUR API (구현체 미정) | 약물 상호작용/금기 점검 | `health` (`dur_checks`에 매 호출 결과 저장) |
+| Object Storage (S3/NCP Object Storage 등, 미정) | 처방전/복약 확인 사진 저장 | `prescription`, `health` |
 
 ## 9) 기술 스택
 | 항목 | 선택 |
