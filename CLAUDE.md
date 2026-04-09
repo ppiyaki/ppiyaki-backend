@@ -66,7 +66,7 @@
 - 변수명은 **풀네임** (`MemberCreateResponse memberCreateResponse`)
 - 메서드 네이밍: 조회 `read`/`get`/`find`, 등록 `create`/`add`, 수정 `update`/`modify`, 삭제 `delete`/`remove`
 - DTO는 API별 분리(이번 스프린트 한정), 리스트 응답 변수명은 `responses`
-- 엔티티 `@NoArgsConstructor(access = AccessLevel.PACKAGE)` (package-private)
+- 엔티티는 `@NoArgsConstructor(access = AccessLevel.PROTECTED)` + `@AllArgsConstructor(access = AccessLevel.PACKAGE)` 조합 (PROTECTED no-args는 Hibernate 프록시 호환을 위해 필수)
 - Lombok: `@Data`/`@Setter` 금지. `@Getter`/`@NoArgsConstructor`/`@RequiredArgsConstructor`는 적극 사용
 - **null 검증은 DTO와 Domain 둘 다 수행**. Domain은 매개변수의 모든 값에 대해 `Objects.requireNonNull`
 - 테스트는 BDD 스타일(`given/when/then`), **신규 엔드포인트는 성공 케이스 E2E(RestAssured) 필수**
