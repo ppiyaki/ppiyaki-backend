@@ -45,14 +45,30 @@
 - **외부 API**: WireMock 또는 인터페이스 mock
 - **수량 기준**: "사용자 시나리오당 1개" 정도. 과도하게 쓰면 CI 느려짐
 
-## 4) 네이밍
+## 4) 네이밍 / 스타일 (BDD)
 
-두 스타일 중 하나로 일관:
+- **BDD 스타일을 기본 규칙**으로 한다. 본문은 `given / when / then` 블록으로 나눈다.
+- 메서드명은 한글 또는 `given_when_then` 스타일 중 파일 내 일관 사용.
 
-- **`메서드명_시나리오_기대결과`** — 예: `softDelete_whenCalled_setsDeletedAt`
-- **`given_when_then`** — 예: `givenActiveRelation_whenSoftDelete_thenBecomesInactive`
+```java
+@Test
+void softDelete_호출하면_isActive는_false가_된다() {
+    // given
+    final CareRelation relation = new CareRelation(1L, 2L, "CODE");
 
-한 파일 내에서 혼용 금지.
+    // when
+    relation.softDelete(LocalDateTime.of(2026, 4, 9, 12, 0));
+
+    // then
+    assertThat(relation.isActive()).isFalse();
+}
+```
+
+## 4-1) E2E 필수 규칙
+- **모든 신규 엔드포인트는 성공 케이스 E2E 테스트를 반드시 작성**한다.
+- 실패/검증 케이스는 리뷰어 요청 시 추가.
+- E2E 프레임워크는 **RestAssured**를 사용한다 (`@SpringBootTest(webEnvironment = RANDOM_PORT)` + RestAssured).
+- RestAssured가 아직 의존성에 없다면 첫 E2E 작성 PR에서 함께 추가.
 
 ## 5) 어떤 테스트를 꼭 써야 하는가 (MVP 기준)
 
