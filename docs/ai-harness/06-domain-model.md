@@ -34,7 +34,7 @@
 | Medicine | `medicine` | 약물 기본 정보, 잔량, DUR 경고 텍스트 | `medicines` |
 | Medication | `medication` | 복약 일정, 알림 발송 | `medication_schedules` (+ 알림 저장소 미정) |
 | Health | `health` | 복약 기록, 행동 인식 결과, 이행률 | `medication_logs` |
-| Pet | `pet` | 게이미피케이션: 삐약이 캐릭터 성장 | `pet` |
+| Pet | `pet` | 게이미피케이션: 삐약이 캐릭터 성장 | `pets` |
 | Infra | `infra` | OCR/LLM/FCM/Storage 외부 연동 어댑터 | (테이블 없음) |
 
 ### 컨텍스트 의존성
@@ -73,118 +73,125 @@
 | 삐약이 | Ppiyaki / Pet Character | 복약 성공 시 성장하는 게이미피케이션 캐릭터 |
 | 리포트 | Report | 보호자용 복약 리포트 (스키마 미정) |
 
-## 5) 엔티티 (DBML 기반)
+## 5) 엔티티 (코드 기준)
 
-> 출처: 팀 제공 DBML. 명백한 오타/미정의는 §7 오픈 이슈 참조.
+> 출처: `src/main/java/com/ppiyaki/**/*.java` 현재 HEAD 기준.
+> 팀 제공 DBML에는 있지만 **코드에는 아직 반영되지 않은 항목**은 §7 오픈 이슈의 "계획됨" 항목으로 추적한다.
 
-### users
+### 공통 시간 필드
+- `CreatedTimeEntity` (`@MappedSuperclass`): `created_at` (`@CreatedDate`)
+- `BaseTimeEntity extends CreatedTimeEntity`: `created_at` + `updated_at` (`@LastModifiedDate`)
+- 아래 "시간 필드" 열에서 `created` = `CreatedTimeEntity`, `created+updated` = `BaseTimeEntity`, `-` = 상속 없음
+
+### users (target: `@Table(name = "users")`, extends `BaseTimeEntity`)
 계정 단위. 시니어/보호자 모두 한 테이블.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
-| id | bigint PK | |
-| login_id | varchar | 로그인 식별자 (카카오 식별자 매핑 예정) |
-| password | varchar | 로컬 로그인 대비. 카카오 전용이면 nullable 고려 |
-| role | varchar | `SENIOR` / `CAREGIVER` |
+| id | bigint PK (IDENTITY) | |
+| login_id | varchar | 로그인 식별자 |
+| password | varchar | 로컬 로그인용 (카카오 전용 전환 시 nullable 검토: §7-13) |
+| role | varchar | `SENIOR` / `CAREGIVER` (후보, enum 미정) |
 | nickname | varchar | 사용자 표시 이름 |
-| gender | varchar | 성별 (코드 체계는 오픈 이슈 §7-14) |
-| dob | date | 생년월일 (마스킹 대상 민감정보) |
-| pet | varchar | 보유 캐릭터 식별(코드/이름). `pet` 테이블과의 연결 방식은 오픈 이슈 §7-1 |
-| created_at / updated_at | timestamp | |
+| gender | varchar | 성별 (코드 체계 미정: §7-14) |
+| dob | date | 생년월일 (민감정보, 마스킹 정책: §7-15) |
+| pet | varchar | 보유 캐릭터 식별 (`pets` 테이블과의 연결 방식: §7-1) |
+| created_at / updated_at | timestamp | `BaseTimeEntity` |
 
-### care_relations
+> **코드 갭(현재 HEAD 기준)**: 코드의 `User.java`는 `nickname`, `gender`, `dob`가 없고 `pet` 대신 `ppiyaki bigint` 컬럼을 가진다. 이 문서는 **타깃 스키마**를 기술하며, 코드 갱신은 별도 PR로 진행한다. 추적: §7-16.
+
+### care_relations (target: `@Table(name = "care_relations")`, extends `BaseTimeEntity`)
 보호자–시니어 관계(1:N). 해제 시 soft delete.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| senior_id | bigint FK → users.id | |
-| caregiver_id | bigint FK → users.id | |
+| senior_id | bigint | `users.id` 참조 |
+| caregiver_id | bigint | `users.id` 참조 |
 | invite_code | varchar | 시니어가 보호자에게 발급/공유 |
 | deleted_at | timestamp nullable | soft delete. NULL이면 활성 관계 |
-| created_at / updated_at | timestamp | |
+| created_at / updated_at | timestamp | `BaseTimeEntity` |
 
-### health_profiles
+> **코드 갭**: 현재 코드는 `caregiver_senior_mappings` 이름으로 존재하며 `deleted_at`이 없다. 타깃 이름과 soft delete 도입은 별도 PR. 추적: §7-17.
+
+### health_profiles (`@Table(name = "health_profiles")`, extends `CreatedTimeEntity`)
 시니어별 건강 배경 정보 (1:1).
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| senior_id | bigint FK → users.id | |
+| senior_id | bigint | `users.id` 참조 |
 | diet_habits | varchar | 식습관 |
 | allergies | varchar | 알러지 |
 | smoking_status | boolean | 흡연 여부 |
 | drinking_status | boolean | 음주 여부 |
-| created_at | timestamp | |
+| created_at | timestamp | `CreatedTimeEntity` (updated_at 없음) |
 
-### prescriptions
+### prescriptions (`@Table(name = "prescriptions")`, extends `CreatedTimeEntity`)
 처방전 업로드 + OCR 원문 보관.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| senior_id | bigint FK → users.id | 대상 시니어 |
-| caregiver_id | bigint FK → users.id | 업로드 수행자(보호자) |
+| senior_id | bigint | `users.id` 참조 (대상 시니어) |
+| caregiver_id | bigint | `users.id` 참조 (업로드 수행자) |
 | ocr_image_url | varchar | 원본 이미지 저장 경로 |
-| extracted_text | text | OCR 원문 |
-| status | varchar | `UPLOADED`/`PROCESSING`/`SUCCESS`/`FAILED` (후보) |
-| created_at | timestamp | |
+| extracted_text | TEXT | OCR 원문 (`columnDefinition = "TEXT"`) |
+| status | varchar | `UPLOADED`/`PROCESSING`/`SUCCESS`/`FAILED` (후보, enum 미정) |
+| created_at | timestamp | `CreatedTimeEntity` |
 
-### medicines
-처방전에서 파생된 약물. 수동 등록은 오픈 이슈 §7-5.
+### medicines (`@Table(name = "medicines")`, extends `CreatedTimeEntity`)
+처방전에서 파생된 약물. 수동 등록 경로는 오픈 이슈 §7-5.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| prescription_id | bigint FK → prescriptions.id | |
+| prescription_id | bigint | `prescriptions.id` 참조 |
 | name | varchar | 약물명 |
-| total_amount | int | 처방 총량 |
-| remaining_amount | int | 현재 잔량 |
+| total_amount | Integer | 처방 총량 |
+| remaining_amount | Integer | 현재 잔량 |
 | dur_warning_text | varchar | DUR 경고 요약 텍스트 |
-| created_at | timestamp | |
+| created_at | timestamp | `CreatedTimeEntity` |
 
-### medication_schedules
-복약 일정. `medicine` 1건당 시간대별 N행으로 해석됨(오픈 이슈 §7-6).
+### medication_schedules (`@Table(name = "medication_schedules")`, extends `CreatedTimeEntity`)
+복약 일정. `medicine` 1건당 시간대별 N행으로 해석됨 (오픈 이슈 §7-6).
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| medicine_id | bigint FK → medicines.id | |
-| scheduled_time | time | 복용 시각(일자 정보는 별도) |
-| dosage | varchar | 1회 복용량(예: `1정`) |
-| created_at | timestamp | |
+| medicine_id | bigint | `medicines.id` 참조 |
+| scheduled_time | time (`LocalTime`) | 복용 시각 (일자 정보는 별도) |
+| dosage | varchar | 1회 복용량 (예: `1정`) |
+| created_at | timestamp | `CreatedTimeEntity` |
 
-### medication_logs
+### medication_logs (`@Table(name = "medication_logs")`, extends `CreatedTimeEntity`)
 복약 이행 기록. 일자별 × 스케줄별 1행.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| senior_id | bigint FK → users.id | |
-| schedule_id | bigint FK → medication_schedules.id | |
-| target_date | date | 예정 복약 일자 |
-| taken_at | datetime | 실제 확인 시각 |
-| status | varchar | 사용자 확정 상태(후보: `TAKEN`/`MISSED`/`PENDING`) |
+| senior_id | bigint | `users.id` 참조 |
+| schedule_id | bigint | `medication_schedules.id` 참조 |
+| target_date | date (`LocalDate`) | 예정 복약 일자 |
+| taken_at | datetime (`LocalDateTime`) | 실제 확인 시각 |
+| status | varchar | 사용자 확정 상태 (후보: `TAKEN`/`MISSED`/`PENDING`) |
 | photo_url | varchar | 비전 인증 사진 |
 | ai_status | varchar | 비전 인증 판정 결과 (오픈 이슈 §7-9) |
 | is_proxy | boolean | 보호자 대리 처리 여부 |
-| created_at | timestamp | |
+| created_at | timestamp | `CreatedTimeEntity` |
 
-### pet
-삐약이 캐릭터. 현재 placeholder.
-
-| 컬럼 | 타입 | 설명 |
-|---|---|---|
-| id | bigint PK | 현재 유일 컬럼. 성장 속성 미정(오픈 이슈 §7-3) |
-
-### report
-보호자용 리포트. 현재 placeholder.
+### pets (`@Table(name = "pets")`, **공통 시간 엔티티 상속 없음**)
+삐약이 캐릭터. 현재 최소 구현 상태 — 성장 속성은 `point` 하나.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| caregiver_id | bigint | FK 방향/스키마 미정 (오픈 이슈 §7-4) |
-| senior_id | bigint | 원본 DBML 타입 오타(`biging` → `bigint`) |
+| point | bigint (`Long`) | 누적 포인트 (복약 성공 이벤트로 증가 — 오픈 이슈 §7-3) |
+
+> `Pet.java`는 `CreatedTimeEntity`/`BaseTimeEntity`를 상속하지 않아 `created_at`/`updated_at`이 **없다**. 성장 이력을 시간순으로 추적하려면 별도 로그 테이블(`pet_growth_logs` 등) 도입을 고려 — §7-3.
+
+### report (DBML 제안, 엔티티 클래스 미구현)
+보호자용 리포트. 현재 코드에는 엔티티 클래스가 없다 (DBML 초안에만 존재). 스키마 결정 전까지 별도 엔티티로 다루지 않는다. 추적: §7-4.
 
 ## 6) ERD (Mermaid)
 
@@ -201,8 +208,7 @@ erDiagram
     medicines ||--o{ medication_schedules : "has"
     medication_schedules ||--o{ medication_logs : "produces"
     users ||--o{ medication_logs : "senior"
-    users ||--o| pet : "owns"
-    users ||--o{ report : "target/owner"
+    users ||--o| pets : "owns"
 
     users {
         bigint id PK
@@ -247,8 +253,8 @@ erDiagram
         bigint id PK
         bigint prescription_id FK
         varchar name
-        int total_amount
-        int remaining_amount
+        integer total_amount
+        integer remaining_amount
         varchar dur_warning_text
         timestamp created_at
     }
@@ -271,13 +277,9 @@ erDiagram
         boolean is_proxy
         timestamp created_at
     }
-    pet {
+    pets {
         bigint id PK
-    }
-    report {
-        bigint id PK
-        bigint caregiver_id FK
-        bigint senior_id FK
+        bigint point
     }
 ```
 
@@ -285,21 +287,24 @@ erDiagram
 
 | # | 주제 | 현상 | 결정 필요 |
 |---|---|---|---|
-| 7-1 | `users.pet` ↔ `pet` 테이블 연결 방식 | `users.pet varchar`로 보유 캐릭터를 코드/이름으로 참조. 별도 `pet` 테이블(현재 id만)은 어떤 데이터를 가질지 미정 | `users.pet`이 카탈로그(캐릭터 종류)를 가리키는지, 인스턴스(개별 캐릭터 상태)인지 확정 |
-| 7-2 | `report.senior_id` 타입 오타 | `biging` | `bigint`로 수정 |
-| 7-3 | `pet` 테이블 속성 | 현재 `id`만 존재 | 성장 속성(레벨/경험치/스테이지) MVP 범위 확정 |
-| 7-4 | `report` 스키마 | 거의 비어있음 | 무엇을 집계할지(기간, 이행률, 실패 건수 등) |
+| 7-1 | `users.pet` ↔ `pets` 테이블 연결 방식 | 타깃은 `users.pet varchar`로 보유 캐릭터를 코드/이름으로 참조. 현재 코드는 `ppiyaki bigint`로 PK 참조 형태 | `users.pet`이 카탈로그(캐릭터 종류 코드)인지 인스턴스 식별(`pets.id` 매핑)인지 확정 |
+| 7-2 | `users.role` enum 정의 | varchar 자유값 | `SENIOR`/`CAREGIVER` enum 확정 및 컨버터 도입 |
+| 7-3 | `pets` 성장 모델 | 현재 `id`, `point`만 존재. 레벨/스테이지/이력 없음 | 레벨/경험치/스테이지/성장 이력 로그 테이블 필요 여부 |
+| 7-4 | `report` 스키마 | DBML에만 있고 엔티티 미구현 | 집계 대상(기간, 이행률, 실패 건수 등)과 테이블 도입 시점 |
 | 7-5 | 수동 등록 약물 | `medicines.prescription_id` NOT NULL로 보임 | "더미 처방전" vs "nullable + 소유자 직결" 중 선택 |
 | 7-6 | 요일/종료일 관리 | `medication_schedules`에 frequency/duration 없음 | 요일 비트마스크, 종료일 컬럼, 또는 별도 테이블 |
 | 7-7 | DUR 결과 영속화 | 결과 저장 테이블 없음 | `dur_checks` 테이블 신설 여부 |
 | 7-8 | 알림/FCM 토큰 | 테이블 없음 | `device_tokens`, `medication_reminders` 신설 여부 |
 | 7-9 | `status` vs `ai_status` | 의미 구분 불명확 | 사용자 확정 상태 vs 비전 판정 상태로 분리 정의 |
 | 7-10 | `is_proxy` | 보호자 대리 처리 의도로 추정 | 공식 정의와 허용 전이 상태 정의 |
-| 7-11 | `pet` 대상 | 현재 모든 user에 연결 가능 | 시니어 전용인가 보호자도 포함인가 |
-| 7-12 | 인덱스/제약 | DBML엔 unique/인덱스 선언 없음 | `login_id` unique, `(target_date, schedule_id)` unique 등 |
+| 7-11 | `pets` 대상 | 타깃 `users.pet`이 모든 user에 붙을 수 있음 | 시니어 전용인가 보호자도 포함인가 |
+| 7-12 | 인덱스/제약 | 현재 엔티티에 unique/복합 인덱스 선언 없음 | `login_id` unique, `(target_date, schedule_id)` unique 등 |
 | 7-13 | `password` nullable | 카카오 전용이면 불필요 | nullable 여부 및 로컬 로그인 허용 여부 |
 | 7-14 | `users.gender` 코드 체계 | varchar 자유값 | `MALE`/`FEMALE`/`OTHER`/`UNKNOWN` 등 enum 확정 |
 | 7-15 | `users.dob` 마스킹 정책 | 생년월일은 민감정보 | 로그/리포트 출력 시 연도만 노출, 풀 날짜는 권한 있는 쿼리에만 허용 |
+| 7-16 | `users` 필드 확장 (코드 갭) | 타깃: `nickname`/`gender`/`dob`/`pet varchar`. 현재 코드: `ppiyaki bigint`만 존재하고 나머지 없음 | `User.java` 및 마이그레이션 PR로 코드 반영 |
+| 7-17 | `caregiver_senior_mappings` → `care_relations` (코드 갭) | 타깃: 테이블 rename + `deleted_at` soft delete. 현재 코드: 원래 이름 유지, soft delete 없음 | 엔티티 클래스 rename + 마이그레이션 PR |
+| 7-18 | `pets` 공통 시간 필드 | `Pet.java`가 `CreatedTimeEntity`를 상속하지 않음 | 생성/갱신 시각 필요성 판단 → 필요하면 상속 추가 |
 
 ## 8) 외부 연동 인벤토리
 
@@ -324,6 +329,7 @@ erDiagram
 | CI | GitHub Actions (`backend-ci.yml`) |
 
 ## 10) 갱신 규칙
-- DBML이 바뀌면 이 문서의 §5, §6을 같은 PR에서 갱신한다.
+- 이 문서는 **타깃 스키마**를 기술한다. 코드가 아직 따라오지 못한 항목은 §7 오픈 이슈에 "코드 갭"으로 기록한다.
+- 엔티티 코드(`src/main/java/com/ppiyaki/**/*.java`)가 바뀌면 §5, §6을 같은 PR에서 갱신한다.
 - 오픈 이슈가 해소되면 §7에서 제거하고 본문에 반영한다.
 - 새 용어는 반드시 §4 유비쿼터스 랭귀지에 먼저 등재한 뒤 코드에서 사용한다.
