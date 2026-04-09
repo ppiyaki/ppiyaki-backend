@@ -34,7 +34,7 @@
 | Medicine | `medicine` | 약물 기본 정보, 잔량, DUR 경고 텍스트 | `medicines` |
 | Medication | `medication` | 복약 일정, 알림 발송 | `medication_schedules` (+ 알림 저장소 미정) |
 | Health | `health` | 복약 기록, 행동 인식 결과, 이행률 | `medication_logs` |
-| Pet | `pet` | 게이미피케이션: 삐약이 캐릭터 성장 | `ppiyaki` |
+| Pet | `pet` | 게이미피케이션: 삐약이 캐릭터 성장 | `pet` |
 | Infra | `infra` | OCR/LLM/FCM/Storage 외부 연동 어댑터 | (테이블 없음) |
 
 ### 컨텍스트 의존성
@@ -89,7 +89,7 @@
 | nickname | varchar | 사용자 표시 이름 |
 | gender | varchar | 성별 (코드 체계는 오픈 이슈 §7-14) |
 | dob | date | 생년월일 (마스킹 대상 민감정보) |
-| pet | varchar | 보유 캐릭터 식별(코드/이름). ppiyaki 테이블과의 연결 방식은 오픈 이슈 §7-1 |
+| pet | varchar | 보유 캐릭터 식별(코드/이름). `pet` 테이블과의 연결 방식은 오픈 이슈 §7-1 |
 | created_at / updated_at | timestamp | |
 
 ### care_relations
@@ -170,8 +170,8 @@
 | is_proxy | boolean | 보호자 대리 처리 여부 |
 | created_at | timestamp | |
 
-### ppiyaki
-캐릭터. 현재 placeholder.
+### pet
+삐약이 캐릭터. 현재 placeholder.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
@@ -201,7 +201,7 @@ erDiagram
     medicines ||--o{ medication_schedules : "has"
     medication_schedules ||--o{ medication_logs : "produces"
     users ||--o{ medication_logs : "senior"
-    users ||--o| ppiyaki : "owns"
+    users ||--o| pet : "owns"
     users ||--o{ report : "target/owner"
 
     users {
@@ -271,7 +271,7 @@ erDiagram
         boolean is_proxy
         timestamp created_at
     }
-    ppiyaki {
+    pet {
         bigint id PK
     }
     report {
@@ -285,9 +285,9 @@ erDiagram
 
 | # | 주제 | 현상 | 결정 필요 |
 |---|---|---|---|
-| 7-1 | `users.pet` ↔ `ppiyaki` 테이블 연결 방식 | `users.pet varchar`로 보유 캐릭터를 코드/이름으로 참조. 별도 `ppiyaki` 테이블(현재 id만)은 어떤 데이터를 가질지 미정 | `users.pet`이 카탈로그(캐릭터 종류)를 가리키는지, 인스턴스(개별 캐릭터 상태)인지 확정 |
+| 7-1 | `users.pet` ↔ `pet` 테이블 연결 방식 | `users.pet varchar`로 보유 캐릭터를 코드/이름으로 참조. 별도 `pet` 테이블(현재 id만)은 어떤 데이터를 가질지 미정 | `users.pet`이 카탈로그(캐릭터 종류)를 가리키는지, 인스턴스(개별 캐릭터 상태)인지 확정 |
 | 7-2 | `report.senior_id` 타입 오타 | `biging` | `bigint`로 수정 |
-| 7-3 | `ppiyaki` 속성 | 현재 `id`만 존재 | 성장 속성(레벨/경험치/스테이지) MVP 범위 확정 |
+| 7-3 | `pet` 테이블 속성 | 현재 `id`만 존재 | 성장 속성(레벨/경험치/스테이지) MVP 범위 확정 |
 | 7-4 | `report` 스키마 | 거의 비어있음 | 무엇을 집계할지(기간, 이행률, 실패 건수 등) |
 | 7-5 | 수동 등록 약물 | `medicines.prescription_id` NOT NULL로 보임 | "더미 처방전" vs "nullable + 소유자 직결" 중 선택 |
 | 7-6 | 요일/종료일 관리 | `medication_schedules`에 frequency/duration 없음 | 요일 비트마스크, 종료일 컬럼, 또는 별도 테이블 |
@@ -295,7 +295,7 @@ erDiagram
 | 7-8 | 알림/FCM 토큰 | 테이블 없음 | `device_tokens`, `medication_reminders` 신설 여부 |
 | 7-9 | `status` vs `ai_status` | 의미 구분 불명확 | 사용자 확정 상태 vs 비전 판정 상태로 분리 정의 |
 | 7-10 | `is_proxy` | 보호자 대리 처리 의도로 추정 | 공식 정의와 허용 전이 상태 정의 |
-| 7-11 | `ppiyaki` 대상 | 현재 모든 user에 연결 가능 | 시니어 전용인가 보호자도 포함인가 |
+| 7-11 | `pet` 대상 | 현재 모든 user에 연결 가능 | 시니어 전용인가 보호자도 포함인가 |
 | 7-12 | 인덱스/제약 | DBML엔 unique/인덱스 선언 없음 | `login_id` unique, `(target_date, schedule_id)` unique 등 |
 | 7-13 | `password` nullable | 카카오 전용이면 불필요 | nullable 여부 및 로컬 로그인 허용 여부 |
 | 7-14 | `users.gender` 코드 체계 | varchar 자유값 | `MALE`/`FEMALE`/`OTHER`/`UNKNOWN` 등 enum 확정 |
