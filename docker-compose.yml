@@ -1,0 +1,27 @@
+services:
+  mysql:
+    image: mysql:8.4.6
+    container_name: ppiyaki-mysql-local
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ppiyaki
+      MYSQL_DATABASE: ppiyaki
+      MYSQL_USER: ppiyaki
+      MYSQL_PASSWORD: ppiyaki
+      TZ: Asia/Seoul
+    ports:
+      - "3306:3306"
+    volumes:
+      - ppiyaki-mysql-data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+09:00
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pppiyaki"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  ppiyaki-mysql-data:
