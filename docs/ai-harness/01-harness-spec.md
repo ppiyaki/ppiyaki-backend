@@ -13,6 +13,7 @@
 - 완료 기준: 테스트/행동/성능 기준
 - 제약: 아키텍처(DDD, OOP), 보안, 일정
 - 변경 범위: 허용 파일/금지 파일
+- **중간 규모 이상 기능(신규 도메인/외부 연동/다중 PR)은 `docs/features/<slug>.md` Feature Spec을 먼저 작성·합의한 뒤 구현 착수한다.** 상세: `docs/features/README.md`, `02-agent-workflow.md §9`
 
 ## 4) 출력 계약 (AI 결과물)
 - 코드 변경 + 근거 + 영향 범위

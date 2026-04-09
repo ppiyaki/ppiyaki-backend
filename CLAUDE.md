@@ -49,6 +49,11 @@
 - 포맷 위반 시: `./gradlew spotlessApply`
 - CI 실패 상태로 머지 금지(기술적으로는 가능하나 팀 합의로 차단).
 
+### 기능 기획 (Feature Spec)
+- 중간 규모 이상 기능(신규 도메인/외부 연동/다중 PR)은 **`docs/features/<slug>.md` Feature Spec을 먼저 작성·합의**한 뒤 구현에 착수한다.
+- 템플릿: `docs/features/_template.md`, 상세 규칙: `docs/features/README.md`, 프로세스: `docs/ai-harness/02-agent-workflow.md §9`.
+- 관련 PR을 만들 때 해당 spec을 **반드시 Read**하고, 충돌 시 spec을 먼저 갱신한 뒤 구현한다.
+
 ### 도메인 / DDD
 - 새 용어는 `docs/ai-harness/06-domain-model.md §4 유비쿼터스 랭귀지`에 먼저 등재한 뒤 코드에서 사용.
 - 엔티티 변경 시 `§5 엔티티`, `§6 Mermaid ERD`를 **같은 PR**에서 갱신.
