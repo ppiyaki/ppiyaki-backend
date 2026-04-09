@@ -10,7 +10,7 @@ COPY src /app/src
 
 RUN gradle clean bootJar -x test -x checkstyleMain -x checkstyleTest --no-daemon
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 
 COPY --from=build /app/build/libs/*.jar app.jar
