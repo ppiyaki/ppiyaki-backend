@@ -23,7 +23,7 @@
 ## 3) PR 작성 규칙
 - 제목 형식(고정): `type(scope): 제목`
   - 예시: `feat(prescription): OCR 추출 결과 저장 개선`
-  - `scope`는 아래 화이트리스트에서 선택 (final): `user`, `pet`, `prescription`, `medicine`, `medication`, `health`, `infra`
+  - `scope`는 아래 화이트리스트에서 선택 (final): `user`, `pet`, `prescription`, `medicine`, `medication`, `health`, `infra`, `chat`
   - 신규 scope가 필요하면 이 문서를 먼저 PR로 갱신한 뒤 사용한다.
 - PR 본문은 `.github/PULL_REQUEST_TEMPLATE.md` 템플릿을 사용한다.
 - PR 본문은 `AS-IS`, `TO-BE` 중심으로 간결하게 작성한다.

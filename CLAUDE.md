@@ -34,7 +34,7 @@
 - 작업 브랜치는 `develop`에서 파생: `<type>/<요약>-#<이슈번호>` (예: `feature/ocr-result-save-#123`)
 - PR 제목 형식: `type(scope): 제목`
   - `type`: `feat` `fix` `docs` `style` `refactor` `test` `chore`
-  - `scope` 화이트리스트(final): `user` `pet` `prescription` `medicine` `medication` `health` `infra`
+  - `scope` 화이트리스트(final): `user` `pet` `prescription` `medicine` `medication` `health` `infra` `chat`
 - PR 생성 **직후** 라벨을 부여한다(한 세트로): `type:*`, `scope:*`, (AI 작성 시) `ai-generated`, (보호 영역 변경 시) `needs-human-review`
 - 리뷰 1명 승인 후 **Squash merge**. 단 `develop → main` 릴리즈는 **Merge commit** (§8 참조).
 
