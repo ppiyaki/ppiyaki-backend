@@ -16,6 +16,7 @@
 - `docs/ai-harness/05-prompt-ops.md`: 프롬프트 버전관리/승인/롤백 운영
 - `docs/ai-harness/06-domain-model.md`: 도메인 모델/유비쿼터스 랭귀지/ERD (기능 구현의 공통 참조 기준)
 - `docs/ai-harness/07-testing-guide.md`: 레이어별 테스트 전략 및 필수 기준
+- `docs/ai-harness/08-code-conventions.md`: 코드 컨벤션 (final/어노테이션/DTO/엔티티/Lombok/null 검증 등)
 
 ## 3-1) 관련 자산
 - `prompts/`: 재사용 프롬프트 저장소 (운영 규칙은 `05-prompt-ops.md`)
