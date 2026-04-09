@@ -22,6 +22,10 @@
 - `docs/ai-harness/04-security-policy.md` — 민감정보/시크릿/금지행위
 - `docs/ai-harness/05-prompt-ops.md` — 프롬프트 버전관리
 - `docs/ai-harness/06-domain-model.md` — **도메인 모델 / ERD / 유비쿼터스 랭귀지 (구현 전 반드시 확인)**
+- `docs/ai-harness/07-testing-guide.md` — 레이어별 테스트 전략, BDD 스타일, E2E 필수 룰
+- `docs/ai-harness/08-code-conventions.md` — 코드 컨벤션 (final/DTO/엔티티/Lombok/null 검증)
+- `docs/decisions/` — ADR (횡단 결정의 영속 이력)
+- `docs/features/` — Feature Spec (기능 단위 living 명세서)
 
 ## 4) 비협상 룰 (어기지 말 것)
 
@@ -53,6 +57,19 @@
 - 중간 규모 이상 기능(신규 도메인/외부 연동/다중 PR)은 **`docs/features/<slug>.md` Feature Spec을 먼저 작성·합의**한 뒤 구현에 착수한다.
 - 템플릿: `docs/features/_template.md`, 상세 규칙: `docs/features/README.md`, 프로세스: `docs/ai-harness/02-agent-workflow.md §9`.
 - 관련 PR을 만들 때 해당 spec을 **반드시 Read**하고, 충돌 시 spec을 먼저 갱신한 뒤 구현한다.
+
+### 코드 컨벤션 (요점)
+상세: `docs/ai-harness/08-code-conventions.md`
+- 메서드 매개변수, 지역변수 모두 `final`
+- record는 필드 2개 이상이면 멀티라인
+- 어노테이션은 **글자 길이 피라미드**(짧은 것부터) 순
+- 변수명은 **풀네임** (`MemberCreateResponse memberCreateResponse`)
+- 메서드 네이밍: 조회 `read`/`get`/`find`, 등록 `create`/`add`, 수정 `update`/`modify`, 삭제 `delete`/`remove`
+- DTO는 API별 분리(이번 스프린트 한정), 리스트 응답 변수명은 `responses`
+- 엔티티 `@NoArgsConstructor(access = AccessLevel.PACKAGE)` (package-private)
+- Lombok: `@Data`/`@Setter` 금지. `@Getter`/`@NoArgsConstructor`/`@RequiredArgsConstructor`는 적극 사용
+- **null 검증은 DTO와 Domain 둘 다 수행**. Domain은 매개변수의 모든 값에 대해 `Objects.requireNonNull`
+- 테스트는 BDD 스타일(`given/when/then`), **신규 엔드포인트는 성공 케이스 E2E(RestAssured) 필수**
 
 ### 도메인 / DDD
 - 새 용어는 `docs/ai-harness/06-domain-model.md §4 유비쿼터스 랭귀지`에 먼저 등재한 뒤 코드에서 사용.
