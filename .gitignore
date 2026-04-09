@@ -39,3 +39,6 @@ out/
 ### macOS ###
 .DS_Store
 **/.DS_Store
+
+### Local-only imports (Notion export 등, 개인정보 포함 가능) ###
+docs/_import/
