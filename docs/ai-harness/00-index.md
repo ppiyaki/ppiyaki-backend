@@ -14,6 +14,7 @@
 - `docs/ai-harness/03-quality-gates.md`: 빌드/테스트 게이트와 실패 처리
 - `docs/ai-harness/04-security-policy.md`: 민감정보/시크릿/금지행위 정책
 - `docs/ai-harness/05-prompt-ops.md`: 프롬프트 버전관리/승인/롤백 운영
+- `docs/ai-harness/06-domain-model.md`: 도메인 모델/유비쿼터스 랭귀지/ERD (기능 구현의 공통 참조 기준)
 
 ## 3-1) 관련 자산
 - `prompts/`: 재사용 프롬프트 저장소 (운영 규칙은 `05-prompt-ops.md`)
