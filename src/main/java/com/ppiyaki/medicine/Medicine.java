@@ -21,6 +21,9 @@ public class Medicine extends CreatedTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "owner_id", nullable = false)
+    private Long ownerId;
+
     @Column(name = "prescription_id")
     private Long prescriptionId;
 
@@ -37,12 +40,14 @@ public class Medicine extends CreatedTimeEntity {
     private String durWarningText;
 
     public Medicine(
+            final Long ownerId,
             final Long prescriptionId,
             final String name,
             final Integer totalAmount,
             final Integer remainingAmount,
             final String durWarningText
     ) {
+        this.ownerId = ownerId;
         this.prescriptionId = prescriptionId;
         this.name = name;
         this.totalAmount = totalAmount;
