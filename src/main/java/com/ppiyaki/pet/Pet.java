@@ -1,5 +1,6 @@
 package com.ppiyaki.pet;
 
+import com.ppiyaki.common.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -14,7 +15,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @Table(name = "pets")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Pet {
+public class Pet extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -31,13 +32,28 @@ public class MedicationSchedule extends CreatedTimeEntity {
     @Column(name = "dosage")
     private String dosage;
 
+    @Column(name = "days_of_week")
+    private String daysOfWeek;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
     public MedicationSchedule(
             final Long medicineId,
             final LocalTime scheduledTime,
-            final String dosage
+            final String dosage,
+            final String daysOfWeek,
+            final LocalDate startDate,
+            final LocalDate endDate
     ) {
         this.medicineId = medicineId;
         this.scheduledTime = scheduledTime;
         this.dosage = dosage;
+        this.daysOfWeek = daysOfWeek;
+        this.startDate = startDate;
+        this.endDate = endDate;
     }
 }

@@ -47,6 +47,9 @@ public class MedicationLog extends CreatedTimeEntity {
     @Column(name = "is_proxy")
     private Boolean isProxy;
 
+    @Column(name = "confirmed_by_user_id")
+    private Long confirmedByUserId;
+
     public MedicationLog(
             final Long seniorId,
             final Long scheduleId,
@@ -55,7 +58,8 @@ public class MedicationLog extends CreatedTimeEntity {
             final String status,
             final String photoUrl,
             final String aiStatus,
-            final Boolean isProxy
+            final Boolean isProxy,
+            final Long confirmedByUserId
     ) {
         this.seniorId = seniorId;
         this.scheduleId = scheduleId;
@@ -65,5 +69,6 @@ public class MedicationLog extends CreatedTimeEntity {
         this.photoUrl = photoUrl;
         this.aiStatus = aiStatus;
         this.isProxy = isProxy;
+        this.confirmedByUserId = confirmedByUserId;
     }
 }

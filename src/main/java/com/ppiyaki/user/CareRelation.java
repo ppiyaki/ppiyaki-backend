@@ -7,15 +7,16 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(name = "caregiver_senior_mappings")
+@Table(name = "care_relations")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class CaregiverSeniorMapping extends BaseTimeEntity {
+public class CareRelation extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,13 +31,20 @@ public class CaregiverSeniorMapping extends BaseTimeEntity {
     @Column(name = "invite_code")
     private String inviteCode;
 
-    public CaregiverSeniorMapping(
-            final Long seniorId,
-            final Long caregiverId,
-            final String inviteCode
-    ) {
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    public CareRelation(final Long seniorId, final Long caregiverId, final String inviteCode) {
         this.seniorId = seniorId;
         this.caregiverId = caregiverId;
         this.inviteCode = inviteCode;
+    }
+
+    public void softDelete(final LocalDateTime now) {
+        this.deletedAt = now;
+    }
+
+    public boolean isActive() {
+        return this.deletedAt == null;
     }
 }

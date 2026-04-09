@@ -2,6 +2,31 @@
 
 복약/건강 도메인을 다루는 백엔드 프로젝트입니다.
 
+## 로컬 개발 환경
+
+### 1) MySQL (Docker)
+```bash
+docker compose up -d
+# 종료: docker compose down
+# 데이터 초기화: docker compose down -v
+```
+- 이미지: `mysql:8.4.6` (운영 NCP MySQL과 동일 계열)
+- 접속: `localhost:3306`, DB `ppiyaki`, 유저 `ppiyaki` / 비밀번호 `ppiyaki` (로컬 전용 기본값)
+- 데이터는 `ppiyaki-mysql-data` 이름붙은 볼륨에 저장된다.
+
+### 2) 앱 실행
+```bash
+./gradlew bootRun --args='--spring.profiles.active=local'
+```
+- `local` 프로필은 `application-local.yml`을 사용해 위 Docker MySQL에 연결한다.
+- 프로필 없이 실행하면 `application.yml`의 기본 H2 URL을 사용한다 (빠른 스모크 테스트용).
+
+### 3) 테스트
+```bash
+./gradlew test
+```
+- 테스트는 H2 인메모리 DB를 사용한다 (CI와 동일).
+
 ## 팀 온보딩 (5줄 요약)
 1. 작업은 이슈부터 — `.github/ISSUE_TEMPLATE/task.md`로 이슈를 만들고 번호를 받는다.
 2. `develop`에서 `feature|fix|refactor|chore/<요약>-#<이슈번호>` 브랜치를 판다.
