@@ -22,3 +22,8 @@ spring:
       hibernate:
         format_sql: true
         use_sql_comments: true
+
+jwt:
+  secret: ${JWT_SECRET:local-dev-secret-key-must-be-at-least-32-bytes-long}
+  access-token-expiry: ${JWT_ACCESS_EXPIRY:1800000}
+  refresh-token-expiry: ${JWT_REFRESH_EXPIRY:1209600000}
