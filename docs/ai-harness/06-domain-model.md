@@ -29,7 +29,7 @@
 
 | Context | PR scope | 책임 | 주요 엔티티 |
 |---|---|---|---|
-| User | `user` | 계정, 인증, 역할, 보호자-시니어 연동, 건강 프로필 | `users`, `caregiver_senior_mappings`, `health_profiles` |
+| User | `user` | 계정, 인증, 역할, 보호자-시니어 연동, 건강 프로필 | `users`, `care_relations`, `health_profiles` |
 | Prescription | `prescription` | 처방전 이미지, OCR 원문, 파싱/상태 | `prescriptions` |
 | Medicine | `medicine` | 약물 기본 정보, 잔량, DUR 경고 텍스트 | `medicines` |
 | Medication | `medication` | 복약 일정, 알림 발송 | `medication_schedules` (+ 알림 저장소 미정) |
@@ -58,7 +58,7 @@
 |---|---|---|
 | 시니어 | Senior | 약을 실제로 복용하는 주 사용자 (`users.role = SENIOR`) |
 | 보호자 | Caregiver | 시니어와 연동되어 처방전 등록/모니터링을 수행 |
-| 연동 | Caregiver–Senior Mapping | 보호자와 시니어의 관계. `invite_code`로 초대/수락 |
+| 연동 | Care Relation | 보호자와 시니어의 관계. `invite_code`로 초대/수락. soft delete(`deleted_at`) 지원 |
 | 처방전 | Prescription | 병원에서 발급한 약물 처방 서류 이미지와 OCR 결과 |
 | OCR 원문 | Extracted Text | Clova OCR이 추출한 텍스트(구조화 전) |
 | 파싱 결과 | Parsed Result | LLM이 OCR 원문을 구조화한 약물 목록(JSON) |
@@ -86,11 +86,14 @@
 | login_id | varchar | 로그인 식별자 (카카오 식별자 매핑 예정) |
 | password | varchar | 로컬 로그인 대비. 카카오 전용이면 nullable 고려 |
 | role | varchar | `SENIOR` / `CAREGIVER` |
-| ppiyaki | `ppiyaki` (FK 의도로 보임) | 캐릭터 참조. 오픈 이슈 §7-1 |
+| nickname | varchar | 사용자 표시 이름 |
+| gender | varchar | 성별 (코드 체계는 오픈 이슈 §7-14) |
+| dob | date | 생년월일 (마스킹 대상 민감정보) |
+| pet | varchar | 보유 캐릭터 식별(코드/이름). ppiyaki 테이블과의 연결 방식은 오픈 이슈 §7-1 |
 | created_at / updated_at | timestamp | |
 
-### caregiver_senior_mappings
-보호자–시니어 1:N 관계.
+### care_relations
+보호자–시니어 관계(1:N). 해제 시 soft delete.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
@@ -98,6 +101,7 @@
 | senior_id | bigint FK → users.id | |
 | caregiver_id | bigint FK → users.id | |
 | invite_code | varchar | 시니어가 보호자에게 발급/공유 |
+| deleted_at | timestamp nullable | soft delete. NULL이면 활성 관계 |
 | created_at / updated_at | timestamp | |
 
 ### health_profiles
@@ -188,8 +192,8 @@
 
 ```mermaid
 erDiagram
-    users ||--o{ caregiver_senior_mappings : "senior"
-    users ||--o{ caregiver_senior_mappings : "caregiver"
+    users ||--o{ care_relations : "senior"
+    users ||--o{ care_relations : "caregiver"
     users ||--|| health_profiles : "has"
     users ||--o{ prescriptions : "senior"
     users ||--o{ prescriptions : "uploaded_by"
@@ -205,15 +209,19 @@ erDiagram
         varchar login_id
         varchar password
         varchar role
-        bigint ppiyaki_id FK
+        varchar nickname
+        varchar gender
+        date dob
+        varchar pet
         timestamp created_at
         timestamp updated_at
     }
-    caregiver_senior_mappings {
+    care_relations {
         bigint id PK
         bigint senior_id FK
         bigint caregiver_id FK
         varchar invite_code
+        timestamp deleted_at
         timestamp created_at
         timestamp updated_at
     }
@@ -277,7 +285,7 @@ erDiagram
 
 | # | 주제 | 현상 | 결정 필요 |
 |---|---|---|---|
-| 7-1 | `users.ppiyaki` 컬럼 타입 | DBML에 `ppiyaki` 타입으로 적힘 | `ppiyaki_id bigint FK`로 표기 수정 |
+| 7-1 | `users.pet` ↔ `ppiyaki` 테이블 연결 방식 | `users.pet varchar`로 보유 캐릭터를 코드/이름으로 참조. 별도 `ppiyaki` 테이블(현재 id만)은 어떤 데이터를 가질지 미정 | `users.pet`이 카탈로그(캐릭터 종류)를 가리키는지, 인스턴스(개별 캐릭터 상태)인지 확정 |
 | 7-2 | `report.senior_id` 타입 오타 | `biging` | `bigint`로 수정 |
 | 7-3 | `ppiyaki` 속성 | 현재 `id`만 존재 | 성장 속성(레벨/경험치/스테이지) MVP 범위 확정 |
 | 7-4 | `report` 스키마 | 거의 비어있음 | 무엇을 집계할지(기간, 이행률, 실패 건수 등) |
@@ -290,6 +298,8 @@ erDiagram
 | 7-11 | `ppiyaki` 대상 | 현재 모든 user에 연결 가능 | 시니어 전용인가 보호자도 포함인가 |
 | 7-12 | 인덱스/제약 | DBML엔 unique/인덱스 선언 없음 | `login_id` unique, `(target_date, schedule_id)` unique 등 |
 | 7-13 | `password` nullable | 카카오 전용이면 불필요 | nullable 여부 및 로컬 로그인 허용 여부 |
+| 7-14 | `users.gender` 코드 체계 | varchar 자유값 | `MALE`/`FEMALE`/`OTHER`/`UNKNOWN` 등 enum 확정 |
+| 7-15 | `users.dob` 마스킹 정책 | 생년월일은 민감정보 | 로그/리포트 출력 시 연도만 노출, 풀 날짜는 권한 있는 쿼리에만 허용 |
 
 ## 8) 외부 연동 인벤토리
 
