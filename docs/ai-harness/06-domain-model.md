@@ -474,6 +474,7 @@ erDiagram
 | # | 주제 | 현재 상태 |
 |---|---|---|
 | 7-9 | 약 개수 인식 세부 | MediaPipe 기반 행동 인식은 **제외**. 약 개수 인식으로 대체 예정이나 세부 기획 미완 → `medication_logs.photo_url`/`ai_status` 컬럼은 placeholder로 유지 |
+| 7-23 | DB 마이그레이션 도구 도입 | **후순위.** 현재는 `src/main/resources/schema.sql`을 Hibernate metadata에서 추출해 운영 스키마를 관리. 운영 안정화 단계에서 Flyway/Liquibase 도입 검토. 도입 시 `application-prod.yml`의 `ddl-auto: validate` 정책과 부트스트랩 흐름(초기 schema.sql → migration baseline) 정리 필요 |
 
 ## 8) 외부 연동 인벤토리
 
