@@ -119,17 +119,66 @@ Claude Code에서 다음을 실행하여 연결을 확인한다:
 ```
 `ppiyaki-claude` 봇 정보가 반환되면 설정 완료.
 
-### 참고: Notion MCP 도구의 제한사항
-- MCP 도구는 `paragraph`와 `bulleted_list_item` 블록만 생성 가능
-- heading, table, code, divider 등은 Notion REST API를 직접 호출해야 함 (환경변수 `$NOTION_API_KEY` 사용)
-- code block 생성 예시:
-  ```bash
-  curl -X PATCH "https://api.notion.com/v1/blocks/{page_id}/children" \
-    -H "Authorization: Bearer $NOTION_API_KEY" \
-    -H "Notion-Version: 2022-06-28" \
-    -H "Content-Type: application/json" \
-    -d '{"children": [{"type": "code", "code": {"rich_text": [{"type": "text", "text": {"content": "..."}}], "language": "json"}}]}'
-  ```
+### 중요: Notion MCP 도구의 제한사항과 해결 방법
+
+> **MCP 도구(`mcp__notion__*`)는 `paragraph`와 `bulleted_list_item` 블록만 생성할 수 있다.**
+> heading, **table**, code, divider 등은 **Notion REST API를 `curl`로 직접 호출**해야 한다.
+
+MCP 도구만 사용하면 테이블이 bullet 목록으로 대체되어 기존 템플릿과 불일치가 발생한다.
+**API 명세 작성 시 반드시 직접 API 호출 방식을 사용할 것.**
+
+#### table 블록 생성 예시
+```bash
+curl -X PATCH "https://api.notion.com/v1/blocks/{page_id}/children" \
+  -H "Authorization: Bearer $NOTION_API_KEY" \
+  -H "Notion-Version: 2022-06-28" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "children": [{
+      "type": "table",
+      "table": {
+        "table_width": 4,
+        "has_column_header": true,
+        "has_row_header": false,
+        "children": [
+          {"type": "table_row", "table_row": {"cells": [
+            [{"type": "text", "text": {"content": "필드"}, "annotations": {"bold": true}}],
+            [{"type": "text", "text": {"content": "타입"}, "annotations": {"bold": true}}],
+            [{"type": "text", "text": {"content": "필수 여부"}, "annotations": {"bold": true}}],
+            [{"type": "text", "text": {"content": "상세 설명"}, "annotations": {"bold": true}}]
+          ]}},
+          {"type": "table_row", "table_row": {"cells": [
+            [{"type": "text", "text": {"content": "name"}}],
+            [{"type": "text", "text": {"content": "String"}}],
+            [{"type": "text", "text": {"content": "Y"}}],
+            [{"type": "text", "text": {"content": "약물명"}}]
+          ]}}
+        ]
+      }
+    }]
+  }'
+```
+
+#### code 블록 생성 예시
+```bash
+curl -X PATCH "https://api.notion.com/v1/blocks/{page_id}/children" \
+  -H "Authorization: Bearer $NOTION_API_KEY" \
+  -H "Notion-Version: 2022-06-28" \
+  -H "Content-Type: application/json" \
+  -d '{"children": [{"type": "code", "code": {"rich_text": [{"type": "text", "text": {"content": "..."}}], "language": "json"}}]}'
+```
+
+#### heading / divider 생성 예시
+```bash
+# heading_1 (blue background)
+{"type": "heading_1", "heading_1": {"rich_text": [{"type": "text", "text": {"content": "Request"}}], "color": "blue_background"}}
+
+# heading_2 (yellow background)  
+{"type": "heading_2", "heading_2": {"rich_text": [{"type": "text", "text": {"content": "헤더"}}], "color": "yellow_background"}}
+
+# divider
+{"type": "divider", "divider": {}}
+```
 
 ## 5) 도메인 ↔ Notion 매핑
 
