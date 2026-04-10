@@ -11,13 +11,16 @@ import com.ppiyaki.user.OAuthProvider;
 import com.ppiyaki.user.RefreshToken;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.controller.dto.KakaoLoginRequest;
+import com.ppiyaki.user.controller.dto.LoginRequest;
 import com.ppiyaki.user.controller.dto.LoginResponse;
+import com.ppiyaki.user.controller.dto.SignupRequest;
 import com.ppiyaki.user.controller.dto.TokenResponse;
 import com.ppiyaki.user.repository.OAuthIdentityRepository;
 import com.ppiyaki.user.repository.RefreshTokenRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +30,7 @@ public class AuthService {
     private final KakaoOAuthClient kakaoOAuthClient;
     private final JwtProvider jwtProvider;
     private final JwtProperties jwtProperties;
+    private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
     private final OAuthIdentityRepository oAuthIdentityRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -35,6 +39,7 @@ public class AuthService {
             final KakaoOAuthClient kakaoOAuthClient,
             final JwtProvider jwtProvider,
             final JwtProperties jwtProperties,
+            final PasswordEncoder passwordEncoder,
             final UserRepository userRepository,
             final OAuthIdentityRepository oAuthIdentityRepository,
             final RefreshTokenRepository refreshTokenRepository
@@ -42,6 +47,7 @@ public class AuthService {
         this.kakaoOAuthClient = Objects.requireNonNull(kakaoOAuthClient, "kakaoOAuthClient must not be null");
         this.jwtProvider = Objects.requireNonNull(jwtProvider, "jwtProvider must not be null");
         this.jwtProperties = Objects.requireNonNull(jwtProperties, "jwtProperties must not be null");
+        this.passwordEncoder = Objects.requireNonNull(passwordEncoder, "passwordEncoder must not be null");
         this.userRepository = Objects.requireNonNull(userRepository, "userRepository must not be null");
         this.oAuthIdentityRepository = Objects.requireNonNull(oAuthIdentityRepository,
                 "oAuthIdentityRepository must not be null");
@@ -62,6 +68,47 @@ public class AuthService {
                 .findByProviderAndProviderUserId(OAuthProvider.KAKAO, providerUserId)
                 .map(identity -> userRepository.findById(identity.getUserId()).orElseThrow())
                 .orElseGet(() -> createNewUser(kakaoUserInfo, providerUserId));
+
+        final String accessToken = jwtProvider.createAccessToken(user.getId());
+        final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
+        saveRefreshToken(user.getId(), refreshTokenValue);
+
+        final boolean isOnboarded = user.getRole() != null;
+
+        return new LoginResponse(accessToken, refreshTokenValue, isOnboarded);
+    }
+
+    @Transactional
+    public LoginResponse signup(final SignupRequest signupRequest) {
+        Objects.requireNonNull(signupRequest, "signupRequest must not be null");
+
+        if (userRepository.existsByLoginId(signupRequest.loginId())) {
+            throw new BusinessException(ErrorCode.AUTH_DUPLICATE_LOGIN_ID);
+        }
+
+        final String encodedPassword = passwordEncoder.encode(signupRequest.password());
+        final User user = userRepository.save(
+                new User(signupRequest.loginId(), encodedPassword, null,
+                        signupRequest.nickname(), null, null, null));
+
+        final String accessToken = jwtProvider.createAccessToken(user.getId());
+        final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
+        saveRefreshToken(user.getId(), refreshTokenValue);
+
+        return new LoginResponse(accessToken, refreshTokenValue, false);
+    }
+
+    @Transactional
+    public LoginResponse login(final LoginRequest loginRequest) {
+        Objects.requireNonNull(loginRequest, "loginRequest must not be null");
+
+        final User user = userRepository.findByLoginId(loginRequest.loginId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS));
+
+        if (user.getPassword() == null
+                || !passwordEncoder.matches(loginRequest.password(), user.getPassword())) {
+            throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+        }
 
         final String accessToken = jwtProvider.createAccessToken(user.getId());
         final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
