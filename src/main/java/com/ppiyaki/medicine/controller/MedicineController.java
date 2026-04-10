@@ -64,7 +64,7 @@ public class MedicineController {
     public ResponseEntity<MedicineResponse> update(
             @AuthenticationPrincipal final Long userId,
             @PathVariable final Long medicineId,
-            @RequestBody final MedicineUpdateRequest medicineUpdateRequest
+            @Valid @RequestBody final MedicineUpdateRequest medicineUpdateRequest
     ) {
         final MedicineResponse medicineResponse = medicineService.update(userId, medicineId, medicineUpdateRequest);
         return ResponseEntity.ok(medicineResponse);
