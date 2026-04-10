@@ -1,5 +1,6 @@
 package com.ppiyaki.medicine.service;
 
+import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.controller.dto.MedicineCreateRequest;
 import com.ppiyaki.medicine.controller.dto.MedicineDeleteResponse;
@@ -19,16 +20,22 @@ import org.springframework.transaction.annotation.Transactional;
 public class MedicineService {
 
     private final MedicineRepository medicineRepository;
+    private final MedicationScheduleRepository medicationScheduleRepository;
     private final UserRepository userRepository;
     private final CareRelationRepository careRelationRepository;
 
     public MedicineService(
             final MedicineRepository medicineRepository,
+            final MedicationScheduleRepository medicationScheduleRepository,
             final UserRepository userRepository,
             final CareRelationRepository careRelationRepository
     ) {
-        this.medicineRepository = Objects.requireNonNull(medicineRepository, "medicineRepository must not be null");
-        this.userRepository = Objects.requireNonNull(userRepository, "userRepository must not be null");
+        this.medicineRepository = Objects.requireNonNull(medicineRepository,
+                "medicineRepository must not be null");
+        this.medicationScheduleRepository = Objects.requireNonNull(medicationScheduleRepository,
+                "medicationScheduleRepository must not be null");
+        this.userRepository = Objects.requireNonNull(userRepository,
+                "userRepository must not be null");
         this.careRelationRepository = Objects.requireNonNull(careRelationRepository,
                 "careRelationRepository must not be null");
     }
@@ -107,9 +114,11 @@ public class MedicineService {
         final Medicine medicine = findMedicineById(medicineId);
         validateAccess(userId, medicine.getOwnerId());
 
+        final int deletedScheduleCount = medicationScheduleRepository.countByMedicineId(medicineId);
+        medicationScheduleRepository.deleteByMedicineId(medicineId);
         medicineRepository.delete(medicine);
 
-        return new MedicineDeleteResponse(medicineId, 0);
+        return new MedicineDeleteResponse(medicineId, deletedScheduleCount);
     }
 
     private Medicine findMedicineById(final Long medicineId) {
@@ -152,6 +161,7 @@ public class MedicineService {
 
     private void validateCareRelation(final Long caregiverId, final Long seniorId) {
         careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(caregiverId, seniorId)
-                .orElseThrow(() -> new SecurityException("No active care relation between caregiver and senior"));
+                .orElseThrow(() -> new SecurityException(
+                        "No active care relation between caregiver and senior"));
     }
 }

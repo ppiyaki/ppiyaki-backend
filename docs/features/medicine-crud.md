@@ -147,7 +147,7 @@ last_reviewed: 2026-04-10
 
 ### 5-4) 데이터 흐름
 
-```
+```text
 Client → [Authorization: Bearer token]
        → MedicineController
        → MedicineService (소유자 검증 포함)
@@ -174,7 +174,7 @@ Client → [Authorization: Bearer token]
   - 목록 조회 → 200 + 본인 약물만 반환
   - 상세 조회 → 200
   - 수정 → 200 + 변경된 필드 검증
-  - 삭제 → 204
+  - 삭제 → 200 + `deletedScheduleCount` 검증
 - **Service 단위 테스트**: 소유자 검증 실패 시 예외 발생 케이스
 
 ## 8) 오픈 질문
