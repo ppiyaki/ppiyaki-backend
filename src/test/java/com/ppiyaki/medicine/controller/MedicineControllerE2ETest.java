@@ -11,13 +11,18 @@ import static org.hamcrest.Matchers.notNullValue;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.ppiyaki.medication.MedicationSchedule;
+import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
@@ -34,6 +39,9 @@ class MedicineControllerE2ETest {
 
     @LocalServerPort
     private int port;
+
+    @Autowired
+    private MedicationScheduleRepository medicationScheduleRepository;
 
     private static long kakaoIdSequence = 200000L;
 
@@ -179,6 +187,31 @@ class MedicineControllerE2ETest {
                 .statusCode(200)
                 .body("deletedMedicineId", is(medicineId))
                 .body("deletedScheduleCount", is(0));
+    }
+
+    @Test
+    @DisplayName("약물 삭제 시 연관 복약 일정도 cascade 삭제된다")
+    void delete_cascadeSchedules() {
+        // given
+        final String token = loginAsNewUser("캐스케이드유저");
+        final Integer medicineId = createMedicine(token, "캐스케이드약", 30, 20);
+
+        medicationScheduleRepository.save(
+                new MedicationSchedule(Long.valueOf(medicineId), LocalTime.of(8, 0),
+                        "1정", "DAILY", LocalDate.now(), null));
+        medicationScheduleRepository.save(
+                new MedicationSchedule(Long.valueOf(medicineId), LocalTime.of(20, 0),
+                        "1정", "DAILY", LocalDate.now(), null));
+
+        // when & then
+        RestAssured.given()
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .delete("/api/v1/medicines/" + medicineId)
+                .then()
+                .statusCode(200)
+                .body("deletedMedicineId", is(medicineId))
+                .body("deletedScheduleCount", is(2));
     }
 
     @Test
