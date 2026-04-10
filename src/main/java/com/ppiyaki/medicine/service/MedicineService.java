@@ -126,16 +126,23 @@ public class MedicineService {
                 .orElseThrow(() -> new IllegalArgumentException("Medicine not found: " + medicineId));
     }
 
+    private User findUserById(final Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+    }
+
     private Long resolveOwnerId(final Long userId, final Long seniorId) {
+        final User user = findUserById(userId);
+
         if (seniorId == null) {
+            if (user.getRole() == UserRole.CAREGIVER) {
+                throw new SecurityException("Caregiver must specify seniorId");
+            }
             return userId;
         }
 
-        final User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
-
         if (user.getRole() != UserRole.CAREGIVER) {
-            throw new IllegalArgumentException("Only caregivers can specify seniorId");
+            throw new SecurityException("Only caregivers can specify seniorId");
         }
 
         validateCareRelation(userId, seniorId);
@@ -143,8 +150,17 @@ public class MedicineService {
     }
 
     private Long resolveOwnerIdForRead(final Long userId, final Long seniorId) {
+        final User user = findUserById(userId);
+
         if (seniorId == null) {
+            if (user.getRole() == UserRole.CAREGIVER) {
+                throw new SecurityException("Caregiver must specify seniorId");
+            }
             return userId;
+        }
+
+        if (user.getRole() != UserRole.CAREGIVER) {
+            throw new SecurityException("Only caregivers can specify seniorId");
         }
 
         validateCareRelation(userId, seniorId);
