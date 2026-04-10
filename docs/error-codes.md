@@ -34,6 +34,8 @@
 |---|---|---|---|
 | `AUTH_001` | 401 | Invalid token | 유효하지 않은 토큰 |
 | `AUTH_002` | 401 | Token expired | 만료된 토큰 |
+| `AUTH_003` | 409 | Login ID already exists | loginId 중복 (회원가입 시) |
+| `AUTH_004` | 401 | Invalid login ID or password | 로그인 실패 (ID 또는 비밀번호 불일치) |
 
 ### User
 | 코드 | HTTP | 메시지 | 설명 |
