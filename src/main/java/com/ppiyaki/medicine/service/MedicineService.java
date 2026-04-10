@@ -1,5 +1,7 @@
 package com.ppiyaki.medicine.service;
 
+import com.ppiyaki.common.exception.BusinessException;
+import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.controller.dto.MedicineCreateRequest;
@@ -123,12 +125,14 @@ public class MedicineService {
 
     private Medicine findMedicineById(final Long medicineId) {
         return medicineRepository.findById(medicineId)
-                .orElseThrow(() -> new IllegalArgumentException("Medicine not found: " + medicineId));
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.MEDICINE_NOT_FOUND, "Medicine not found: " + medicineId));
     }
 
     private User findUserById(final Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
     }
 
     private Long resolveOwnerId(final Long userId, final Long seniorId) {
@@ -136,13 +140,13 @@ public class MedicineService {
 
         if (seniorId == null) {
             if (user.getRole() == UserRole.CAREGIVER) {
-                throw new SecurityException("Caregiver must specify seniorId");
+                throw new BusinessException(ErrorCode.CARE_RELATION_REQUIRED);
             }
             return userId;
         }
 
         if (user.getRole() != UserRole.CAREGIVER) {
-            throw new SecurityException("Only caregivers can specify seniorId");
+            throw new BusinessException(ErrorCode.CARE_RELATION_NOT_CAREGIVER);
         }
 
         validateCareRelation(userId, seniorId);
@@ -154,13 +158,13 @@ public class MedicineService {
 
         if (seniorId == null) {
             if (user.getRole() == UserRole.CAREGIVER) {
-                throw new SecurityException("Caregiver must specify seniorId");
+                throw new BusinessException(ErrorCode.CARE_RELATION_REQUIRED);
             }
             return userId;
         }
 
         if (user.getRole() != UserRole.CAREGIVER) {
-            throw new SecurityException("Only caregivers can specify seniorId");
+            throw new BusinessException(ErrorCode.CARE_RELATION_NOT_CAREGIVER);
         }
 
         validateCareRelation(userId, seniorId);
@@ -177,7 +181,6 @@ public class MedicineService {
 
     private void validateCareRelation(final Long caregiverId, final Long seniorId) {
         careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(caregiverId, seniorId)
-                .orElseThrow(() -> new SecurityException(
-                        "No active care relation between caregiver and senior"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
     }
 }
