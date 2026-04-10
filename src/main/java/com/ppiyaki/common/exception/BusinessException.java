@@ -7,12 +7,12 @@ public class BusinessException extends RuntimeException {
     private final ErrorCode errorCode;
 
     public BusinessException(final ErrorCode errorCode) {
-        super(errorCode.getMessage());
-        this.errorCode = Objects.requireNonNull(errorCode, "errorCode must not be null");
+        super(Objects.requireNonNull(errorCode, "errorCode must not be null").getMessage());
+        this.errorCode = errorCode;
     }
 
     public BusinessException(final ErrorCode errorCode, final String detailMessage) {
-        super(detailMessage);
+        super(Objects.requireNonNull(detailMessage, "detailMessage must not be null"));
         this.errorCode = Objects.requireNonNull(errorCode, "errorCode must not be null");
     }
 
