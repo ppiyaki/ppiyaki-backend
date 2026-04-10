@@ -4,6 +4,8 @@ import com.ppiyaki.common.auth.JwtProperties;
 import com.ppiyaki.common.auth.JwtProvider;
 import com.ppiyaki.common.auth.KakaoOAuthClient;
 import com.ppiyaki.common.auth.KakaoOAuthClient.KakaoUserInfo;
+import com.ppiyaki.common.exception.BusinessException;
+import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.user.OAuthIdentity;
 import com.ppiyaki.user.OAuthProvider;
 import com.ppiyaki.user.RefreshToken;
@@ -84,11 +86,11 @@ public class AuthService {
         Objects.requireNonNull(refreshTokenValue, "refreshTokenValue must not be null");
 
         final RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenValue)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid refresh token"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_INVALID_TOKEN));
 
         if (refreshToken.isExpired()) {
             refreshTokenRepository.delete(refreshToken);
-            throw new IllegalArgumentException("Refresh token expired");
+            throw new BusinessException(ErrorCode.AUTH_TOKEN_EXPIRED);
         }
 
         final Long userId = refreshToken.getUserId();
@@ -112,7 +114,7 @@ public class AuthService {
     public User findUserById(final Long userId) {
         Objects.requireNonNull(userId, "userId must not be null");
         return userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
     }
 
     private void saveRefreshToken(final Long userId, final String tokenValue) {
