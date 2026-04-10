@@ -20,6 +20,7 @@ import com.ppiyaki.user.repository.RefreshTokenRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -87,9 +88,14 @@ public class AuthService {
         }
 
         final String encodedPassword = passwordEncoder.encode(signupRequest.password());
-        final User user = userRepository.save(
-                new User(signupRequest.loginId(), encodedPassword, null,
-                        signupRequest.nickname(), null, null, null));
+        final User user;
+        try {
+            user = userRepository.save(
+                    new User(signupRequest.loginId(), encodedPassword, null,
+                            signupRequest.nickname(), null, null, null));
+        } catch (final DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.AUTH_DUPLICATE_LOGIN_ID);
+        }
 
         final String accessToken = jwtProvider.createAccessToken(user.getId());
         final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
