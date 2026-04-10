@@ -9,7 +9,9 @@ public enum ErrorCode {
 
     // Auth
     AUTH_INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_001", "Invalid token"), AUTH_TOKEN_EXPIRED(
-            HttpStatus.UNAUTHORIZED, "AUTH_002", "Token expired"),
+            HttpStatus.UNAUTHORIZED, "AUTH_002", "Token expired"), AUTH_DUPLICATE_LOGIN_ID(HttpStatus.CONFLICT,
+                    "AUTH_003", "Login ID already exists"), AUTH_INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED,
+                            "AUTH_004", "Invalid login ID or password"),
 
     // User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_001", "User not found"),

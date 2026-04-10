@@ -2,13 +2,17 @@ package com.ppiyaki.user.controller;
 
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.controller.dto.KakaoLoginRequest;
+import com.ppiyaki.user.controller.dto.LoginRequest;
 import com.ppiyaki.user.controller.dto.LoginResponse;
 import com.ppiyaki.user.controller.dto.LogoutRequest;
 import com.ppiyaki.user.controller.dto.RefreshRequest;
+import com.ppiyaki.user.controller.dto.SignupRequest;
 import com.ppiyaki.user.controller.dto.TokenResponse;
 import com.ppiyaki.user.controller.dto.UserMeResponse;
 import com.ppiyaki.user.service.AuthService;
+import jakarta.validation.Valid;
 import java.util.Objects;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +29,18 @@ public class AuthController {
 
     public AuthController(final AuthService authService) {
         this.authService = Objects.requireNonNull(authService, "authService must not be null");
+    }
+
+    @PostMapping("/auth/signup")
+    public ResponseEntity<LoginResponse> signup(@Valid @RequestBody final SignupRequest signupRequest) {
+        final LoginResponse loginResponse = authService.signup(signupRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(loginResponse);
+    }
+
+    @PostMapping("/auth/login")
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody final LoginRequest loginRequest) {
+        final LoginResponse loginResponse = authService.login(loginRequest);
+        return ResponseEntity.ok(loginResponse);
     }
 
     @PostMapping("/auth/kakao")
