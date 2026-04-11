@@ -5,7 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MedicationScheduleRepository extends JpaRepository<MedicationSchedule, Long> {
 
-    int countByMedicineId(final Long medicineId);
-
-    void deleteByMedicineId(final Long medicineId);
+    int deleteByMedicineId(final Long medicineId);
 }
