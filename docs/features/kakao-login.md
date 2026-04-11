@@ -180,9 +180,9 @@ last_reviewed: 2026-04-11
 - `users.password` nullable 전환 — `#17` 완료 여부 확인 필요 (타깃 스키마 기준이나 코드 갭 있음: 06-domain-model §7-16)
 
 ## 6) 작업 분할 (예상 PR 리스트)
-- [ ] PR 1: `feat(user)` Spring Security 뼈대 + JWT 유틸 + JwtAuthenticationFilter
-- [ ] PR 2: `feat(user)` KakaoOAuthClient 어댑터 + `/api/v1/auth/kakao` 엔드포인트 + user 조회/생성
-- [ ] PR 3: `feat(user)` Refresh/Logout + `/api/v1/users/me` + `@AuthenticationPrincipal` ArgumentResolver
+- [x] PR 1: `feat(user)` Spring Security 뼈대 + JWT 유틸 + JwtAuthenticationFilter
+- [x] PR 2: `feat(user)` `KakaoIdTokenVerifier`(OIDC JWKS 검증) + `/api/v1/auth/kakao` 엔드포인트 + user 조회/생성
+- [x] PR 3: `feat(user)` Refresh/Logout + `/api/v1/users/me` + `@AuthenticationPrincipal` ArgumentResolver
 - [ ] PR 4: `refactor(user)` `users.password` nullable 전환 (코드 갭 §7-16 일부)
 
 ## 7) 테스트 전략
