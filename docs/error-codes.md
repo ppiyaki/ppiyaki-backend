@@ -47,6 +47,12 @@
 |---|---|---|---|
 | `MEDICINE_001` | 404 | Medicine not found | 존재하지 않는 약물 |
 
+### Medication Schedule
+| 코드 | HTTP | 메시지 | 설명 |
+|---|---|---|---|
+| `SCHEDULE_001` | 404 | Schedule not found | 존재하지 않는 복약 일정 |
+| `SCHEDULE_002` | 400 | Schedule does not belong to this medicine | 일정이 해당 약물에 속하지 않음 |
+
 ### Care Relation
 | 코드 | HTTP | 메시지 | 설명 |
 |---|---|---|---|

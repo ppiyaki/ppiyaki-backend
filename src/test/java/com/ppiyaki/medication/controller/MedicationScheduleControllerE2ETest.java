@@ -1,0 +1,287 @@
+package com.ppiyaki.medication.controller;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.ppiyaki.medicine.Medicine;
+import com.ppiyaki.medicine.repository.MedicineRepository;
+import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+        "kakao.client-id=test-client-id",
+        "kakao.client-secret=test-client-secret",
+        "kakao.token-uri=http://localhost:19879/oauth/token",
+        "kakao.user-info-uri=http://localhost:19879/v2/user/me"
+})
+class MedicationScheduleControllerE2ETest {
+
+    private static final int WIREMOCK_PORT = 19879;
+    private static WireMockServer wireMockServer;
+
+    @LocalServerPort
+    private int port;
+
+    @Autowired
+    private MedicineRepository medicineRepository;
+
+    private static long kakaoIdSequence = 400000L;
+
+    @BeforeAll
+    static void startWireMock() {
+        wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().port(WIREMOCK_PORT));
+        wireMockServer.start();
+    }
+
+    @AfterAll
+    static void stopWireMock() {
+        wireMockServer.stop();
+    }
+
+    @BeforeEach
+    void setUp() {
+        RestAssured.port = port;
+        wireMockServer.resetAll();
+        stubKakaoTokenEndpoint();
+    }
+
+    @Test
+    @DisplayName("복약 일정 등록 시 201 응답과 생성된 일정 정보를 반환한다")
+    void create_success() {
+        // given
+        final String token = loginAsNewUser("일정등록유저");
+        final Integer medicineId = createMedicine(token, "타이레놀정", 30, 25);
+
+        // when & then
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + token)
+                .body("""
+                        {
+                            "scheduledTime": "08:00",
+                            "dosage": "1정",
+                            "daysOfWeek": "DAILY",
+                            "startDate": "2026-04-11"
+                        }
+                        """)
+                .when()
+                .post("/api/v1/medicines/" + medicineId + "/schedules")
+                .then()
+                .statusCode(201)
+                .body("id", notNullValue())
+                .body("medicineId", is(medicineId))
+                .body("scheduledTime", is("08:00:00"))
+                .body("dosage", is("1정"))
+                .body("daysOfWeek", is("DAILY"));
+    }
+
+    @Test
+    @DisplayName("약물의 복약 일정 목록을 조회한다")
+    void readAll_success() {
+        // given
+        final String token = loginAsNewUser("목록유저");
+        final Integer medicineId = createMedicine(token, "비타민C", 60, 50);
+        createSchedule(token, medicineId, "08:00", "1정");
+        createSchedule(token, medicineId, "20:00", "1정");
+
+        // when & then
+        RestAssured.given()
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .get("/api/v1/medicines/" + medicineId + "/schedules")
+                .then()
+                .statusCode(200)
+                .body("responses", hasSize(2));
+    }
+
+    @Test
+    @DisplayName("복약 일정 상세 조회에 성공한다")
+    void readById_success() {
+        // given
+        final String token = loginAsNewUser("상세유저");
+        final Integer medicineId = createMedicine(token, "오메가3", 90, 80);
+        final Integer scheduleId = createSchedule(token, medicineId, "09:00", "2정");
+
+        // when & then
+        RestAssured.given()
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .get("/api/v1/medicines/" + medicineId + "/schedules/" + scheduleId)
+                .then()
+                .statusCode(200)
+                .body("dosage", is("2정"))
+                .body("scheduledTime", is("09:00:00"));
+    }
+
+    @Test
+    @DisplayName("복약 일정을 수정한다")
+    void update_success() {
+        // given
+        final String token = loginAsNewUser("수정유저");
+        final Integer medicineId = createMedicine(token, "아스피린", 20, 15);
+        final Integer scheduleId = createSchedule(token, medicineId, "08:00", "1정");
+
+        // when & then
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + token)
+                .body("""
+                        {
+                            "scheduledTime": "09:30",
+                            "dosage": "2정"
+                        }
+                        """)
+                .when()
+                .patch("/api/v1/medicines/" + medicineId + "/schedules/" + scheduleId)
+                .then()
+                .statusCode(200)
+                .body("scheduledTime", is("09:30:00"))
+                .body("dosage", is("2정"));
+    }
+
+    @Test
+    @DisplayName("복약 일정을 삭제한다")
+    void delete_success() {
+        // given
+        final String token = loginAsNewUser("삭제유저");
+        final Integer medicineId = createMedicine(token, "삭제약", 10, 5);
+        final Integer scheduleId = createSchedule(token, medicineId, "12:00", "1정");
+
+        // when & then
+        RestAssured.given()
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .delete("/api/v1/medicines/" + medicineId + "/schedules/" + scheduleId)
+                .then()
+                .statusCode(204);
+    }
+
+    @Test
+    @DisplayName("다른 사용자의 약물에 일정 등록 시 403 응답")
+    void create_forbidden() {
+        // given
+        final String ownerToken = loginAsNewUser("소유자");
+        final Integer medicineId = createMedicine(ownerToken, "소유자약", 10, 5);
+
+        final String otherToken = loginAsNewUser("다른유저");
+
+        // when & then
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + otherToken)
+                .body("""
+                        {
+                            "scheduledTime": "08:00",
+                            "dosage": "1정"
+                        }
+                        """)
+                .when()
+                .post("/api/v1/medicines/" + medicineId + "/schedules")
+                .then()
+                .statusCode(403);
+    }
+
+    private String loginAsNewUser(final String nickname) {
+        final long kakaoId = kakaoIdSequence++;
+        stubKakaoUserInfoEndpoint(kakaoId, nickname);
+
+        return RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "code": "test-auth-code",
+                            "redirectUri": "http://localhost/callback"
+                        }
+                        """)
+                .when()
+                .post("/api/v1/auth/kakao")
+                .then()
+                .extract()
+                .path("accessToken");
+    }
+
+    private Integer createMedicine(final String token, final String name,
+            final int totalAmount, final int remainingAmount) {
+        final Integer userId = RestAssured.given()
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .get("/api/v1/users/me")
+                .then()
+                .extract()
+                .path("id");
+
+        final Medicine medicine = medicineRepository.save(
+                new Medicine(Long.valueOf(userId), null, name, totalAmount, remainingAmount, null));
+        return medicine.getId().intValue();
+    }
+
+    private Integer createSchedule(
+            final String token,
+            final Integer medicineId,
+            final String time,
+            final String dosage
+    ) {
+        return RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + token)
+                .body("""
+                        {
+                            "scheduledTime": "%s",
+                            "dosage": "%s"
+                        }
+                        """.formatted(time, dosage))
+                .when()
+                .post("/api/v1/medicines/" + medicineId + "/schedules")
+                .then()
+                .extract()
+                .path("id");
+    }
+
+    private void stubKakaoTokenEndpoint() {
+        wireMockServer.stubFor(post(urlPathEqualTo("/oauth/token"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                                {
+                                    "access_token": "kakao-access-token-mock",
+                                    "token_type": "bearer",
+                                    "expires_in": 3600
+                                }
+                                """)));
+    }
+
+    private void stubKakaoUserInfoEndpoint(final Long kakaoId, final String nickname) {
+        wireMockServer.stubFor(get(urlPathEqualTo("/v2/user/me"))
+                .withHeader("Authorization", equalTo("Bearer kakao-access-token-mock"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                                {
+                                    "id": %d,
+                                    "kakao_account": {
+                                        "profile": {
+                                            "nickname": "%s"
+                                        }
+                                    }
+                                }
+                                """.formatted(kakaoId, nickname))));
+    }
+}

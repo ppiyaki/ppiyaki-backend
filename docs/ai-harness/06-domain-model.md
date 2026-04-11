@@ -183,7 +183,7 @@
 | end_date | date nullable | 복약 종료일. NULL이면 무기한 |
 | created_at | timestamp | `CreatedTimeEntity` |
 
-> **코드 갭**: 현재 코드에는 `days_of_week`, `start_date`, `end_date`가 없음. 추적: §7-16.
+> **코드 갭 해소됨**: `days_of_week`, `start_date`, `end_date` 추가 완료 (#16). 현재 코드와 타깃 스키마 일치.
 
 ### medication_logs (`@Table(name = "medication_logs")`, extends `CreatedTimeEntity`)
 복약 이행 기록. 일자별 × 스케줄별 1행.
