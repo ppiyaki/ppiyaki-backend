@@ -9,6 +9,9 @@ related_prs: []
 last_reviewed: 2026-04-09
 ---
 
+> **프론트엔드 팀 전달 사항은 §5-4 참조**
+---
+
 # 카카오 로그인
 
 ## 1) 개요 (What / Why)
@@ -18,9 +21,25 @@ last_reviewed: 2026-04-09
 - 이 기능이 없으면 Medicine/Prescription 등 소유자 기반 기능이 실사용자 흐름으로 검증되지 않는다.
 
 ## 2) 사용자 시나리오
-1. **신규 보호자 가입**: 사용자가 앱 첫 실행 시 "카카오로 시작하기"를 누르면, 카카오 인증 후 우리 서버가 JWT를 발급하고 `users` + `oauth_identities`를 생성한다.
-2. **기존 사용자 재로그인**: 기존 카카오 계정으로 다시 로그인 시, `oauth_identities`에서 매칭되는 user를 찾아 JWT만 재발급한다.
-3. **로컬 계정이 있는 사용자의 카카오 연결(선택)**: 이번 범위에서는 **제외**. 별도 feature로 분리.
+
+### SC-1: 신규 사용자 카카오 가입 + 온보딩
+1. 사용자가 앱에서 "카카오로 시작하기"를 탭한다.
+2. 카카오 SDK가 인가코드를 발급한다.
+3. 앱이 인가코드를 백엔드 `POST /api/v1/auth/kakao`에 전달한다.
+4. 백엔드가 카카오 서버와 토큰 교환 → 사용자 정보 조회 → 신규 유저 자동 생성(`users` + `oauth_identities`) → JWT 발급.
+5. 응답에 `isOnboarded=false` 포함 → 앱이 온보딩 화면(닉네임/역할 입력)으로 이동.
+6. 온보딩 완료 후 메인 화면 진입. (온보딩 API 자체는 별도 feature)
+
+### SC-2: 기존 사용자 카카오 로그인
+1. 사용자가 "카카오로 시작하기" 탭 → 인가코드 → 백엔드 전달.
+2. 백엔드가 기존 `oauth_identities` 매칭 → JWT 발급.
+3. `isOnboarded=true` → 앱이 메인 화면으로 이동.
+
+### SC-3: 토큰 만료 시 갱신
+1. access token 만료 → 앱이 refresh token으로 `POST /api/v1/auth/refresh` 호출.
+2. 새 access token + refresh token 발급(rotation).
+
+> 로컬 계정이 있는 사용자의 카카오 연결(선택)은 이번 범위에서 **제외**. 별도 feature로 분리.
 
 ## 3) 요구사항
 
@@ -31,7 +50,8 @@ last_reviewed: 2026-04-09
 - [ ] `oauth_identities`에 `(provider=KAKAO, provider_user_id)` 조회
   - 존재: 해당 `user_id`로 JWT 발급
   - 미존재: 신규 `users` 생성(nickname은 카카오 닉네임, 기타는 null) 후 `oauth_identities` 생성
-- [ ] JWT 응답 형식: `{ accessToken, refreshToken, userId, role }`
+- [ ] JWT 응답 형식: `{ accessToken, refreshToken, isOnboarded }`
+- [ ] 온보딩 미완료 판별: `users.role IS NULL` → `isOnboarded=false`
 - [ ] Refresh 엔드포인트로 access token 재발급
 - [ ] 로그아웃 엔드포인트(서버에서 refresh 토큰 무효화)
 
@@ -67,7 +87,7 @@ last_reviewed: 2026-04-09
 ### 5-2) API 엔드포인트
 | Method | Path | 설명 | 인증 | Req | Res |
 |---|---|---|---|---|---|
-| POST | /api/v1/auth/kakao | Authorization Code → 서버 JWT | 없음 | `{ code, redirectUri }` | `{ accessToken, refreshToken, userId, role }` |
+| POST | /api/v1/auth/kakao | Authorization Code → 서버 JWT | 없음 | `{ code, redirectUri }` | `{ accessToken, refreshToken, isOnboarded }` |
 | POST | /api/v1/auth/refresh | Refresh token 재발급 | 없음 | `{ refreshToken }` | `{ accessToken, refreshToken }` |
 | POST | /api/v1/auth/logout | 로그아웃 (refresh 무효화) | 필수 | `{ refreshToken }` | 204 |
 | GET | /api/v1/users/me | 현재 로그인 유저 정보 | 필수 | - | UserResponse |
@@ -80,30 +100,62 @@ last_reviewed: 2026-04-09
 - `infra/auth/KakaoOAuthClient` 어댑터 분리
 - 설정: `application-local.yml`/`application.yml` 또는 환경변수로 `kakao.client-id`, `kakao.client-secret`, `kakao.redirect-uri`
 
-### 5-4) 데이터 흐름
+### 5-4) 데이터 흐름 (프론트엔드 팀 공유용)
+
 ```
-Client
-  │  1) 카카오 로그인 SDK → authorization code
-  ▼
-Server /api/v1/auth/kakao (code)
-  │  2) POST kauth.kakao.com/oauth/token
-  ▼
-Kakao Auth
-  │  3) access_token
-  ▼
-Server
-  │  4) GET kapi.kakao.com/v2/user/me
-  ▼
-Kakao API
-  │  5) { id, properties.nickname, ... }
-  ▼
-Server
-  │  6) oauth_identities 조회 → user 매칭 or 생성
-  │  7) JWT(access+refresh) 발급
-  ▼
-Client
-  │  { accessToken, refreshToken, userId, role }
+┌──────┐       ┌──────────┐       ┌──────────┐       ┌──────────┐
+│  App │       │ 카카오SDK  │       │ Backend  │       │카카오 서버│
+└──┬───┘       └────┬─────┘       └────┬─────┘       └────┬─────┘
+   │  1. 로그인 탭   │                  │                   │
+   │───────────────>│                  │                   │
+   │                │  2. 카카오 인증   │                   │
+   │                │─────────────────────────────────────>│
+   │                │  3. 인가코드 반환  │                   │
+   │                │<─────────────────────────────────────│
+   │ 4. 인가코드     │                  │                   │
+   │<───────────────│                  │                   │
+   │                                   │                   │
+   │  5. POST /api/v1/auth/kakao       │                   │
+   │     { code, redirectUri }         │                   │
+   │──────────────────────────────────>│                   │
+   │                                   │ 6. 토큰 교환       │
+   │                                   │  POST /oauth/token│
+   │                                   │─────────────────>│
+   │                                   │  access_token     │
+   │                                   │<─────────────────│
+   │                                   │ 7. 사용자 정보     │
+   │                                   │  GET /v2/user/me  │
+   │                                   │─────────────────>│
+   │                                   │  kakao_user_id    │
+   │                                   │<─────────────────│
+   │                                   │                   │
+   │                                   │ 8. DB 조회/생성    │
+   │                                   │  oauth_identities │
+   │                                   │  → User 매칭/생성  │
+   │                                   │                   │
+   │                                   │ 9. JWT 발급       │
+   │                                   │  access + refresh │
+   │                                   │                   │
+   │  10. 응답                          │                   │
+   │  { accessToken, refreshToken,     │                   │
+   │    isOnboarded }                  │                   │
+   │<──────────────────────────────────│                   │
+   │                                   │                   │
+   │  [isOnboarded=false]              │                   │
+   │  → 온보딩 화면 (닉네임/역할 입력)  │                   │
+   │  [isOnboarded=true]               │                   │
+   │  → 메인 화면                      │                   │
 ```
+
+#### 프론트엔드 요약
+| 항목 | 내용 |
+|---|---|
+| 앱이 할 일 | 카카오 SDK로 **인가코드(authorization code)** 만 받아서 백엔드에 전달. access token 교환은 백엔드가 처리. |
+| 로그인 요청 | `POST /api/v1/auth/kakao` body: `{ "code": "인가코드", "redirectUri": "카카오에 등록한 redirect URI" }` |
+| 응답 분기 | `isOnboarded=false` → 온보딩 화면, `isOnboarded=true` → 메인 화면 |
+| 인증 헤더 | 이후 API 호출 시 `Authorization: Bearer {accessToken}` |
+| 토큰 갱신 | 401 응답 시 `POST /api/v1/auth/refresh` body: `{ "refreshToken": "..." }` → 새 토큰 쌍 수신 |
+| 로그아웃 | `POST /api/v1/auth/logout` (인증 필수) body: `{ "refreshToken": "..." }` → 204 |
 
 ### 5-5) DB 마이그레이션
 - `oauth_identities` 테이블은 #19에서 이미 생성됨. 추가 마이그레이션 불필요.
@@ -124,12 +176,19 @@ Client
 
 | # | 질문 | 선택지 | 담당/기한 |
 |---|---|---|---|
-| Q1 | refresh token 저장 위치 | (a) DB 테이블 `refresh_tokens` (b) Redis | @goohong / 구현 전 |
-| Q2 | JWT 시크릿 관리 | (a) GitHub Secrets + env (b) NCP 시크릿 매니저 | @goohong / 구현 전 |
-| Q3 | 카카오 신규 가입 시 default role | (a) CAREGIVER 고정 (b) 미결정(null) 후 온보딩에서 선택 | @goohong (프론트 협의) |
-| Q4 | logout 시 access token 블랙리스트 | (a) 없음(refresh만 무효화) (b) 단기 블랙리스트 | @goohong / 구현 전 |
+| ~~Q1~~ | ~~refresh token 저장 위치~~ | ~~(a) DB 테이블~~ | **결정됨** → §9 참조 |
+| ~~Q2~~ | ~~JWT 시크릿 관리~~ | ~~(a) GitHub Secrets + env~~ | **결정됨** → §9 참조 |
+| ~~Q3~~ | ~~카카오 신규 가입 시 default role~~ | ~~(b) null 후 온보딩에서 선택~~ | **결정됨** → §9 참조 |
+| ~~Q4~~ | ~~logout 시 access token 블랙리스트~~ | ~~(a) 없음(refresh만 무효화)~~ | **결정됨** → §9 참조 |
 | Q5 | 에러 응답 포맷 | `docs/features/` 다른 spec과 공유할 공통 ErrorCode | 프론트팀 합의 필요 |
 
 ## 9) 결정 로그
 - 2026-04-09: 초안 작성 (status=draft). 카카오 외 IdP, 로컬 계정 연결은 out-of-scope.
 - 2026-04-09: Refresh/Logout 포함 범위 확정. 역할 선택 UI는 온보딩 feature로 분리.
+- 2026-04-09: OAuth 플로우는 **하이브리드** 채택 — 앱이 카카오 SDK로 인가코드 획득, 백엔드가 토큰 교환. 순수 서버 redirect는 모바일 앱에 부적합.
+- 2026-04-09: Q3 결정 — 신규 가입 시 role=NULL. 온보딩에서 닉네임/역할 입력. `users.role IS NULL`로 온보딩 미완료 판별 (`isOnboarded` 응답 필드).
+- 2026-04-09: 기존 `OAuthIdentity`/`OAuthProvider(KAKAO)` 엔티티 재사용 확정.
+- 2026-04-09: 프론트엔드 연동 플로우 다이어그램 추가 (§5-4).
+- 2026-04-09: Q1 결정 — refresh token은 DB 테이블(`refresh_tokens`)에 저장.
+- 2026-04-09: Q2 결정 — JWT 시크릿은 GitHub Secrets + 환경변수로 관리.
+- 2026-04-09: Q4 결정 — logout 시 access token 블랙리스트 없음. refresh만 무효화. access token은 만료(30분)까지 유효.

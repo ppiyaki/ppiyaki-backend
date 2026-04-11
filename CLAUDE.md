@@ -24,6 +24,7 @@
 - `docs/ai-harness/06-domain-model.md` — **도메인 모델 / ERD / 유비쿼터스 랭귀지 (구현 전 반드시 확인)**
 - `docs/ai-harness/07-testing-guide.md` — 레이어별 테스트 전략, BDD 스타일, E2E 필수 룰
 - `docs/ai-harness/08-code-conventions.md` — 코드 컨벤션 (final/DTO/엔티티/Lombok/null 검증)
+- `docs/ai-harness/09-notion-api-spec.md` — **Notion API 명세 연동 가이드 (API 변경 시 반드시 확인)**
 - `docs/decisions/` — ADR (횡단 결정의 영속 이력)
 - `docs/features/` — Feature Spec (기능 단위 living 명세서)
 
@@ -77,6 +78,11 @@
 - 계층 침범 금지 (Controller → Repository 직접 호출 등).
 - PR scope와 패키지 경로가 일치해야 함 (예: `scope:medication` ↔ `com.ppiyaki.medication.*`).
 
+### Notion API 명세 동기화
+- API 엔드포인트를 **추가/수정/삭제**한 PR에서 Notion API 명세 DB도 **같은 작업 안에서** 갱신한다.
+- 상세 가이드: `docs/ai-harness/09-notion-api-spec.md`
+- `NOTION_API_KEY`는 `.env` 또는 `.claude/settings.local.json`에만 저장. **커밋 금지.**
+
 ### 보안 / 민감정보
 - 시크릿(API 키/토큰/비밀번호) 하드코딩 금지.
 - 의료정보(복약 기록, 건강 프로필)는 로그/코멘트/스크린샷에 원문 노출 금지.
@@ -110,13 +116,25 @@ gh pr edit <num> --add-label "type:*,scope:*,ai-generated"
 gh pr merge <num> --squash --delete-branch
 ```
 
-## 7) AI 에이전트 자기 점검 (PR 생성 직후)
-PR을 만든 직후 다음 4개를 머릿속으로 떠올려라. 떠올리지 않았다면 PR 생성이 끝난 것이 아니다.
+## 7) AI 에이전트 자기 점검
+
+### 7-1) 구현 완료 후, PR 생성 전 (필수)
+Feature Spec(`docs/features/*.md`)이 있는 기능이면, PR을 만들기 **전에** 다음을 수행한다:
+1. Feature Spec의 `§3 기능 요구사항` 체크박스를 **한 줄씩** 읽는다.
+2. 각 항목에 대해 **구현 코드가 존재하는지** 확인한다 (파일명/메서드명 수준).
+3. 구현이 누락된 항목이 있으면:
+   - 의존성 부재(엔티티/테이블 미존재 등)로 불가능한 경우 → **사용자에게 보고**하고 스펙 수정 또는 구현 방향을 확인받는다.
+   - 단순 누락이면 → 구현을 완료한다.
+4. **하드코딩/stub으로 대체하여 "일단 넘어가기" 금지.** 스펙과 코드가 1:1 대응되지 않으면 PR을 만들지 않는다.
+
+### 7-2) PR 생성 직후
+PR을 만든 직후 다음을 떠올려라. 떠올리지 않았다면 PR 생성이 끝난 것이 아니다.
 - [ ] `type:*` 라벨 1개 부여
 - [ ] `scope:*` 라벨 1개 부여
 - [ ] AI 보조/생성이면 `ai-generated` 라벨 부여
 - [ ] 보호 영역 변경 시 `needs-human-review` 라벨 부여
 - [ ] PR body를 `gh pr create --body`로 새로 쓴 경우, 템플릿의 AI 체크리스트 블록을 수동으로 채운다 (`--body`는 템플릿을 덮어씀).
+- [ ] API 엔드포인트 변경이 있으면 **Notion API 명세 DB 갱신** 완료 (`docs/ai-harness/09-notion-api-spec.md` 참조)
 
 ## 8) 릴리즈 (develop → main)
 - 릴리즈 PR 제목: `release: vX.Y.Z` 또는 `release: YYYY-MM-DD`
