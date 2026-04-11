@@ -12,10 +12,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-        "kakao.client-id=test-client-id",
-        "kakao.client-secret=test-client-secret",
-        "kakao.token-uri=http://localhost:19878/oauth/token",
-        "kakao.user-info-uri=http://localhost:19878/v2/user/me"
+        "kakao.oidc.issuer=https://kauth.kakao.com",
+        "kakao.oidc.jwks-uri=http://localhost:19878/.well-known/jwks.json",
+        "kakao.oidc.audience=test-app-key"
 })
 class LocalAuthE2ETest {
 
