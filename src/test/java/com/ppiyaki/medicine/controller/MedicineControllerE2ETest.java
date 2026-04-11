@@ -13,6 +13,8 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
+import com.ppiyaki.user.CareRelation;
+import com.ppiyaki.user.repository.CareRelationRepository;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import java.time.LocalDate;
@@ -25,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "kakao.client-id=test-client-id",
@@ -42,6 +45,12 @@ class MedicineControllerE2ETest {
 
     @Autowired
     private MedicationScheduleRepository medicationScheduleRepository;
+
+    @Autowired
+    private CareRelationRepository careRelationRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private static long kakaoIdSequence = 200000L;
 
@@ -222,6 +231,99 @@ class MedicineControllerE2ETest {
                 .get("/api/v1/medicines")
                 .then()
                 .statusCode(401);
+    }
+
+    @Test
+    @DisplayName("연동된 보호자는 시니어 약물을 seniorId 지정으로 등록/조회할 수 있다")
+    void caregiver_linked_canManageSeniorMedicines() {
+        // given
+        final String seniorToken = loginAsNewUser("시니어연동");
+        final Long seniorUserId = readUserId(seniorToken);
+
+        final String caregiverToken = loginAsNewUser("보호자연동");
+        final Long caregiverUserId = readUserId(caregiverToken);
+        setUserRoleToCaregiver(caregiverUserId);
+
+        careRelationRepository.save(new CareRelation(seniorUserId, caregiverUserId, "INVITE-OK"));
+
+        // when & then: caregiver creates medicine for senior
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + caregiverToken)
+                .body("""
+                        {
+                            "seniorId": %d,
+                            "name": "시니어약",
+                            "totalAmount": 30,
+                            "remainingAmount": 25
+                        }
+                        """.formatted(seniorUserId))
+                .when()
+                .post("/api/v1/medicines")
+                .then()
+                .statusCode(201)
+                .body("name", is("시니어약"));
+
+        // and: caregiver can read senior's medicine list
+        RestAssured.given()
+                .header("Authorization", "Bearer " + caregiverToken)
+                .when()
+                .get("/api/v1/medicines?seniorId=" + seniorUserId)
+                .then()
+                .statusCode(200)
+                .body("responses", hasSize(1));
+    }
+
+    @Test
+    @DisplayName("미연동 보호자가 시니어 약물에 접근 시 403 응답")
+    void caregiver_notLinked_isForbidden() {
+        // given
+        final String seniorToken = loginAsNewUser("시니어미연동");
+        final Long seniorUserId = readUserId(seniorToken);
+
+        final String caregiverToken = loginAsNewUser("보호자미연동");
+        final Long caregiverUserId = readUserId(caregiverToken);
+        setUserRoleToCaregiver(caregiverUserId);
+
+        // when & then: create 시도 → 403
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + caregiverToken)
+                .body("""
+                        {
+                            "seniorId": %d,
+                            "name": "거부약",
+                            "totalAmount": 10,
+                            "remainingAmount": 10
+                        }
+                        """.formatted(seniorUserId))
+                .when()
+                .post("/api/v1/medicines")
+                .then()
+                .statusCode(403);
+
+        // and: list 조회도 403
+        RestAssured.given()
+                .header("Authorization", "Bearer " + caregiverToken)
+                .when()
+                .get("/api/v1/medicines?seniorId=" + seniorUserId)
+                .then()
+                .statusCode(403);
+    }
+
+    private Long readUserId(final String token) {
+        final Integer userId = RestAssured.given()
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .get("/api/v1/users/me")
+                .then()
+                .extract()
+                .path("id");
+        return Long.valueOf(userId);
+    }
+
+    private void setUserRoleToCaregiver(final Long userId) {
+        jdbcTemplate.update("UPDATE users SET role = ? WHERE id = ?", "CAREGIVER", userId);
     }
 
     private Integer createMedicine(
