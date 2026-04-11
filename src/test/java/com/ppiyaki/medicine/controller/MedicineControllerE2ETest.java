@@ -226,6 +226,7 @@ class MedicineControllerE2ETest {
     @Test
     @DisplayName("인증 없이 약물 API 호출 시 401 응답")
     void unauthorized() {
+        // when & then
         RestAssured.given()
                 .when()
                 .get("/api/v1/medicines")
