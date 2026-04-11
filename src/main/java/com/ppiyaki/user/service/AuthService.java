@@ -2,8 +2,8 @@ package com.ppiyaki.user.service;
 
 import com.ppiyaki.common.auth.JwtProperties;
 import com.ppiyaki.common.auth.JwtProvider;
-import com.ppiyaki.common.auth.KakaoOAuthClient;
-import com.ppiyaki.common.auth.KakaoOAuthClient.KakaoUserInfo;
+import com.ppiyaki.common.auth.KakaoIdTokenVerifier;
+import com.ppiyaki.common.auth.KakaoIdTokenVerifier.KakaoIdTokenPayload;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.user.OAuthIdentity;
@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthService {
 
-    private final KakaoOAuthClient kakaoOAuthClient;
+    private final KakaoIdTokenVerifier kakaoIdTokenVerifier;
     private final JwtProvider jwtProvider;
     private final JwtProperties jwtProperties;
     private final PasswordEncoder passwordEncoder;
@@ -37,7 +37,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
 
     public AuthService(
-            final KakaoOAuthClient kakaoOAuthClient,
+            final KakaoIdTokenVerifier kakaoIdTokenVerifier,
             final JwtProvider jwtProvider,
             final JwtProperties jwtProperties,
             final PasswordEncoder passwordEncoder,
@@ -45,7 +45,8 @@ public class AuthService {
             final OAuthIdentityRepository oAuthIdentityRepository,
             final RefreshTokenRepository refreshTokenRepository
     ) {
-        this.kakaoOAuthClient = Objects.requireNonNull(kakaoOAuthClient, "kakaoOAuthClient must not be null");
+        this.kakaoIdTokenVerifier = Objects.requireNonNull(kakaoIdTokenVerifier,
+                "kakaoIdTokenVerifier must not be null");
         this.jwtProvider = Objects.requireNonNull(jwtProvider, "jwtProvider must not be null");
         this.jwtProperties = Objects.requireNonNull(jwtProperties, "jwtProperties must not be null");
         this.passwordEncoder = Objects.requireNonNull(passwordEncoder, "passwordEncoder must not be null");
@@ -60,15 +61,13 @@ public class AuthService {
     public LoginResponse loginWithKakao(final KakaoLoginRequest kakaoLoginRequest) {
         Objects.requireNonNull(kakaoLoginRequest, "kakaoLoginRequest must not be null");
 
-        final String kakaoAccessToken = kakaoOAuthClient.fetchAccessToken(kakaoLoginRequest.code(), kakaoLoginRequest
-                .redirectUri());
-        final KakaoUserInfo kakaoUserInfo = kakaoOAuthClient.fetchUserInfo(kakaoAccessToken);
+        final KakaoIdTokenPayload payload = kakaoIdTokenVerifier.verify(kakaoLoginRequest.idToken());
 
-        final String providerUserId = String.valueOf(kakaoUserInfo.id());
+        final String providerUserId = payload.sub();
         final User user = oAuthIdentityRepository
                 .findByProviderAndProviderUserId(OAuthProvider.KAKAO, providerUserId)
                 .map(identity -> userRepository.findById(identity.getUserId()).orElseThrow())
-                .orElseGet(() -> createNewUser(kakaoUserInfo, providerUserId));
+                .orElseGet(() -> createNewUser(payload, providerUserId));
 
         final String accessToken = jwtProvider.createAccessToken(user.getId());
         final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
@@ -125,9 +124,9 @@ public class AuthService {
         return new LoginResponse(accessToken, refreshTokenValue, isOnboarded);
     }
 
-    private User createNewUser(final KakaoUserInfo kakaoUserInfo, final String providerUserId) {
+    private User createNewUser(final KakaoIdTokenPayload payload, final String providerUserId) {
         final User user = userRepository.save(
-                new User(null, null, null, kakaoUserInfo.nickname(), null, null, null));
+                new User(null, null, null, payload.nickname(), null, null, null));
 
         oAuthIdentityRepository.save(new OAuthIdentity(user.getId(), OAuthProvider.KAKAO, providerUserId));
 

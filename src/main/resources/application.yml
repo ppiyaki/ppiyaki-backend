@@ -29,7 +29,7 @@ jwt:
   refresh-token-expiry: ${JWT_REFRESH_EXPIRY:1209600000}
 
 kakao:
-  client-id: ${KAKAO_CLIENT_ID:local-kakao-client-id}
-  client-secret: ${KAKAO_CLIENT_SECRET:local-kakao-client-secret}
-  token-uri: ${KAKAO_TOKEN_URI:https://kauth.kakao.com/oauth/token}
-  user-info-uri: ${KAKAO_USER_INFO_URI:https://kapi.kakao.com/v2/user/me}
+  oidc:
+    issuer: ${KAKAO_OIDC_ISSUER:https://kauth.kakao.com}
+    jwks-uri: ${KAKAO_OIDC_JWKS_URI:https://kauth.kakao.com/.well-known/jwks.json}
+    audience: ${KAKAO_OIDC_AUDIENCE:local-kakao-app-key}
