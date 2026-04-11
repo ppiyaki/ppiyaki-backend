@@ -116,8 +116,7 @@ public class MedicineService {
         final Medicine medicine = findMedicineById(medicineId);
         validateAccess(userId, medicine.getOwnerId());
 
-        final int deletedScheduleCount = medicationScheduleRepository.countByMedicineId(medicineId);
-        medicationScheduleRepository.deleteByMedicineId(medicineId);
+        final int deletedScheduleCount = medicationScheduleRepository.deleteByMedicineId(medicineId);
         medicineRepository.delete(medicine);
 
         return new MedicineDeleteResponse(medicineId, deletedScheduleCount);
