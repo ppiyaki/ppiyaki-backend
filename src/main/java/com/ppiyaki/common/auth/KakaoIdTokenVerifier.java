@@ -53,7 +53,9 @@ public class KakaoIdTokenVerifier {
     }
 
     public KakaoIdTokenPayload verify(final String idToken) {
-        Objects.requireNonNull(idToken, "idToken must not be null");
+        if (idToken == null || idToken.isBlank()) {
+            throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
+        }
 
         try {
             final Locator<Key> keyLocator = this::resolveKey;
@@ -69,7 +71,7 @@ public class KakaoIdTokenVerifier {
             final String nickname = claims.get(NICKNAME_CLAIM, String.class);
 
             return new KakaoIdTokenPayload(sub, nickname);
-        } catch (final JwtException e) {
+        } catch (final JwtException | IllegalArgumentException e) {
             throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN);
         }
     }
