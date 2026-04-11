@@ -450,7 +450,7 @@ erDiagram
 | 7-17 | `caregiver_senior_mappings` → `care_relations` | 테이블 rename + `deleted_at` soft delete 도입 |
 | 7-18 | `Pet` 공통 시간 엔티티 상속 | `Pet.java`가 `BaseTimeEntity`를 상속하도록 변경해 `created_at`/`updated_at` 추가 |
 | 7-19 | 신규 엔티티 구현 | `oauth_identities`, `dur_checks`, `device_tokens`, `medication_reminders`, `reports` 엔티티 클래스 신설 |
-| 7-20 | `medication_schedules` 필드 확장 | `days_of_week`, `start_date`, `end_date` 추가 |
+| ~~7-20~~ | ~~`medication_schedules` 필드 확장~~ | ~~`days_of_week`, `start_date`, `end_date` 추가~~ ✅ 해소됨 (§5 반영) |
 | 7-21 | `medication_logs` 필드 확장 | `confirmed_by_user_id` 추가 |
 | 7-22 | `medicines` 소유 관계 | `owner_id` 추가, `prescription_id` nullable 전환 |
 

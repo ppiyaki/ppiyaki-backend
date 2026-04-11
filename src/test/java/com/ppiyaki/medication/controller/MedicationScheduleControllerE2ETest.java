@@ -13,6 +13,8 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
+import com.ppiyaki.user.CareRelation;
+import com.ppiyaki.user.repository.CareRelationRepository;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.AfterAll;
@@ -40,6 +42,9 @@ class MedicationScheduleControllerE2ETest {
 
     @Autowired
     private MedicineRepository medicineRepository;
+
+    @Autowired
+    private CareRelationRepository careRelationRepository;
 
     private static long kakaoIdSequence = 400000L;
 
@@ -173,6 +178,48 @@ class MedicationScheduleControllerE2ETest {
     }
 
     @Test
+    @DisplayName("연동된 보호자는 시니어 약물에 대한 일정 등록/조회에 성공한다")
+    void caregiver_canAccessSeniorSchedules() {
+        // given
+        final String seniorToken = loginAsNewUser("시니어");
+        final Long seniorUserId = readUserId(seniorToken);
+        final Integer medicineId = createMedicine(seniorToken, "시니어약", 30, 20);
+
+        final String caregiverToken = loginAsNewUser("보호자");
+        final Long caregiverUserId = readUserId(caregiverToken);
+
+        careRelationRepository.save(new CareRelation(seniorUserId, caregiverUserId, "INVITE"));
+
+        // when & then: caregiver create
+        final Integer scheduleId = RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + caregiverToken)
+                .body("""
+                        {
+                            "scheduledTime": "07:30",
+                            "dosage": "1정",
+                            "daysOfWeek": "DAILY"
+                        }
+                        """)
+                .when()
+                .post("/api/v1/medicines/" + medicineId + "/schedules")
+                .then()
+                .statusCode(201)
+                .body("medicineId", is(medicineId))
+                .extract()
+                .path("id");
+
+        // and: caregiver can read it back
+        RestAssured.given()
+                .header("Authorization", "Bearer " + caregiverToken)
+                .when()
+                .get("/api/v1/medicines/" + medicineId + "/schedules/" + scheduleId)
+                .then()
+                .statusCode(200)
+                .body("dosage", is("1정"));
+    }
+
+    @Test
     @DisplayName("다른 사용자의 약물에 일정 등록 시 403 응답")
     void create_forbidden() {
         // given
@@ -218,6 +265,14 @@ class MedicationScheduleControllerE2ETest {
 
     private Integer createMedicine(final String token, final String name,
             final int totalAmount, final int remainingAmount) {
+        final Long userId = readUserId(token);
+
+        final Medicine medicine = medicineRepository.save(
+                new Medicine(userId, null, name, totalAmount, remainingAmount, null));
+        return medicine.getId().intValue();
+    }
+
+    private Long readUserId(final String token) {
         final Integer userId = RestAssured.given()
                 .header("Authorization", "Bearer " + token)
                 .when()
@@ -225,10 +280,7 @@ class MedicationScheduleControllerE2ETest {
                 .then()
                 .extract()
                 .path("id");
-
-        final Medicine medicine = medicineRepository.save(
-                new Medicine(Long.valueOf(userId), null, name, totalAmount, remainingAmount, null));
-        return medicine.getId().intValue();
+        return Long.valueOf(userId);
     }
 
     private Integer createSchedule(

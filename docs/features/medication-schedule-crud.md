@@ -1,11 +1,11 @@
 ---
 feature: 복약 일정 등록/조회/수정/삭제
 slug: medication-schedule-crud
-status: draft
+status: in-review
 owner: @goohong
 scope: medication
 related_issues: []
-related_prs: []
+related_prs: [91]
 last_reviewed: 2026-04-11
 ---
 
@@ -38,14 +38,14 @@ last_reviewed: 2026-04-11
 ## 3) 요구사항
 
 ### 기능 요구사항
-- [ ] 약물에 복약 일정을 등록할 수 있다 (scheduledTime, dosage 필수)
-- [ ] 등록 시 medicineId가 존재하는지 검증
-- [ ] 등록 시 해당 약물의 소유자(또는 연동된 보호자)인지 검증
-- [ ] 약물별 복약 일정 목록 조회 (페이징 없이 전체 반환)
-- [ ] 복약 일정 단건 상세 조회
-- [ ] 복약 일정 수정 (scheduledTime, dosage, daysOfWeek, startDate, endDate)
-- [ ] 복약 일정 삭제
-- [ ] 소유자 또는 연동된 보호자가 아닌 사용자의 접근 시 403 응답
+- [x] 약물에 복약 일정을 등록할 수 있다 (scheduledTime, dosage 필수)
+- [x] 등록 시 medicineId가 존재하는지 검증
+- [x] 등록 시 해당 약물의 소유자(또는 연동된 보호자)인지 검증
+- [x] 약물별 복약 일정 목록 조회 (페이징 없이 전체 반환)
+- [x] 복약 일정 단건 상세 조회
+- [x] 복약 일정 수정 (scheduledTime, dosage, daysOfWeek, startDate, endDate)
+- [x] 복약 일정 삭제
+- [x] 소유자 또는 연동된 보호자가 아닌 사용자의 접근 시 403 응답
 
 ### 비기능 요구사항
 - daysOfWeek는 "MON,TUE,WED" 또는 "DAILY" 형식의 문자열
@@ -150,7 +150,7 @@ Client → [Authorization: Bearer token]
 - 없음. `medication_schedules` 테이블과 `MedicationSchedule.java` 엔티티가 이미 타깃 스키마와 일치.
 
 ## 6) 작업 분할 (예상 PR 리스트)
-- [ ] PR 1: `feat(medication)` MedicationScheduleService + MedicationScheduleController (CRUD 5개) + DTO + E2E 테스트
+- [x] PR 1 (#91): `feat(medication)` MedicationScheduleService + MedicationScheduleController (CRUD 5개) + DTO + E2E 테스트
 
 ## 7) 테스트 전략
 - **E2E (RestAssured)**:
