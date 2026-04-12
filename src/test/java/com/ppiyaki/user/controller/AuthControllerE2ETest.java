@@ -3,6 +3,7 @@ package com.ppiyaki.user.controller;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -40,6 +41,7 @@ class AuthControllerE2ETest {
 
     private static WireMockServer wireMockServer;
     private static KeyPair keyPair;
+    private static KeyPair attackerKeyPair;
     private static String jwksJson;
 
     @LocalServerPort
@@ -50,6 +52,7 @@ class AuthControllerE2ETest {
         wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().port(WIREMOCK_PORT));
         wireMockServer.start();
         keyPair = Jwts.SIG.RS256.keyPair().build();
+        attackerKeyPair = Jwts.SIG.RS256.keyPair().build();
         jwksJson = buildJwksJson((RSAPublicKey) keyPair.getPublic(), TEST_KID);
     }
 
@@ -195,6 +198,71 @@ class AuthControllerE2ETest {
                 .statusCode(401);
     }
 
+    @Test
+    @DisplayName("만료된 카카오 ID Token으로 로그인 시도하면 401")
+    void kakaoLogin_expiredToken_returns401() {
+        // given - exp가 10초 전
+        final Date longAgo = new Date(System.currentTimeMillis() - TOKEN_EXPIRY_MILLIS);
+        final Date tenSecondsAgo = new Date(System.currentTimeMillis() - 10_000L);
+        final String expiredIdToken = buildIdToken(keyPair, TEST_KID, TEST_ISSUER, TEST_AUDIENCE,
+                "33333", "만료유저", longAgo, tenSecondsAgo);
+
+        // when & then
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "idToken": "%s"
+                        }
+                        """.formatted(expiredIdToken))
+                .when()
+                .post("/api/v1/auth/kakao")
+                .then()
+                .statusCode(401)
+                .body("error.code", is("AUTH_001"));
+    }
+
+    @Test
+    @DisplayName("공격자 키로 위조 서명된 ID Token은 401로 거부된다")
+    void kakaoLogin_forgedSignature_returns401() {
+        // given - JWKS에는 키페어 공개키만 등록되어 있는데 attackerKeyPair 개인키로 서명
+        final Date now = new Date();
+        final Date expiry = new Date(now.getTime() + TOKEN_EXPIRY_MILLIS);
+        final String forgedIdToken = buildIdToken(attackerKeyPair, TEST_KID, TEST_ISSUER, TEST_AUDIENCE,
+                "44444", "공격자", now, expiry);
+
+        // when & then
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "idToken": "%s"
+                        }
+                        """.formatted(forgedIdToken))
+                .when()
+                .post("/api/v1/auth/kakao")
+                .then()
+                .statusCode(401)
+                .body("error.code", is("AUTH_001"));
+    }
+
+    @Test
+    @DisplayName("idToken 필드가 누락된 요청은 인증 실패로 거부된다")
+    void kakaoLogin_missingIdToken_rejected() {
+        // given & when
+        final int statusCode = RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("{}")
+                .when()
+                .post("/api/v1/auth/kakao")
+                .then()
+                .extract()
+                .statusCode();
+
+        // then - 400(유효성 검증) 또는 401(인증 실패) 둘 다 허용 (Security 설정에 따라 다름)
+        assertThat(statusCode).isIn(400, 401);
+    }
+
     private void stubJwksEndpoint() {
         wireMockServer.stubFor(get(urlPathEqualTo("/.well-known/jwks.json"))
                 .willReturn(aResponse()
@@ -206,15 +274,28 @@ class AuthControllerE2ETest {
     private static String buildIdToken(final String sub, final String nickname) {
         final Date now = new Date();
         final Date expiry = new Date(now.getTime() + TOKEN_EXPIRY_MILLIS);
+        return buildIdToken(keyPair, TEST_KID, TEST_ISSUER, TEST_AUDIENCE, sub, nickname, now, expiry);
+    }
+
+    private static String buildIdToken(
+            final KeyPair signingKeyPair,
+            final String kid,
+            final String issuer,
+            final String audience,
+            final String sub,
+            final String nickname,
+            final Date issuedAt,
+            final Date expiry
+    ) {
         return Jwts.builder()
-                .header().keyId(TEST_KID).and()
-                .issuer(TEST_ISSUER)
-                .audience().add(TEST_AUDIENCE).and()
+                .header().keyId(kid).and()
+                .issuer(issuer)
+                .audience().add(audience).and()
                 .subject(sub)
                 .claim("nickname", nickname)
-                .issuedAt(now)
+                .issuedAt(issuedAt)
                 .expiration(expiry)
-                .signWith(keyPair.getPrivate(), Jwts.SIG.RS256)
+                .signWith(signingKeyPair.getPrivate(), Jwts.SIG.RS256)
                 .compact();
     }
 
