@@ -1,13 +1,15 @@
 ---
 feature: LLM 텍스트 채팅 API
 slug: llm-chat
-status: draft
+status: deprecated
 owner: @qkrehgus02
 scope: chat
 related_issues: [36]
 related_prs: []
 last_reviewed: 2026-04-09
 ---
+
+> **⚠️ Superseded**: 이 문서의 stateless `/api/v1/chat` 엔드포인트는 세션 기반 multi-turn 채팅으로 대체되었습니다. 현재 구현은 [`docs/features/chat-session.md`](chat-session.md)를 참조하세요.
 
 # LLM 텍스트 채팅 API
 

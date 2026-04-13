@@ -53,6 +53,7 @@ last_reviewed: 2026-04-10
 - 기존 `chat` 컨텍스트에 추가. 이번 이슈에서는 엔티티 없음 (stateless).
 
 ### 5-2) API 엔드포인트
+
 | Method | Path | 설명 | 인증 | Req | Res |
 |---|---|---|---|---|---|
 | POST | /api/v1/tts | 텍스트 → 음성(mp3) 변환 | 없음 | `TtsRequest` (JSON) | mp3 바이너리 (audio/mpeg) |
@@ -77,7 +78,7 @@ last_reviewed: 2026-04-10
 - 실패 처리: TTS 호출 실패 시 500 반환
 
 ### 5-4) 데이터 흐름
-```
+```text
 Client → POST /api/v1/tts (JSON)
        → TtsController
        → TtsService

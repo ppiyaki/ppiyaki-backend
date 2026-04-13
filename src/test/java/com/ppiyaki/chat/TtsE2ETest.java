@@ -1,6 +1,7 @@
 package com.ppiyaki.chat;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -8,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.ppiyaki.chat.service.TtsService;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import io.restassured.response.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,14 +38,17 @@ class TtsE2ETest {
         final byte[] audioBytes = new byte[]{1, 2, 3, 4, 5};
         when(ttsService.synthesize(anyString())).thenReturn(audioBytes);
 
-        // when & then
-        given()
+        // when
+        final Response response = given()
                 .contentType(ContentType.JSON)
                 .body("{\"text\": \"아스피린은 공복에 복용을 피하세요.\"}")
                 .when()
-                .post("/api/v1/tts")
-                .then()
+                .post("/api/v1/tts");
+
+        // then
+        response.then()
                 .statusCode(200)
                 .header("Content-Type", equalTo("audio/mpeg"));
+        assertThat(response.asByteArray()).isEqualTo(audioBytes);
     }
 }

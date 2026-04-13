@@ -20,8 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/v1/chat/sessions")
+@RequiredArgsConstructor
 public class ChatSessionController {
 
     private final ChatSessionService chatSessionService;
@@ -36,7 +36,7 @@ public class ChatSessionController {
     @PostMapping("/{sessionId}/messages")
     public ResponseEntity<ChatMessageResponse> sendMessage(
             @PathVariable final Long sessionId,
-            @RequestBody @Valid final ChatMessageRequest chatMessageRequest) {
+            @Valid @RequestBody final ChatMessageRequest chatMessageRequest) {
         final String response = chatSessionService.sendMessage(sessionId, chatMessageRequest.message());
         return ResponseEntity.ok(new ChatMessageResponse(response));
     }

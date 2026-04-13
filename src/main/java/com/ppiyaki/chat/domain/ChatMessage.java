@@ -42,6 +42,9 @@ public class ChatMessage extends CreatedTimeEntity {
         Objects.requireNonNull(session, "session must not be null");
         Objects.requireNonNull(role, "role must not be null");
         Objects.requireNonNull(content, "content must not be null");
+        if (content.isBlank()) {
+            throw new IllegalArgumentException("content must not be blank");
+        }
         this.session = session;
         this.role = role;
         this.content = content;

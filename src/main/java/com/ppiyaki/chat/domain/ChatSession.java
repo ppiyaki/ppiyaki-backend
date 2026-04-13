@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,6 +27,12 @@ public class ChatSession extends BaseTimeEntity {
     }
 
     public boolean isExpired(final LocalDateTime now, final long expirationMinutes) {
-        return getUpdatedAt().plusMinutes(expirationMinutes).isBefore(now);
+        Objects.requireNonNull(now, "now must not be null");
+        Objects.requireNonNull(getUpdatedAt(), "updatedAt must not be null");
+        if (expirationMinutes < 0) {
+            throw new IllegalArgumentException("expirationMinutes must be >= 0");
+        }
+        final LocalDateTime expiry = getUpdatedAt().plusMinutes(expirationMinutes);
+        return !now.isBefore(expiry);
     }
 }

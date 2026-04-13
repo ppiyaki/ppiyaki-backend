@@ -11,7 +11,7 @@
 2. PR 생성 (base: `develop`)
 3. **PR 생성 직후 즉시(같은 작업 단계에서) 아래를 모두 수행한다. 이 단계를 건너뛴 PR은 리뷰 대상이 아니다.**
    - [ ] `type:*` 라벨 1개 부여 (`type:feat` `type:fix` `type:refactor` `type:chore` `type:docs` `type:test` `type:style`)
-   - [ ] `scope:*` 라벨 1개 부여 (화이트리스트: `user` `pet` `prescription` `medicine` `medication` `health` `infra`)
+   - [ ] `scope:*` 라벨 1개 부여 (화이트리스트: `user` `pet` `prescription` `medicine` `medication` `health` `infra` `chat`)
    - [ ] AI가 작성/보조한 PR이면 `ai-generated` 라벨 부여
    - [ ] 보호 영역(`docs/ai-harness/01-harness-spec.md` §6) 변경 시 `needs-human-review` 라벨 부여
    - [ ] PR 본문이 `.github/PULL_REQUEST_TEMPLATE.md`를 덮어쓴 경우 AI 체크리스트 블록을 수동으로 다시 채워 넣는다 (`gh pr create --body`는 템플릿을 무시함).

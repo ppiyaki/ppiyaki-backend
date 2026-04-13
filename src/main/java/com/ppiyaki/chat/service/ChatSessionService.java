@@ -7,6 +7,7 @@ import com.ppiyaki.chat.repository.ChatMessageRepository;
 import com.ppiyaki.chat.repository.ChatSessionRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -33,11 +34,23 @@ public class ChatSessionService {
         return chatSessionRepository.save(ChatSession.create());
     }
 
-    @Transactional
     public String sendMessage(final Long sessionId, final String message) {
         Objects.requireNonNull(sessionId, "sessionId must not be null");
         Objects.requireNonNull(message, "message must not be null");
 
+        final List<Message> promptMessages = loadSessionAndBuildPrompt(sessionId, message);
+
+        final String response = chatClient.prompt(new Prompt(promptMessages))
+                .call()
+                .content();
+
+        saveMessages(sessionId, message, response);
+
+        return response;
+    }
+
+    @Transactional(readOnly = true)
+    protected List<Message> loadSessionAndBuildPrompt(final Long sessionId, final String message) {
         final ChatSession chatSession = chatSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new SessionNotFoundException(sessionId));
 
@@ -45,19 +58,20 @@ public class ChatSessionService {
             throw new SessionExpiredException(sessionId);
         }
 
-        final List<ChatMessage> recentMessages = chatMessageRepository.findTop20BySessionOrderByCreatedAtDesc(
+        final List<ChatMessage> recentMessages = chatMessageRepository.findTop20BySessionOrderByCreatedAtDescIdDesc(
                 chatSession);
 
-        final List<Message> promptMessages = buildPromptMessages(recentMessages, message);
+        return buildPromptMessages(recentMessages, message);
+    }
 
-        final String response = chatClient.prompt(new Prompt(promptMessages))
-                .call()
-                .content();
+    @Transactional
+    protected void saveMessages(final Long sessionId, final String userMessage, final String assistantResponse) {
+        final ChatSession chatSession = chatSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new SessionNotFoundException(sessionId));
 
-        chatMessageRepository.save(new ChatMessage(chatSession, MessageRole.USER, message));
-        chatMessageRepository.save(new ChatMessage(chatSession, MessageRole.ASSISTANT, response));
-
-        return response;
+        chatMessageRepository.save(new ChatMessage(chatSession, MessageRole.USER, userMessage));
+        chatMessageRepository.save(new ChatMessage(chatSession, MessageRole.ASSISTANT, assistantResponse));
+        chatSessionRepository.save(chatSession);
     }
 
     private List<Message> buildPromptMessages(
@@ -66,7 +80,7 @@ public class ChatSessionService {
         final List<Message> messages = new ArrayList<>();
 
         final List<ChatMessage> chronological = new ArrayList<>(recentMessages);
-        java.util.Collections.reverse(chronological);
+        Collections.reverse(chronological);
 
         for (final ChatMessage chatMessage : chronological) {
             if (chatMessage.getRole() == MessageRole.USER) {

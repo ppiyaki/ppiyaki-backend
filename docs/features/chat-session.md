@@ -54,6 +54,7 @@ last_reviewed: 2026-04-10
 기존 `chat` 컨텍스트에 엔티티 2개 신설:
 
 **chat_sessions**
+
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
@@ -61,6 +62,7 @@ last_reviewed: 2026-04-10
 | updated_at | timestamp | `BaseTimeEntity` — 마지막 활동 시각으로 만료 판단에 사용 |
 
 **chat_messages**
+
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
@@ -72,6 +74,7 @@ last_reviewed: 2026-04-10
 > 인증 도입 전이므로 `user_id`는 보류. 인증 추가 시 `chat_sessions`에 `user_id` 컬럼 추가 예정.
 
 ### 5-2) API 엔드포인트
+
 | Method | Path | 설명 | 인증 | Req | Res |
 |---|---|---|---|---|---|
 | POST | /api/v1/chat/sessions | 세션 생성 | 없음 | 없음 | `ChatSessionResponse` |
@@ -107,7 +110,7 @@ last_reviewed: 2026-04-10
 - 히스토리 메시지를 Spring AI의 user/assistant 메시지로 변환해 프롬프트에 포함
 
 ### 5-4) 데이터 흐름
-```
+```text
 Client → POST /api/v1/chat/sessions
        → 세션 생성 → ChatSessionResponse 반환
 

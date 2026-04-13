@@ -57,6 +57,7 @@ last_reviewed: 2026-04-10
 - 음성 파일은 저장하지 않고 변환 후 폐기.
 
 ### 5-2) API 엔드포인트
+
 | Method | Path | 설명 | 인증 | Req | Res |
 |---|---|---|---|---|---|
 | POST | /api/v1/stt | 음성 파일 → 텍스트 변환 | 없음 | `MultipartFile` (form-data) | `SttResponse` |
@@ -80,7 +81,7 @@ last_reviewed: 2026-04-10
 - 실패 처리: Whisper 호출 실패 시 500 반환
 
 ### 5-4) 데이터 흐름
-```
+```text
 Mobile App → 마이크 녹음 → 음성 파일 생성
            → POST /api/v1/stt (multipart/form-data)
            → SttController
