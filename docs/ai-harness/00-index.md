@@ -17,6 +17,7 @@
 - `docs/ai-harness/06-domain-model.md`: 도메인 모델/유비쿼터스 랭귀지/ERD (기능 구현의 공통 참조 기준)
 - `docs/ai-harness/07-testing-guide.md`: 레이어별 테스트 전략 및 필수 기준
 - `docs/ai-harness/08-code-conventions.md`: 코드 컨벤션 (final/어노테이션/DTO/엔티티/Lombok/null 검증 등)
+- `docs/ai-harness/09-notion-api-spec.md`: Notion API 명세 연동 가이드 (DB 구조, 갱신 규칙, NOTION_API_KEY 관리)
 
 ## 3-1) 관련 자산
 - `prompts/`: 재사용 프롬프트 저장소 (운영 규칙은 `05-prompt-ops.md`)
@@ -24,6 +25,7 @@
 - `.github/PULL_REQUEST_TEMPLATE.md`, `.github/ISSUE_TEMPLATE/task.md`: PR/이슈 템플릿
 - `docs/features/`: 기능 단위 living 명세서 (Feature Spec). 프로세스는 `02-agent-workflow.md §9`
 - `docs/decisions/`: Architecture Decision Records (ADR). 횡단 결정의 영속 이력
+- `docs/error-codes.md`: API 에러 코드 목록 (프론트엔드 참고용, ErrorCode enum과 동기화)
 - `CLAUDE.md`: Claude Code 세션 자동 로드 룰 요약
 
 ## 4) 정책 우선순위

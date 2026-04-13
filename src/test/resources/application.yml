@@ -15,3 +15,14 @@ spring:
       chat:
         options:
           model: gpt-4o-mini
+
+jwt:
+  secret: test-secret-key-must-be-at-least-32-bytes-long-for-hmac
+  access-token-expiry: 1800000
+  refresh-token-expiry: 1209600000
+
+kakao:
+  oidc:
+    issuer: https://kauth.kakao.com
+    jwks-uri: https://kauth.kakao.com/.well-known/jwks.json
+    audience: test-kakao-app-key

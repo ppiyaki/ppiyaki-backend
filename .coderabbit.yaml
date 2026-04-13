@@ -1,0 +1,33 @@
+# CodeRabbit Configuration
+# https://docs.coderabbit.ai/guides/configure-coderabbit
+
+language: ko-KR
+
+reviews:
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - develop
+      - main
+  path_instructions:
+    - path: "src/main/java/**"
+      instructions: |
+        이 프로젝트는 Spring Boot 3.5 + Java 21 백엔드입니다.
+        코드 컨벤션(docs/ai-harness/08-code-conventions.md)을 기준으로 리뷰합니다:
+        - 메서드 매개변수와 지역변수는 반드시 final
+        - DTO는 record, 필드 2개 이상이면 멀티라인
+        - 엔티티는 @NoArgsConstructor(access = PROTECTED), @Setter 금지
+        - null 검증은 DTO(@NotNull/@NotBlank)와 Domain(Objects.requireNonNull) 이중 수행
+        - 계층 침범 금지 (Controller → Repository 직접 호출 등)
+    - path: "src/test/java/**"
+      instructions: |
+        테스트는 BDD 스타일(given/when/then)을 따릅니다.
+        신규 엔드포인트는 성공 케이스 E2E(RestAssured) 테스트가 필수입니다.
+    - path: "docs/**"
+      instructions: |
+        문서 변경 시 docs/ai-harness/00-index.md 인덱스와의 정합성을 확인합니다.
+        엔티티 변경이 있으면 06-domain-model.md도 같은 PR에서 갱신되어야 합니다.
+
+chat:
+  auto_reply: true
