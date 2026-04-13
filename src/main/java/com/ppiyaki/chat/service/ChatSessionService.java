@@ -30,15 +30,17 @@ public class ChatSessionService {
     private final ChatClient chatClient;
 
     @Transactional
-    public ChatSession createSession() {
-        return chatSessionRepository.save(ChatSession.create());
+    public ChatSession createSession(final Long userId) {
+        Objects.requireNonNull(userId, "userId must not be null");
+        return chatSessionRepository.save(ChatSession.create(userId));
     }
 
-    public String sendMessage(final Long sessionId, final String message) {
+    public String sendMessage(final Long userId, final Long sessionId, final String message) {
+        Objects.requireNonNull(userId, "userId must not be null");
         Objects.requireNonNull(sessionId, "sessionId must not be null");
         Objects.requireNonNull(message, "message must not be null");
 
-        final List<Message> promptMessages = loadSessionAndBuildPrompt(sessionId, message);
+        final List<Message> promptMessages = loadSessionAndBuildPrompt(userId, sessionId, message);
 
         final String response = chatClient.prompt(new Prompt(promptMessages))
                 .call()
@@ -50,9 +52,14 @@ public class ChatSessionService {
     }
 
     @Transactional(readOnly = true)
-    protected List<Message> loadSessionAndBuildPrompt(final Long sessionId, final String message) {
+    protected List<Message> loadSessionAndBuildPrompt(
+            final Long userId, final Long sessionId, final String message) {
         final ChatSession chatSession = chatSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new SessionNotFoundException(sessionId));
+
+        if (!chatSession.isOwnedBy(userId)) {
+            throw new SessionAccessDeniedException(sessionId);
+        }
 
         if (chatSession.isExpired(LocalDateTime.now(), EXPIRATION_MINUTES)) {
             throw new SessionExpiredException(sessionId);

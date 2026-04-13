@@ -7,9 +7,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.ppiyaki.chat.service.SttService;
+import com.ppiyaki.common.auth.JwtProvider;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.core.io.Resource;
@@ -26,9 +28,15 @@ class SttE2ETest {
     @MockitoBean
     private SttService sttService;
 
+    @Autowired
+    private JwtProvider jwtProvider;
+
+    private String accessToken;
+
     @BeforeEach
     void setUp() {
         RestAssured.port = port;
+        accessToken = jwtProvider.createAccessToken(1L);
     }
 
     @Test
@@ -39,6 +47,7 @@ class SttE2ETest {
 
         // when & then
         given()
+                .header("Authorization", "Bearer " + accessToken)
                 .multiPart("file", "test.wav", new byte[]{1, 2, 3}, "audio/wav")
                 .when()
                 .post("/api/v1/stt")

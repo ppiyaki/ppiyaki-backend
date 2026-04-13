@@ -1,6 +1,7 @@
 package com.ppiyaki.chat.domain;
 
 import com.ppiyaki.common.entity.BaseTimeEntity;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -22,8 +23,18 @@ public class ChatSession extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    public static ChatSession create() {
-        return new ChatSession();
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
+    public static ChatSession create(final Long userId) {
+        Objects.requireNonNull(userId, "userId must not be null");
+        final ChatSession chatSession = new ChatSession();
+        chatSession.userId = userId;
+        return chatSession;
+    }
+
+    public boolean isOwnedBy(final Long userId) {
+        return this.userId.equals(userId);
     }
 
     public boolean isExpired(final LocalDateTime now, final long expirationMinutes) {

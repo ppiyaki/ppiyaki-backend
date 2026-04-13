@@ -7,11 +7,13 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.ppiyaki.chat.service.TtsService;
+import com.ppiyaki.common.auth.JwtProvider;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.TestPropertySource;
@@ -27,9 +29,15 @@ class TtsE2ETest {
     @MockitoBean
     private TtsService ttsService;
 
+    @Autowired
+    private JwtProvider jwtProvider;
+
+    private String accessToken;
+
     @BeforeEach
     void setUp() {
         RestAssured.port = port;
+        accessToken = jwtProvider.createAccessToken(1L);
     }
 
     @Test
@@ -40,6 +48,7 @@ class TtsE2ETest {
 
         // when
         final Response response = given()
+                .header("Authorization", "Bearer " + accessToken)
                 .contentType(ContentType.JSON)
                 .body("{\"text\": \"아스피린은 공복에 복용을 피하세요.\"}")
                 .when()

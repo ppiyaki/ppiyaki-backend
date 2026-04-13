@@ -290,9 +290,8 @@ AI 채팅 세션. 마지막 활동 후 5분 경과 시 만료.
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
+| user_id | bigint FK | `users.id` 참조. 세션 소유자 |
 | created_at / updated_at | timestamp | `BaseTimeEntity`. `updated_at`으로 만료 판단 |
-
-> 인증 도입 시 `user_id` 컬럼 추가 예정.
 
 ### chat_messages (`@Table(name = "chat_messages")`, extends `CreatedTimeEntity`)
 세션 내 개별 메시지. 사용자 입력과 LLM 응답을 모두 저장.
@@ -328,6 +327,7 @@ erDiagram
     users ||--o{ device_tokens : "has"
     users ||--o{ reports : "target"
     users ||--o| pets : "owns (senior only)"
+    users ||--o{ chat_sessions : "owns"
     chat_sessions ||--o{ chat_messages : "contains"
 
     users {
@@ -461,6 +461,7 @@ erDiagram
     }
     chat_sessions {
         bigint id PK
+        bigint user_id FK
         timestamp created_at
         timestamp updated_at
     }

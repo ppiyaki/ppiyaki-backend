@@ -1,5 +1,6 @@
 package com.ppiyaki.chat;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -10,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.ppiyaki.chat.controller.ChatSessionController;
 import com.ppiyaki.chat.domain.ChatSession;
 import com.ppiyaki.chat.service.ChatSessionService;
+import com.ppiyaki.chat.service.SessionAccessDeniedException;
 import com.ppiyaki.chat.service.SessionExpiredException;
 import com.ppiyaki.chat.service.SessionNotFoundException;
 import org.junit.jupiter.api.Test;
@@ -36,9 +38,9 @@ class ChatSessionControllerTest {
     @Test
     void createSession_201_응답과_세션ID를_반환한다() throws Exception {
         // given
-        final ChatSession chatSession = ChatSession.create();
+        final ChatSession chatSession = ChatSession.create(1L);
         ReflectionTestUtils.setField(chatSession, "id", 1L);
-        when(chatSessionService.createSession()).thenReturn(chatSession);
+        when(chatSessionService.createSession(any())).thenReturn(chatSession);
 
         // when & then
         mockMvc.perform(post("/api/v1/chat/sessions"))
@@ -49,7 +51,7 @@ class ChatSessionControllerTest {
     @Test
     void sendMessage_정상_요청시_200_응답을_반환한다() throws Exception {
         // given
-        when(chatSessionService.sendMessage(anyLong(), anyString()))
+        when(chatSessionService.sendMessage(any(), anyLong(), anyString()))
                 .thenReturn("아스피린은 공복에 복용을 피하세요.");
 
         // when & then
@@ -63,7 +65,7 @@ class ChatSessionControllerTest {
     @Test
     void sendMessage_존재하지_않는_세션이면_404를_반환한다() throws Exception {
         // given
-        when(chatSessionService.sendMessage(anyLong(), anyString()))
+        when(chatSessionService.sendMessage(any(), anyLong(), anyString()))
                 .thenThrow(new SessionNotFoundException(999L));
 
         // when & then
@@ -77,7 +79,7 @@ class ChatSessionControllerTest {
     @Test
     void sendMessage_만료된_세션이면_410을_반환한다() throws Exception {
         // given
-        when(chatSessionService.sendMessage(anyLong(), anyString()))
+        when(chatSessionService.sendMessage(any(), anyLong(), anyString()))
                 .thenThrow(new SessionExpiredException(1L));
 
         // when & then
@@ -85,6 +87,20 @@ class ChatSessionControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"message\": \"hello\"}"))
                 .andExpect(status().isGone())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    void sendMessage_다른_사용자의_세션이면_403을_반환한다() throws Exception {
+        // given
+        when(chatSessionService.sendMessage(any(), anyLong(), anyString()))
+                .thenThrow(new SessionAccessDeniedException(1L));
+
+        // when & then
+        mockMvc.perform(post("/api/v1/chat/sessions/1/messages")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\": \"hello\"}"))
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error").exists());
     }
 

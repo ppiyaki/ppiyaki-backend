@@ -40,9 +40,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/v1/auth/**",
-                                "/api/v1/chat/**",
-                                "/api/v1/stt",
-                                "/api/v1/tts",
                                 "/h2-console/**",
                                 "/actuator/health"
                         ).permitAll()
