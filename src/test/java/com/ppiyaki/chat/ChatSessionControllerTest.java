@@ -14,6 +14,8 @@ import com.ppiyaki.chat.service.ChatSessionService;
 import com.ppiyaki.chat.service.SessionAccessDeniedException;
 import com.ppiyaki.chat.service.SessionExpiredException;
 import com.ppiyaki.chat.service.SessionNotFoundException;
+import com.ppiyaki.chat.service.SttService;
+import com.ppiyaki.chat.service.TtsService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -34,6 +36,12 @@ class ChatSessionControllerTest {
 
     @MockitoBean
     private ChatSessionService chatSessionService;
+
+    @MockitoBean
+    private SttService sttService;
+
+    @MockitoBean
+    private TtsService ttsService;
 
     @Test
     void createSession_201_응답과_세션ID를_반환한다() throws Exception {

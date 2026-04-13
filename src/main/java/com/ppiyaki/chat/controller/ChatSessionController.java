@@ -8,10 +8,14 @@ import com.ppiyaki.chat.service.ChatSessionService;
 import com.ppiyaki.chat.service.SessionAccessDeniedException;
 import com.ppiyaki.chat.service.SessionExpiredException;
 import com.ppiyaki.chat.service.SessionNotFoundException;
+import com.ppiyaki.chat.service.SttService;
+import com.ppiyaki.chat.service.TtsService;
 import jakarta.validation.Valid;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -19,7 +23,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/chat/sessions")
@@ -27,6 +33,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class ChatSessionController {
 
     private final ChatSessionService chatSessionService;
+    private final SttService sttService;
+    private final TtsService ttsService;
 
     @PostMapping
     public ResponseEntity<ChatSessionResponse> createSession(
@@ -43,6 +51,23 @@ public class ChatSessionController {
             @Valid @RequestBody final ChatMessageRequest chatMessageRequest) {
         final String response = chatSessionService.sendMessage(userId, sessionId, chatMessageRequest.message());
         return ResponseEntity.ok(new ChatMessageResponse(response));
+    }
+
+    @PostMapping(value = "/{sessionId}/voice-messages", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> sendVoiceMessage(
+            @AuthenticationPrincipal final Long userId,
+            @PathVariable final Long sessionId,
+            @RequestParam("file") final MultipartFile file,
+            @RequestParam(value = "language", defaultValue = "ko") final String language) {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "음성 파일이 비어있습니다."));
+        }
+        final String transcribedText = sttService.transcribe(file.getResource(), language);
+        final String llmResponse = chatSessionService.sendMessage(userId, sessionId, transcribedText);
+        final byte[] audioBytes = ttsService.synthesize(llmResponse);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, "audio/mpeg")
+                .body(audioBytes);
     }
 
     @ExceptionHandler(SessionNotFoundException.class)
