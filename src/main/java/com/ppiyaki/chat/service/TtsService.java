@@ -13,6 +13,9 @@ public class TtsService {
 
     public byte[] synthesize(final String text) {
         Objects.requireNonNull(text, "text must not be null");
+        if (text.isBlank()) {
+            throw new IllegalArgumentException("text must not be blank");
+        }
         return speechModel.call(text);
     }
 }

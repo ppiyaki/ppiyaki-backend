@@ -26,6 +26,10 @@ public class SttService {
 
         final AudioTranscriptionPrompt prompt = new AudioTranscriptionPrompt(audioResource, options);
 
-        return transcriptionModel.call(prompt).getResult().getOutput();
+        final var response = transcriptionModel.call(prompt);
+        if (response == null || response.getResult() == null || response.getResult().getOutput() == null) {
+            throw new IllegalStateException("STT 변환 결과가 비어있습니다.");
+        }
+        return response.getResult().getOutput();
     }
 }

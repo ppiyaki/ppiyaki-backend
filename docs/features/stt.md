@@ -1,13 +1,15 @@
 ---
 feature: OpenAI Whisper 기반 STT API
 slug: stt
-status: draft
+status: deprecated
 owner: @qkrehgus02
 scope: chat
 related_issues: [75]
 related_prs: []
 last_reviewed: 2026-04-10
 ---
+
+> **⚠️ Deprecated**: 독립 `/api/v1/stt` 엔드포인트는 음성 채팅 통합 API로 대체되었습니다. 현재 구현은 [`docs/features/voice-chat.md`](voice-chat.md)를 참조하세요.
 
 # OpenAI Whisper 기반 STT API
 
@@ -111,5 +113,5 @@ Mobile App → 마이크 녹음 → 음성 파일 생성
 ## 9) 결정 로그
 - 2026-04-10: 초안 작성 (status=draft). OpenAI Whisper 사용, stateless 독립 API로 범위 한정.
 - 2026-04-10: 지원 포맷은 Whisper API 기본 지원 포맷(mp3, wav, m4a, webm)을 그대로 수용.
-- 2026-04-10: Q1 해소 — Spring AI `AudioTranscriptionClient` 사용. 기존 ChatClient와 추상화 일관성 유지.
+- 2026-04-10: Q1 해소 — Spring AI `OpenAiAudioTranscriptionModel` 사용. 기존 ChatClient와 추상화 일관성 유지.
 - 2026-04-10: Q2 해소 — 언어 기본값 `ko`, 요청 파라미터 `language`로 변경 가능하게.

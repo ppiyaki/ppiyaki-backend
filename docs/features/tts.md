@@ -1,13 +1,15 @@
 ---
 feature: OpenAI TTS 기반 음성 합성 API
 slug: tts
-status: draft
+status: deprecated
 owner: @qkrehgus02
 scope: chat
 related_issues: [77]
 related_prs: []
 last_reviewed: 2026-04-10
 ---
+
+> **⚠️ Deprecated**: 독립 `/api/v1/tts` 엔드포인트는 음성 채팅 통합 API로 대체되었습니다. 현재 구현은 [`docs/features/voice-chat.md`](voice-chat.md)를 참조하세요.
 
 # OpenAI TTS 기반 음성 합성 API
 

@@ -71,7 +71,7 @@ last_reviewed: 2026-04-10
 | content | text | 메시지 내용 |
 | created_at | timestamp | `CreatedTimeEntity` |
 
-> 인증 도입 전이므로 `user_id`는 보류. 인증 추가 시 `chat_sessions`에 `user_id` 컬럼 추가 예정.
+> `chat_sessions.user_id`는 세션 소유자를 식별하며, 모든 세션 접근 시 소유자 검증에 사용된다. 상세: `06-domain-model.md` chat_sessions 참조.
 
 ### 5-2) API 엔드포인트
 

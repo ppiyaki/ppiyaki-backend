@@ -34,7 +34,7 @@ public class SentenceBuffer {
         int lastIndex = -1;
         for (int i = 0; i < text.length(); i++) {
             final char ch = text.charAt(i);
-            if (ch == '.' || ch == '?' || ch == '!' || ch == '。') {
+            if (ch == '.' || ch == '?' || ch == '!' || ch == '。' || ch == '？' || ch == '！') {
                 lastIndex = i;
             }
         }

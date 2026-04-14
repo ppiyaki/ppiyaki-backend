@@ -30,8 +30,9 @@ last_reviewed: 2026-04-14
 - [ ] 시스템 프롬프트 시니어 맞춤 보강
 
 ### 비기능 요구사항
-- WebFlux 의존성 추가 (Flux 사용)
+- Spring MVC SSE (SseEmitter 사용). WebFlux 불필요
 - 기존 JWT 인증 유지
+- SSE 타임아웃: 60초. 클라이언트 재연결은 프론트에서 처리
 
 ## 4) 범위 / 비범위
 

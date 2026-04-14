@@ -22,6 +22,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
@@ -56,38 +57,44 @@ class ChatSessionControllerTest {
     }
 
     @Test
-    void sendMessage_존재하지_않는_세션이면_예외가_발생한다() {
+    void sendMessage_존재하지_않는_세션이면_404를_반환한다() throws Exception {
         // given
         when(chatSessionService.sendMessageStream(any(), anyLong(), anyString()))
                 .thenThrow(new SessionNotFoundException(999L));
 
         // when & then
-        org.junit.jupiter.api.Assertions.assertThrows(SessionNotFoundException.class, () -> {
-            chatSessionService.sendMessageStream(null, 999L, "hello");
-        });
+        mockMvc.perform(post("/api/v1/chat/sessions/999/messages")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\": \"hello\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").exists());
     }
 
     @Test
-    void sendMessage_만료된_세션이면_예외가_발생한다() {
+    void sendMessage_만료된_세션이면_410을_반환한다() throws Exception {
         // given
         when(chatSessionService.sendMessageStream(any(), anyLong(), anyString()))
                 .thenThrow(new SessionExpiredException(1L));
 
         // when & then
-        org.junit.jupiter.api.Assertions.assertThrows(SessionExpiredException.class, () -> {
-            chatSessionService.sendMessageStream(null, 1L, "hello");
-        });
+        mockMvc.perform(post("/api/v1/chat/sessions/1/messages")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\": \"hello\"}"))
+                .andExpect(status().isGone())
+                .andExpect(jsonPath("$.error").exists());
     }
 
     @Test
-    void sendMessage_다른_사용자의_세션이면_예외가_발생한다() {
+    void sendMessage_다른_사용자의_세션이면_403을_반환한다() throws Exception {
         // given
         when(chatSessionService.sendMessageStream(any(), anyLong(), anyString()))
                 .thenThrow(new SessionAccessDeniedException(1L));
 
         // when & then
-        org.junit.jupiter.api.Assertions.assertThrows(SessionAccessDeniedException.class, () -> {
-            chatSessionService.sendMessageStream(null, 1L, "hello");
-        });
+        mockMvc.perform(post("/api/v1/chat/sessions/1/messages")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"message\": \"hello\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").exists());
     }
 }

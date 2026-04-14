@@ -11,13 +11,13 @@ spring:
       mode: never
   ai:
     openai:
-      api-key: test-dummy-key
+      api-key: ${OPENAI_API_KEY:test-dummy-key}
       chat:
         options:
           model: gpt-4o-mini
 
 jwt:
-  secret: test-secret-key-must-be-at-least-32-bytes-long-for-hmac
+  secret: ${JWT_SECRET:test-secret-key-must-be-at-least-32-bytes-long-for-hmac}
   access-token-expiry: 1800000
   refresh-token-expiry: 1209600000
 

@@ -67,9 +67,9 @@ public class ChatSessionService {
                         })
                         .doOnComplete(() -> {
                             try {
+                                saveMessages(sessionId, message, fullResponse.toString());
                                 emitter.send(SseEmitter.event().data("[DONE]"));
                                 emitter.complete();
-                                saveMessages(sessionId, message, fullResponse.toString());
                             } catch (final Exception e) {
                                 emitter.completeWithError(e);
                             }
@@ -117,9 +117,9 @@ public class ChatSessionService {
                             try {
                                 sentenceBuffer.flush().ifPresent(sentence -> sendVoiceEvent(emitter, ttsService,
                                         sentence));
+                                saveMessages(sessionId, transcribedText, fullResponse.toString());
                                 emitter.send(SseEmitter.event().data("[DONE]"));
                                 emitter.complete();
-                                saveMessages(sessionId, transcribedText, fullResponse.toString());
                             } catch (final Exception e) {
                                 emitter.completeWithError(e);
                             }

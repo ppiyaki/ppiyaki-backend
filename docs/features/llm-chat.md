@@ -56,6 +56,7 @@ last_reviewed: 2026-04-09
 - 엔티티는 세션 관리 이슈에서 추가 예정.
 
 ### 5-2) API 엔드포인트
+
 | Method | Path | 설명 | 인증 | Req | Res |
 |---|---|---|---|---|---|
 | POST | /api/v1/chat | 텍스트 메시지 → GPT 응답 | 없음 | `ChatRequest` | `ChatResponse` |
@@ -81,7 +82,7 @@ last_reviewed: 2026-04-09
 - 실패 처리: OpenAI 호출 실패 시 500 반환
 
 ### 5-4) 데이터 흐름
-```
+```text
 Client → POST /api/v1/chat
        → ChatController
        → ChatService
