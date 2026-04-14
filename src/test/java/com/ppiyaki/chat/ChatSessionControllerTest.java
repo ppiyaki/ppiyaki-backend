@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.ppiyaki.chat.controller.ChatSessionController;
 import com.ppiyaki.chat.domain.ChatSession;
+import com.ppiyaki.chat.service.ChatSessionPersistenceService;
 import com.ppiyaki.chat.service.ChatSessionService;
 import com.ppiyaki.chat.service.SessionAccessDeniedException;
 import com.ppiyaki.chat.service.SessionExpiredException;
@@ -36,6 +37,9 @@ class ChatSessionControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
+    private ChatSessionPersistenceService persistenceService;
+
+    @MockitoBean
     private ChatSessionService chatSessionService;
 
     @MockitoBean
@@ -50,7 +54,7 @@ class ChatSessionControllerTest {
         // given
         final ChatSession chatSession = ChatSession.create(1L);
         ReflectionTestUtils.setField(chatSession, "id", 1L);
-        when(chatSessionService.createSession(any())).thenReturn(chatSession);
+        when(persistenceService.createSession(any())).thenReturn(chatSession);
 
         // when & then
         mockMvc.perform(post("/api/v1/chat/sessions"))

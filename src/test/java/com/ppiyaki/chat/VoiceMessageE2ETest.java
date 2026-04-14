@@ -92,7 +92,7 @@ class VoiceMessageE2ETest {
                 .jsonPath()
                 .getLong("sessionId");
 
-        // when & then
+        // when & then — SSE 스트리밍 응답은 RestAssured로 상세 검증 불가, 200 확인만
         given()
                 .header("Authorization", "Bearer " + accessToken)
                 .multiPart("file", "test.wav", new byte[]{1, 2, 3}, "audio/wav")

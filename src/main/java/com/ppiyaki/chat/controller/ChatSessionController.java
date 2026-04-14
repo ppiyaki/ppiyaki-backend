@@ -3,6 +3,7 @@ package com.ppiyaki.chat.controller;
 import com.ppiyaki.chat.controller.dto.ChatMessageRequest;
 import com.ppiyaki.chat.controller.dto.ChatSessionResponse;
 import com.ppiyaki.chat.domain.ChatSession;
+import com.ppiyaki.chat.service.ChatSessionPersistenceService;
 import com.ppiyaki.chat.service.ChatSessionService;
 import com.ppiyaki.chat.service.SessionAccessDeniedException;
 import com.ppiyaki.chat.service.SessionExpiredException;
@@ -31,6 +32,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequiredArgsConstructor
 public class ChatSessionController {
 
+    private final ChatSessionPersistenceService persistenceService;
     private final ChatSessionService chatSessionService;
     private final SttService sttService;
     private final TtsService ttsService;
@@ -38,7 +40,7 @@ public class ChatSessionController {
     @PostMapping
     public ResponseEntity<ChatSessionResponse> createSession(
             @AuthenticationPrincipal final Long userId) {
-        final ChatSession chatSession = chatSessionService.createSession(userId);
+        final ChatSession chatSession = persistenceService.createSession(userId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new ChatSessionResponse(chatSession.getId()));
     }

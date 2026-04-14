@@ -34,6 +34,7 @@ public class ChatSession extends BaseTimeEntity {
     }
 
     public boolean isOwnedBy(final Long userId) {
+        Objects.requireNonNull(userId, "userId must not be null");
         return this.userId.equals(userId);
     }
 
