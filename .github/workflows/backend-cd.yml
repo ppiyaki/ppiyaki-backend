@@ -66,6 +66,8 @@ jobs:
               -e DB_USERNAME='${{ secrets.DB_USERNAME }}' \
               -e DB_PASSWORD='${{ secrets.DB_PASSWORD }}' \
               -e JPA_DDL_AUTO='${{ secrets.JPA_DDL_AUTO }}' \
+              -e JWT_SECRET='${{ secrets.JWT_SECRET }}' \
+              -e KAKAO_OIDC_AUDIENCE='${{ secrets.KAKAO_OIDC_AUDIENCE }}' \
               ${{ secrets.NCP_REGISTRY }}/ppiyaki-server:latest
             
             echo "Cleaning up old images..."
