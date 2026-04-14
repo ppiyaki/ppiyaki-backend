@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -44,7 +45,8 @@ class ChatSessionServiceTest {
     }
 
     @Test
-    void createSession_새_세션을_생성한다() {
+    @DisplayName("새 세션을 생성한다")
+    void createSession_success() {
         // given
         final ChatSession chatSession = ChatSession.create(USER_ID);
         ReflectionTestUtils.setField(chatSession, "id", 1L);
@@ -59,7 +61,8 @@ class ChatSessionServiceTest {
     }
 
     @Test
-    void sendMessageStream_존재하지_않는_세션이면_예외가_발생한다() {
+    @DisplayName("존재하지 않는 세션이면 예외가 발생한다")
+    void sendMessageStream_notFound_throwsException() {
         // given
         when(chatSessionRepository.findById(999L)).thenReturn(Optional.empty());
 
@@ -69,7 +72,8 @@ class ChatSessionServiceTest {
     }
 
     @Test
-    void sendMessageStream_만료된_세션이면_예외가_발생한다() {
+    @DisplayName("만료된 세션이면 예외가 발생한다")
+    void sendMessageStream_expired_throwsException() {
         // given
         final ChatSession chatSession = ChatSession.create(USER_ID);
         ReflectionTestUtils.setField(chatSession, "id", 1L);
@@ -83,7 +87,8 @@ class ChatSessionServiceTest {
     }
 
     @Test
-    void sendMessageStream_다른_사용자의_세션이면_예외가_발생한다() {
+    @DisplayName("다른 사용자의 세션이면 예외가 발생한다")
+    void sendMessageStream_accessDenied_throwsException() {
         // given
         final ChatSession chatSession = ChatSession.create(USER_ID);
         ReflectionTestUtils.setField(chatSession, "id", 1L);
@@ -96,7 +101,8 @@ class ChatSessionServiceTest {
     }
 
     @Test
-    void sendMessageStream_정상_세션이면_SseEmitter를_반환한다() {
+    @DisplayName("정상 세션이면 SseEmitter를 반환한다")
+    void sendMessageStream_success_returnsSseEmitter() {
         // given
         final ChatSession chatSession = ChatSession.create(USER_ID);
         ReflectionTestUtils.setField(chatSession, "id", 1L);
@@ -122,14 +128,16 @@ class ChatSessionServiceTest {
     }
 
     @Test
-    void sendMessageStream_null_세션ID면_예외가_발생한다() {
+    @DisplayName("null 세션ID면 예외가 발생한다")
+    void sendMessageStream_nullSessionId_throwsException() {
         // given & when & then
         assertThatThrownBy(() -> chatSessionService.sendMessageStream(USER_ID, null, "hello"))
                 .isInstanceOf(NullPointerException.class);
     }
 
     @Test
-    void sendMessageStream_null_메시지면_예외가_발생한다() {
+    @DisplayName("null 메시지면 예외가 발생한다")
+    void sendMessageStream_nullMessage_throwsException() {
         // given & when & then
         assertThatThrownBy(() -> chatSessionService.sendMessageStream(USER_ID, 1L, null))
                 .isInstanceOf(NullPointerException.class);

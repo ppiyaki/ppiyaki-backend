@@ -16,6 +16,7 @@ import com.ppiyaki.chat.service.SessionExpiredException;
 import com.ppiyaki.chat.service.SessionNotFoundException;
 import com.ppiyaki.chat.service.SttService;
 import com.ppiyaki.chat.service.TtsService;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -44,7 +45,8 @@ class ChatSessionControllerTest {
     private TtsService ttsService;
 
     @Test
-    void createSession_201_응답과_세션ID를_반환한다() throws Exception {
+    @DisplayName("세션 생성 시 201 응답과 세션ID를 반환한다")
+    void createSession_returns201WithSessionId() throws Exception {
         // given
         final ChatSession chatSession = ChatSession.create(1L);
         ReflectionTestUtils.setField(chatSession, "id", 1L);
@@ -57,7 +59,8 @@ class ChatSessionControllerTest {
     }
 
     @Test
-    void sendMessage_존재하지_않는_세션이면_404를_반환한다() throws Exception {
+    @DisplayName("존재하지 않는 세션이면 404를 반환한다")
+    void sendMessage_notFoundSession_returns404() throws Exception {
         // given
         when(chatSessionService.sendMessageStream(any(), anyLong(), anyString()))
                 .thenThrow(new SessionNotFoundException(999L));
@@ -71,7 +74,8 @@ class ChatSessionControllerTest {
     }
 
     @Test
-    void sendMessage_만료된_세션이면_410을_반환한다() throws Exception {
+    @DisplayName("만료된 세션이면 410을 반환한다")
+    void sendMessage_expiredSession_returns410() throws Exception {
         // given
         when(chatSessionService.sendMessageStream(any(), anyLong(), anyString()))
                 .thenThrow(new SessionExpiredException(1L));
@@ -85,7 +89,8 @@ class ChatSessionControllerTest {
     }
 
     @Test
-    void sendMessage_다른_사용자의_세션이면_403을_반환한다() throws Exception {
+    @DisplayName("다른 사용자의 세션이면 403을 반환한다")
+    void sendMessage_accessDenied_returns403() throws Exception {
         // given
         when(chatSessionService.sendMessageStream(any(), anyLong(), anyString()))
                 .thenThrow(new SessionAccessDeniedException(1L));

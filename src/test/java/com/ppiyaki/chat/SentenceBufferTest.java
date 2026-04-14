@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.ppiyaki.chat.service.SentenceBuffer;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class SentenceBufferTest {
@@ -17,7 +18,8 @@ class SentenceBufferTest {
     }
 
     @Test
-    void append_문장이_완성되면_반환한다() {
+    @DisplayName("마침표로 문장이 완성되면 반환한다")
+    void append_periodEnded_returnsSentence() {
         // given & when
         final Optional<String> result1 = sentenceBuffer.append("아스피린은 ");
         final Optional<String> result2 = sentenceBuffer.append("공복에 복용을 피하세요.");
@@ -28,7 +30,8 @@ class SentenceBufferTest {
     }
 
     @Test
-    void append_물음표로_문장이_끝나면_반환한다() {
+    @DisplayName("물음표로 문장이 끝나면 반환한다")
+    void append_questionMarkEnded_returnsSentence() {
         // given & when
         final Optional<String> result = sentenceBuffer.append("부작용이 뭔가요?");
 
@@ -37,7 +40,8 @@ class SentenceBufferTest {
     }
 
     @Test
-    void append_느낌표로_문장이_끝나면_반환한다() {
+    @DisplayName("느낌표로 문장이 끝나면 반환한다")
+    void append_exclamationMarkEnded_returnsSentence() {
         // given & when
         final Optional<String> result = sentenceBuffer.append("꼭 드세요!");
 
@@ -46,7 +50,8 @@ class SentenceBufferTest {
     }
 
     @Test
-    void flush_남은_텍스트를_반환한다() {
+    @DisplayName("flush 시 남은 텍스트를 반환한다")
+    void flush_remainingText_returnsText() {
         // given
         sentenceBuffer.append("남은 텍스트");
 
@@ -58,7 +63,8 @@ class SentenceBufferTest {
     }
 
     @Test
-    void flush_비어있으면_empty를_반환한다() {
+    @DisplayName("flush 시 비어있으면 empty를 반환한다")
+    void flush_empty_returnsEmpty() {
         // when
         final Optional<String> result = sentenceBuffer.flush();
 

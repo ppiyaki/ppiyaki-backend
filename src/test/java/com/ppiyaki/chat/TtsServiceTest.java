@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.ppiyaki.chat.service.TtsService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.openai.OpenAiAudioSpeechModel;
 
@@ -22,7 +23,8 @@ class TtsServiceTest {
     }
 
     @Test
-    void synthesize_정상_텍스트를_입력하면_음성_바이트를_반환한다() {
+    @DisplayName("정상 텍스트를 입력하면 음성 바이트를 반환한다")
+    void synthesize_validText_returnsAudioBytes() {
         // given
         final String text = "아스피린은 공복에 복용을 피하세요.";
         final byte[] expectedAudio = new byte[]{1, 2, 3, 4, 5};
@@ -36,7 +38,8 @@ class TtsServiceTest {
     }
 
     @Test
-    void synthesize_null_텍스트를_입력하면_예외가_발생한다() {
+    @DisplayName("null 텍스트를 입력하면 예외가 발생한다")
+    void synthesize_nullText_throwsException() {
         // given & when & then
         assertThatThrownBy(() -> ttsService.synthesize(null))
                 .isInstanceOf(NullPointerException.class);

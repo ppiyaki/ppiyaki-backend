@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.ppiyaki.common.auth.JwtProvider;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -60,7 +61,8 @@ class ChatSessionE2ETest {
     }
 
     @Test
-    void 세션_생성_성공_케이스() {
+    @DisplayName("세션 생성 성공")
+    void createSession_success() {
         given()
                 .header("Authorization", "Bearer " + accessToken)
                 .when()
@@ -71,7 +73,8 @@ class ChatSessionE2ETest {
     }
 
     @Test
-    void 인증_없이_요청하면_401을_반환한다() {
+    @DisplayName("인증 없이 요청하면 401을 반환한다")
+    void createSession_unauthorized_returns401() {
         given()
                 .when()
                 .post("/api/v1/chat/sessions")

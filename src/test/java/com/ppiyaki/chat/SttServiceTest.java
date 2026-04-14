@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.ppiyaki.chat.service.SttService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.audio.transcription.AudioTranscription;
 import org.springframework.ai.audio.transcription.AudioTranscriptionPrompt;
@@ -28,7 +29,8 @@ class SttServiceTest {
     }
 
     @Test
-    void transcribe_정상_음성파일을_입력하면_텍스트를_반환한다() {
+    @DisplayName("정상 음성파일을 입력하면 텍스트를 반환한다")
+    void transcribe_validAudio_returnsText() {
         // given
         final Resource audioResource = new ByteArrayResource(new byte[]{1, 2, 3});
         final String expectedText = "아스피린 복용 시 주의사항이 뭔가요?";
@@ -46,14 +48,16 @@ class SttServiceTest {
     }
 
     @Test
-    void transcribe_null_음성파일을_입력하면_예외가_발생한다() {
+    @DisplayName("null 음성파일을 입력하면 예외가 발생한다")
+    void transcribe_nullAudio_throwsException() {
         // given & when & then
         assertThatThrownBy(() -> sttService.transcribe(null, "ko"))
                 .isInstanceOf(NullPointerException.class);
     }
 
     @Test
-    void transcribe_null_언어를_입력하면_예외가_발생한다() {
+    @DisplayName("null 언어를 입력하면 예외가 발생한다")
+    void transcribe_nullLanguage_throwsException() {
         // given
         final Resource audioResource = new ByteArrayResource(new byte[]{1, 2, 3});
 

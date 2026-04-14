@@ -12,6 +12,7 @@ import com.ppiyaki.chat.service.TtsService;
 import com.ppiyaki.common.auth.JwtProvider;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -72,7 +73,8 @@ class VoiceMessageE2ETest {
     }
 
     @Test
-    void voice_messages_엔드포인트_세션생성_후_호출_성공() {
+    @DisplayName("음성 메시지 엔드포인트 세션 생성 후 호출 성공")
+    void voiceMessages_createSessionAndSend_success() {
         // given
         when(sttService.transcribe(any(Resource.class), anyString()))
                 .thenReturn("아스피린 부작용이 뭐야?");
@@ -90,7 +92,7 @@ class VoiceMessageE2ETest {
                 .jsonPath()
                 .getLong("sessionId");
 
-        // when & then - SSE 응답이므로 200 확인만
+        // when & then
         given()
                 .header("Authorization", "Bearer " + accessToken)
                 .multiPart("file", "test.wav", new byte[]{1, 2, 3}, "audio/wav")
