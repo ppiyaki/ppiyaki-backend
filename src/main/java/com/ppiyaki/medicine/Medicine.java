@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -47,11 +48,31 @@ public class Medicine extends CreatedTimeEntity {
             final Integer remainingAmount,
             final String durWarningText
     ) {
-        this.ownerId = ownerId;
+        this.ownerId = Objects.requireNonNull(ownerId, "ownerId must not be null");
         this.prescriptionId = prescriptionId;
-        this.name = name;
-        this.totalAmount = totalAmount;
-        this.remainingAmount = remainingAmount;
+        this.name = Objects.requireNonNull(name, "name must not be null");
+        this.totalAmount = Objects.requireNonNull(totalAmount, "totalAmount must not be null");
+        this.remainingAmount = Objects.requireNonNull(remainingAmount, "remainingAmount must not be null");
         this.durWarningText = durWarningText;
+    }
+
+    public void update(
+            final String name,
+            final Integer totalAmount,
+            final Integer remainingAmount,
+            final String durWarningText
+    ) {
+        if (name != null) {
+            this.name = name;
+        }
+        if (totalAmount != null) {
+            this.totalAmount = totalAmount;
+        }
+        if (remainingAmount != null) {
+            this.remainingAmount = remainingAmount;
+        }
+        if (durWarningText != null) {
+            this.durWarningText = durWarningText;
+        }
     }
 }

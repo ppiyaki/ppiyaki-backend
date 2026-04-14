@@ -170,7 +170,7 @@
 | dur_warning_text | varchar | DUR 경고 요약 텍스트(최근 dur_checks에서 복사된 요약) |
 | created_at | timestamp | `CreatedTimeEntity` |
 
-> **코드 갭**: 현재 코드에는 `owner_id`가 없고 `prescription_id`는 non-null. 추적: §7-16.
+> **코드 갭 해소됨**: `owner_id` 추가 및 `prescription_id` nullable 전환 완료 (#15). 현재 코드와 타깃 스키마 일치.
 
 ### medication_schedules (target: `@Table(name = "medication_schedules")`, extends `CreatedTimeEntity`)
 복약 일정. `medicine` 1건당 시간대별 N행.
