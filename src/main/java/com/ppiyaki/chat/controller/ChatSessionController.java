@@ -1,7 +1,6 @@
 package com.ppiyaki.chat.controller;
 
 import com.ppiyaki.chat.controller.dto.ChatMessageRequest;
-import com.ppiyaki.chat.controller.dto.ChatMessageResponse;
 import com.ppiyaki.chat.controller.dto.ChatSessionResponse;
 import com.ppiyaki.chat.domain.ChatSession;
 import com.ppiyaki.chat.service.ChatSessionService;
@@ -13,7 +12,6 @@ import com.ppiyaki.chat.service.TtsService;
 import jakarta.validation.Valid;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/api/v1/chat/sessions")
@@ -44,17 +43,16 @@ public class ChatSessionController {
                 .body(new ChatSessionResponse(chatSession.getId()));
     }
 
-    @PostMapping("/{sessionId}/messages")
-    public ResponseEntity<ChatMessageResponse> sendMessage(
+    @PostMapping(value = "/{sessionId}/messages", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter sendMessage(
             @AuthenticationPrincipal final Long userId,
             @PathVariable final Long sessionId,
             @Valid @RequestBody final ChatMessageRequest chatMessageRequest) {
-        final String response = chatSessionService.sendMessage(userId, sessionId, chatMessageRequest.message());
-        return ResponseEntity.ok(new ChatMessageResponse(response));
+        return chatSessionService.sendMessageStream(userId, sessionId, chatMessageRequest.message());
     }
 
-    @PostMapping(value = "/{sessionId}/voice-messages", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> sendVoiceMessage(
+    @PostMapping(value = "/{sessionId}/voice-messages", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Object sendVoiceMessage(
             @AuthenticationPrincipal final Long userId,
             @PathVariable final Long sessionId,
             @RequestParam("file") final MultipartFile file,
@@ -62,12 +60,9 @@ public class ChatSessionController {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "음성 파일이 비어있습니다."));
         }
+
         final String transcribedText = sttService.transcribe(file.getResource(), language);
-        final String llmResponse = chatSessionService.sendMessage(userId, sessionId, transcribedText);
-        final byte[] audioBytes = ttsService.synthesize(llmResponse);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_TYPE, "audio/mpeg")
-                .body(audioBytes);
+        return chatSessionService.sendVoiceMessageStream(userId, sessionId, transcribedText, ttsService);
     }
 
     @ExceptionHandler(SessionNotFoundException.class)
