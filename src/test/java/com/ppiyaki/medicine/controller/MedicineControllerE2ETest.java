@@ -1,9 +1,7 @@
 package com.ppiyaki.medicine.controller;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -15,10 +13,17 @@ import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.user.CareRelation;
 import com.ppiyaki.user.repository.CareRelationRepository;
+import io.jsonwebtoken.Jwts;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import java.math.BigInteger;
+import java.security.KeyPair;
+import java.security.interfaces.RSAPublicKey;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Date;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,15 +35,21 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-        "kakao.client-id=test-client-id",
-        "kakao.client-secret=test-client-secret",
-        "kakao.token-uri=http://localhost:19877/oauth/token",
-        "kakao.user-info-uri=http://localhost:19877/v2/user/me"
+        "kakao.oidc.issuer=https://kauth.kakao.com",
+        "kakao.oidc.jwks-uri=http://localhost:19877/.well-known/jwks.json",
+        "kakao.oidc.audience=test-app-key"
 })
 class MedicineControllerE2ETest {
 
     private static final int WIREMOCK_PORT = 19877;
+    private static final String TEST_KID = "test-kid-1";
+    private static final String TEST_ISSUER = "https://kauth.kakao.com";
+    private static final String TEST_AUDIENCE = "test-app-key";
+    private static final long TOKEN_EXPIRY_MILLIS = 3_600_000L;
+
     private static WireMockServer wireMockServer;
+    private static KeyPair keyPair;
+    private static String jwksJson;
 
     @LocalServerPort
     private int port;
@@ -58,6 +69,8 @@ class MedicineControllerE2ETest {
     static void startWireMock() {
         wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().port(WIREMOCK_PORT));
         wireMockServer.start();
+        keyPair = Jwts.SIG.RS256.keyPair().build();
+        jwksJson = buildJwksJson((RSAPublicKey) keyPair.getPublic(), TEST_KID);
     }
 
     @AfterAll
@@ -69,21 +82,20 @@ class MedicineControllerE2ETest {
     void setUp() {
         RestAssured.port = port;
         wireMockServer.resetAll();
-        stubKakaoTokenEndpoint();
+        stubJwksEndpoint();
     }
 
     private String loginAsNewUser(final String nickname) {
         final long kakaoId = kakaoIdSequence++;
-        stubKakaoUserInfoEndpoint(kakaoId, nickname);
+        final String idToken = buildIdToken(String.valueOf(kakaoId), nickname);
 
         return RestAssured.given()
                 .contentType(ContentType.JSON)
                 .body("""
                         {
-                            "code": "test-auth-code",
-                            "redirectUri": "http://localhost/callback"
+                            "idToken": "%s"
                         }
-                        """)
+                        """.formatted(idToken))
                 .when()
                 .post("/api/v1/auth/kakao")
                 .then()
@@ -350,35 +362,53 @@ class MedicineControllerE2ETest {
                 .path("id");
     }
 
-    private void stubKakaoTokenEndpoint() {
-        wireMockServer.stubFor(post(urlPathEqualTo("/oauth/token"))
+    private void stubJwksEndpoint() {
+        wireMockServer.stubFor(get(urlPathEqualTo("/.well-known/jwks.json"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
-                        .withBody("""
-                                {
-                                    "access_token": "kakao-access-token-mock",
-                                    "token_type": "bearer",
-                                    "expires_in": 3600
-                                }
-                                """)));
+                        .withBody(jwksJson)));
     }
 
-    private void stubKakaoUserInfoEndpoint(final Long kakaoId, final String nickname) {
-        wireMockServer.stubFor(get(urlPathEqualTo("/v2/user/me"))
-                .withHeader("Authorization", equalTo("Bearer kakao-access-token-mock"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("""
-                                {
-                                    "id": %d,
-                                    "kakao_account": {
-                                        "profile": {
-                                            "nickname": "%s"
-                                        }
-                                    }
-                                }
-                                """.formatted(kakaoId, nickname))));
+    private static String buildIdToken(final String sub, final String nickname) {
+        final Date now = new Date();
+        final Date expiry = new Date(now.getTime() + TOKEN_EXPIRY_MILLIS);
+        return Jwts.builder()
+                .header().keyId(TEST_KID).and()
+                .issuer(TEST_ISSUER)
+                .audience().add(TEST_AUDIENCE).and()
+                .subject(sub)
+                .claim("nickname", nickname)
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(keyPair.getPrivate(), Jwts.SIG.RS256)
+                .compact();
+    }
+
+    private static String buildJwksJson(final RSAPublicKey publicKey, final String kid) {
+        final String modulusBase64 = base64UrlEncode(publicKey.getModulus());
+        final String exponentBase64 = base64UrlEncode(publicKey.getPublicExponent());
+        return """
+                {
+                    "keys": [
+                        {
+                            "kty": "RSA",
+                            "kid": "%s",
+                            "alg": "RS256",
+                            "use": "sig",
+                            "n": "%s",
+                            "e": "%s"
+                        }
+                    ]
+                }
+                """.formatted(kid, modulusBase64, exponentBase64);
+    }
+
+    private static String base64UrlEncode(final BigInteger value) {
+        byte[] bytes = value.toByteArray();
+        if (bytes.length > 1 && bytes[0] == 0) {
+            bytes = Arrays.copyOfRange(bytes, 1, bytes.length);
+        }
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 }
