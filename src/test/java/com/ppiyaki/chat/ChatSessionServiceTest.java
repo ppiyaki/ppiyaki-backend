@@ -97,6 +97,14 @@ class ChatSessionServiceTest {
     }
 
     @Test
+    @DisplayName("null userId면 예외가 발생한다")
+    void sendMessageStream_nullUserId_throwsException() {
+        // given & when & then
+        assertThatThrownBy(() -> chatSessionService.sendMessageStream(null, 1L, "hello"))
+                .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
     @DisplayName("null 세션ID면 예외가 발생한다")
     void sendMessageStream_nullSessionId_throwsException() {
         // given & when & then

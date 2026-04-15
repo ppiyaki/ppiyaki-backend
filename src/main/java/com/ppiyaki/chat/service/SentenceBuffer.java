@@ -1,5 +1,6 @@
 package com.ppiyaki.chat.service;
 
+import java.util.Objects;
 import java.util.Optional;
 
 public class SentenceBuffer {
@@ -7,6 +8,7 @@ public class SentenceBuffer {
     private final StringBuilder buffer = new StringBuilder();
 
     public Optional<String> append(final String token) {
+        Objects.requireNonNull(token, "token must not be null");
         buffer.append(token);
         final String current = buffer.toString();
 

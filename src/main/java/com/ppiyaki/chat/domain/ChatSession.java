@@ -38,6 +38,11 @@ public class ChatSession extends BaseTimeEntity {
         return this.userId.equals(userId);
     }
 
+    public void touch() {
+        // @LastModifiedDate가 동작하도록 dirty 상태를 만든다
+        this.userId = this.userId;
+    }
+
     public boolean isExpired(final LocalDateTime now, final long expirationMinutes) {
         Objects.requireNonNull(now, "now must not be null");
         Objects.requireNonNull(getUpdatedAt(), "updatedAt must not be null");

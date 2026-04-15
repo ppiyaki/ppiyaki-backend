@@ -33,6 +33,23 @@ public class ChatSessionPersistenceService {
     }
 
     @Transactional(readOnly = true)
+    public void validateSession(final Long userId, final Long sessionId) {
+        Objects.requireNonNull(userId, "userId must not be null");
+        Objects.requireNonNull(sessionId, "sessionId must not be null");
+
+        final ChatSession chatSession = chatSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new SessionNotFoundException(sessionId));
+
+        if (!chatSession.isOwnedBy(userId)) {
+            throw new SessionAccessDeniedException(sessionId);
+        }
+
+        if (chatSession.isExpired(LocalDateTime.now(), EXPIRATION_MINUTES)) {
+            throw new SessionExpiredException(sessionId);
+        }
+    }
+
+    @Transactional(readOnly = true)
     public List<Message> loadSessionAndBuildPrompt(
             final Long userId, final Long sessionId, final String message) {
         Objects.requireNonNull(userId, "userId must not be null");
@@ -67,6 +84,7 @@ public class ChatSessionPersistenceService {
 
         chatMessageRepository.save(new ChatMessage(chatSession, MessageRole.USER, userMessage));
         chatMessageRepository.save(new ChatMessage(chatSession, MessageRole.ASSISTANT, assistantResponse));
+        chatSession.touch();
         chatSessionRepository.save(chatSession);
     }
 

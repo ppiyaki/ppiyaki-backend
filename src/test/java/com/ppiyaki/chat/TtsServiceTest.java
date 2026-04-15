@@ -44,4 +44,20 @@ class TtsServiceTest {
         assertThatThrownBy(() -> ttsService.synthesize(null))
                 .isInstanceOf(NullPointerException.class);
     }
+
+    @Test
+    @DisplayName("빈 텍스트를 입력하면 예외가 발생한다")
+    void synthesize_emptyText_throwsException() {
+        // given & when & then
+        assertThatThrownBy(() -> ttsService.synthesize(""))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("공백만 있는 텍스트를 입력하면 예외가 발생한다")
+    void synthesize_blankText_throwsException() {
+        // given & when & then
+        assertThatThrownBy(() -> ttsService.synthesize("   "))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }

@@ -64,6 +64,7 @@ public class ChatSessionController {
             return ResponseEntity.badRequest().body(Map.of("error", "음성 파일이 비어있습니다."));
         }
 
+        persistenceService.validateSession(userId, sessionId);
         final String transcribedText = sttService.transcribe(file.getResource(), language);
         return chatSessionService.sendVoiceMessageStream(userId, sessionId, transcribedText, ttsService);
     }
