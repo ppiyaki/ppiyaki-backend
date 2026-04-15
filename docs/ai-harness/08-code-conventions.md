@@ -135,6 +135,12 @@ public static Member create(final String loginId, final String nickname) {
 
 - "DTO에서 검증했으니 Domain은 생략"은 허용하지 않는다. Domain 객체는 **자체 불변식을 스스로** 지켜야 한다.
 
+### 6-3) Service/Controller/Config 중간 가드 지양
+- **Service/Controller 메서드 파라미터**에 대한 `Objects.requireNonNull` 가드는 **두지 않는다**.
+- **Service/Controller 생성자의 DI 주입 의존성**에도 `Objects.requireNonNull` 가드를 두지 않는다. Spring이 빈을 찾지 못하면 `NoSuchBeanDefinitionException`으로 부트 실패하므로 실행될 일이 없는 unreachable 코드다.
+- **`@ConfigurationProperties` 바인딩 레코드의 필드**는 수동 `Objects.requireNonNull` 대신 `@Validated` + `@NotBlank`/`@NotNull`/`@Positive` 등 **Bean Validation 어노테이션으로 선언적으로 검증**한다. 바인딩 실패 시 `BindValidationException`으로 부트 시점에 자동 fail-fast된다.
+- 근거: Controller 진입 시점에 DTO는 `@Valid`/`@NotBlank`, `@PathVariable`/`@AuthenticationPrincipal`은 프레임워크가 non-null을 보장하고, DI는 Spring이 보장하며, Domain 생성자/팩토리에서 최종 검증이 이루어진다. 중간 가드는 가독성만 해친다.
+
 ## 7) 오픈 항목 (컨벤션 미결)
 
 | # | 주제 | 상태 |
