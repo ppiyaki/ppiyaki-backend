@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface CareRelationRepository extends JpaRepository<CareRelation, Long> {
 
     Optional<CareRelation> findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(
-            Long caregiverId,
-            Long seniorId
+            final Long caregiverId,
+            final Long seniorId
     );
 }

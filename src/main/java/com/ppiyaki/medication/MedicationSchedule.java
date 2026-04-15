@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -49,11 +50,35 @@ public class MedicationSchedule extends CreatedTimeEntity {
             final LocalDate startDate,
             final LocalDate endDate
     ) {
-        this.medicineId = medicineId;
-        this.scheduledTime = scheduledTime;
-        this.dosage = dosage;
+        this.medicineId = Objects.requireNonNull(medicineId, "medicineId must not be null");
+        this.scheduledTime = Objects.requireNonNull(scheduledTime, "scheduledTime must not be null");
+        this.dosage = Objects.requireNonNull(dosage, "dosage must not be null");
         this.daysOfWeek = daysOfWeek;
         this.startDate = startDate;
         this.endDate = endDate;
+    }
+
+    public void update(
+            final LocalTime scheduledTime,
+            final String dosage,
+            final String daysOfWeek,
+            final LocalDate startDate,
+            final LocalDate endDate
+    ) {
+        if (scheduledTime != null) {
+            this.scheduledTime = scheduledTime;
+        }
+        if (dosage != null) {
+            this.dosage = dosage;
+        }
+        if (daysOfWeek != null) {
+            this.daysOfWeek = daysOfWeek;
+        }
+        if (startDate != null) {
+            this.startDate = startDate;
+        }
+        if (endDate != null) {
+            this.endDate = endDate;
+        }
     }
 }

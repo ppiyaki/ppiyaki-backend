@@ -22,6 +22,10 @@ public enum ErrorCode {
     // Medicine
     MEDICINE_NOT_FOUND(HttpStatus.NOT_FOUND, "MEDICINE_001", "Medicine not found"),
 
+    // Medication Schedule
+    SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SCHEDULE_001", "Schedule not found"),
+    SCHEDULE_MEDICINE_MISMATCH(HttpStatus.BAD_REQUEST, "SCHEDULE_002", "Schedule does not belong to this medicine"),
+
     // Care Relation
     CARE_RELATION_NOT_FOUND(HttpStatus.FORBIDDEN, "CARE_001", "No active care relation"),
     CARE_RELATION_REQUIRED(HttpStatus.FORBIDDEN, "CARE_002", "Caregiver must specify seniorId"),
