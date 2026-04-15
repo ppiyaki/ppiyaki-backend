@@ -70,6 +70,7 @@
 - 엔티티는 `@NoArgsConstructor(access = AccessLevel.PROTECTED)` + `@AllArgsConstructor(access = AccessLevel.PACKAGE)` 조합 (PROTECTED no-args는 Hibernate 프록시 호환을 위해 필수)
 - Lombok: `@Data`/`@Setter` 금지. `@Getter`/`@NoArgsConstructor`/`@RequiredArgsConstructor`는 적극 사용
 - **null 검증은 DTO와 Domain 둘 다 수행**. Domain은 매개변수의 모든 값에 대해 `Objects.requireNonNull`
+- **Service/Controller 중간 null 가드 금지** (§6-3). 메서드 파라미터·DI 생성자 모두 `Objects.requireNonNull` 두지 않음. 예외: `application.yml` 바인딩 설정 값은 부트 fail-fast 목적으로 유지
 - 테스트는 BDD 스타일(`given/when/then`), **신규 엔드포인트는 성공 케이스 E2E(RestAssured) 필수**
 
 ### 도메인 / DDD

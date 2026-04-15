@@ -20,14 +20,11 @@ import java.security.spec.RSAPublicKeySpec;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 @Component
-@EnableConfigurationProperties(KakaoOidcProperties.class)
 public class KakaoIdTokenVerifier {
 
     private static final String RSA_KEY_TYPE = "RSA";
@@ -40,12 +37,6 @@ public class KakaoIdTokenVerifier {
 
     public KakaoIdTokenVerifier(final KakaoOidcProperties properties,
             final RestClient.Builder restClientBuilder) {
-        Objects.requireNonNull(properties, "properties must not be null");
-        Objects.requireNonNull(properties.issuer(), "kakao.oidc.issuer must not be null");
-        Objects.requireNonNull(properties.jwksUri(), "kakao.oidc.jwks-uri must not be null");
-        Objects.requireNonNull(properties.audience(), "kakao.oidc.audience must not be null");
-        Objects.requireNonNull(restClientBuilder, "restClientBuilder must not be null");
-
         this.properties = properties;
         this.restClient = restClientBuilder.build();
         this.objectMapper = new ObjectMapper();
@@ -90,7 +81,7 @@ public class KakaoIdTokenVerifier {
     }
 
     private Key resolveKey(final Header header) {
-        if (!(header instanceof JwsHeader jwsHeader)) {
+        if (!(header instanceof final JwsHeader jwsHeader)) {
             throw new SignatureException("not a JWS header");
         }
         final String kid = jwsHeader.getKeyId();
