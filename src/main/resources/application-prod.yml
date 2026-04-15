@@ -18,3 +18,11 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+
+ncp:
+  storage:
+    endpoint: ${NCP_STORAGE_ENDPOINT}
+    region: ${NCP_STORAGE_REGION}
+    access-key: ${NCP_STORAGE_ACCESS_KEY}
+    secret-key: ${NCP_STORAGE_SECRET_KEY}
+    bucket-name: ${NCP_STORAGE_BUCKET_NAME}
