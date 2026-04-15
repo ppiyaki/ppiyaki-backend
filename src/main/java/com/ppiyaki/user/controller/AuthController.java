@@ -11,7 +11,6 @@ import com.ppiyaki.user.controller.dto.TokenResponse;
 import com.ppiyaki.user.controller.dto.UserMeResponse;
 import com.ppiyaki.user.service.AuthService;
 import jakarta.validation.Valid;
-import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,7 +27,7 @@ public class AuthController {
     private final AuthService authService;
 
     public AuthController(final AuthService authService) {
-        this.authService = Objects.requireNonNull(authService, "authService must not be null");
+        this.authService = authService;
     }
 
     @PostMapping("/auth/signup")

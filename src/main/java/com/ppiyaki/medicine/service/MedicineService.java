@@ -14,7 +14,6 @@ import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.util.List;
-import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,21 +31,14 @@ public class MedicineService {
             final UserRepository userRepository,
             final CareRelationRepository careRelationRepository
     ) {
-        this.medicineRepository = Objects.requireNonNull(medicineRepository,
-                "medicineRepository must not be null");
-        this.medicationScheduleRepository = Objects.requireNonNull(medicationScheduleRepository,
-                "medicationScheduleRepository must not be null");
-        this.userRepository = Objects.requireNonNull(userRepository,
-                "userRepository must not be null");
-        this.careRelationRepository = Objects.requireNonNull(careRelationRepository,
-                "careRelationRepository must not be null");
+        this.medicineRepository = medicineRepository;
+        this.medicationScheduleRepository = medicationScheduleRepository;
+        this.userRepository = userRepository;
+        this.careRelationRepository = careRelationRepository;
     }
 
     @Transactional
     public MedicineResponse create(final Long userId, final MedicineCreateRequest medicineCreateRequest) {
-        Objects.requireNonNull(userId, "userId must not be null");
-        Objects.requireNonNull(medicineCreateRequest, "medicineCreateRequest must not be null");
-
         final Long ownerId = resolveOwnerId(userId, medicineCreateRequest.seniorId());
 
         final Medicine medicine = new Medicine(
@@ -64,8 +56,6 @@ public class MedicineService {
 
     @Transactional(readOnly = true)
     public List<MedicineResponse> readAll(final Long userId, final Long seniorId) {
-        Objects.requireNonNull(userId, "userId must not be null");
-
         final Long ownerId = resolveOwnerIdForRead(userId, seniorId);
 
         final List<Medicine> medicines = medicineRepository.findByOwnerId(ownerId);
@@ -76,9 +66,6 @@ public class MedicineService {
 
     @Transactional(readOnly = true)
     public MedicineResponse readById(final Long userId, final Long medicineId) {
-        Objects.requireNonNull(userId, "userId must not be null");
-        Objects.requireNonNull(medicineId, "medicineId must not be null");
-
         final Medicine medicine = findMedicineById(medicineId);
         validateAccess(userId, medicine.getOwnerId());
 
@@ -91,10 +78,6 @@ public class MedicineService {
             final Long medicineId,
             final MedicineUpdateRequest medicineUpdateRequest
     ) {
-        Objects.requireNonNull(userId, "userId must not be null");
-        Objects.requireNonNull(medicineId, "medicineId must not be null");
-        Objects.requireNonNull(medicineUpdateRequest, "medicineUpdateRequest must not be null");
-
         final Medicine medicine = findMedicineById(medicineId);
         validateAccess(userId, medicine.getOwnerId());
 
@@ -110,9 +93,6 @@ public class MedicineService {
 
     @Transactional
     public MedicineDeleteResponse delete(final Long userId, final Long medicineId) {
-        Objects.requireNonNull(userId, "userId must not be null");
-        Objects.requireNonNull(medicineId, "medicineId must not be null");
-
         final Medicine medicine = findMedicineById(medicineId);
         validateAccess(userId, medicine.getOwnerId());
 
