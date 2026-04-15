@@ -60,7 +60,9 @@ public class AuthService {
         final String providerUserId = payload.sub();
         final User user = oAuthIdentityRepository
                 .findByProviderAndProviderUserId(OAuthProvider.KAKAO, providerUserId)
-                .map(identity -> userRepository.findById(identity.getUserId()).orElseThrow())
+                .map(identity -> userRepository.findById(identity.getUserId())
+                        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND,
+                                "User not found: " + identity.getUserId())))
                 .orElseGet(() -> createNewUser(payload, providerUserId));
 
         final String accessToken = jwtProvider.createAccessToken(user.getId());

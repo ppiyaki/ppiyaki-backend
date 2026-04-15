@@ -189,13 +189,30 @@ class AuthControllerE2ETest {
     }
 
     @Test
-    @DisplayName("인증 없이 호출하면 401")
+    @DisplayName("인증 없이 호출하면 401 + AUTH_001 ErrorResponse")
     void me_unauthorized() {
         RestAssured.given()
                 .when()
                 .get("/api/v1/users/me")
                 .then()
-                .statusCode(401);
+                .statusCode(401)
+                .body("success", is(false))
+                .body("error.code", is("AUTH_001"))
+                .body("error.status", is(401));
+    }
+
+    @Test
+    @DisplayName("잘못된 JSON 바디는 400 + MALFORMED_REQUEST(COMMON_002)로 거부된다")
+    void kakaoLogin_malformedBody_returns400() {
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("{not valid json")
+                .when()
+                .post("/api/v1/auth/kakao")
+                .then()
+                .statusCode(400)
+                .body("success", is(false))
+                .body("error.code", is("COMMON_002"));
     }
 
     @Test
