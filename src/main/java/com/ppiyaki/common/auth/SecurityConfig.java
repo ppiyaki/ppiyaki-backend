@@ -1,7 +1,5 @@
 package com.ppiyaki.common.auth;
 
-import java.util.Objects;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -16,14 +14,12 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableConfigurationProperties(JwtProperties.class)
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     public SecurityConfig(final JwtAuthenticationFilter jwtAuthenticationFilter) {
-        this.jwtAuthenticationFilter = Objects.requireNonNull(
-                jwtAuthenticationFilter, "jwtAuthenticationFilter must not be null");
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
     @Bean
