@@ -8,7 +8,6 @@ import com.ppiyaki.medicine.controller.dto.MedicineUpdateRequest;
 import com.ppiyaki.medicine.service.MedicineService;
 import jakarta.validation.Valid;
 import java.util.List;
-import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -29,7 +28,7 @@ public class MedicineController {
     private final MedicineService medicineService;
 
     public MedicineController(final MedicineService medicineService) {
-        this.medicineService = Objects.requireNonNull(medicineService, "medicineService must not be null");
+        this.medicineService = medicineService;
     }
 
     @PostMapping
