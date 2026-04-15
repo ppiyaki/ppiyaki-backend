@@ -1,24 +1,15 @@
 package com.ppiyaki.medication.controller;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.user.CareRelation;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,16 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-        "kakao.client-id=test-client-id",
-        "kakao.client-secret=test-client-secret",
-        "kakao.token-uri=http://localhost:19879/oauth/token",
-        "kakao.user-info-uri=http://localhost:19879/v2/user/me"
-})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class MedicationScheduleControllerE2ETest {
-
-    private static final int WIREMOCK_PORT = 19879;
-    private static WireMockServer wireMockServer;
 
     @LocalServerPort
     private int port;
@@ -46,24 +29,11 @@ class MedicationScheduleControllerE2ETest {
     @Autowired
     private CareRelationRepository careRelationRepository;
 
-    private static long kakaoIdSequence = 400000L;
-
-    @BeforeAll
-    static void startWireMock() {
-        wireMockServer = new WireMockServer(WireMockConfiguration.wireMockConfig().port(WIREMOCK_PORT));
-        wireMockServer.start();
-    }
-
-    @AfterAll
-    static void stopWireMock() {
-        wireMockServer.stop();
-    }
+    private static long userSequence = 400000L;
 
     @BeforeEach
     void setUp() {
         RestAssured.port = port;
-        wireMockServer.resetAll();
-        stubKakaoTokenEndpoint();
     }
 
     @Test
@@ -245,19 +215,18 @@ class MedicationScheduleControllerE2ETest {
     }
 
     private String loginAsNewUser(final String nickname) {
-        final long kakaoId = kakaoIdSequence++;
-        stubKakaoUserInfoEndpoint(kakaoId, nickname);
-
+        final String loginId = "scheduletest" + userSequence++;
         return RestAssured.given()
                 .contentType(ContentType.JSON)
                 .body("""
                         {
-                            "code": "test-auth-code",
-                            "redirectUri": "http://localhost/callback"
+                            "loginId": "%s",
+                            "password": "password1234!",
+                            "nickname": "%s"
                         }
-                        """)
+                        """.formatted(loginId, nickname))
                 .when()
-                .post("/api/v1/auth/kakao")
+                .post("/api/v1/auth/signup")
                 .then()
                 .extract()
                 .path("accessToken");
@@ -303,37 +272,5 @@ class MedicationScheduleControllerE2ETest {
                 .then()
                 .extract()
                 .path("id");
-    }
-
-    private void stubKakaoTokenEndpoint() {
-        wireMockServer.stubFor(post(urlPathEqualTo("/oauth/token"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("""
-                                {
-                                    "access_token": "kakao-access-token-mock",
-                                    "token_type": "bearer",
-                                    "expires_in": 3600
-                                }
-                                """)));
-    }
-
-    private void stubKakaoUserInfoEndpoint(final Long kakaoId, final String nickname) {
-        wireMockServer.stubFor(get(urlPathEqualTo("/v2/user/me"))
-                .withHeader("Authorization", equalTo("Bearer kakao-access-token-mock"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody("""
-                                {
-                                    "id": %d,
-                                    "kakao_account": {
-                                        "profile": {
-                                            "nickname": "%s"
-                                        }
-                                    }
-                                }
-                                """.formatted(kakaoId, nickname))));
     }
 }
