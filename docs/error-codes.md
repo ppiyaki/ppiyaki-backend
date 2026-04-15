@@ -25,11 +25,13 @@
 ## 에러 코드
 
 ### Common
+
 | 코드 | HTTP | 메시지 | 설명 |
 |---|---|---|---|
 | `COMMON_001` | 400 | Invalid input | 요청 파라미터 검증 실패 |
 
 ### Auth
+
 | 코드 | HTTP | 메시지 | 설명 |
 |---|---|---|---|
 | `AUTH_001` | 401 | Invalid token | 유효하지 않은 토큰 |
@@ -38,16 +40,26 @@
 | `AUTH_004` | 401 | Invalid login ID or password | 로그인 실패 (ID 또는 비밀번호 불일치) |
 
 ### User
+
 | 코드 | HTTP | 메시지 | 설명 |
 |---|---|---|---|
 | `USER_001` | 404 | User not found | 존재하지 않는 사용자 |
 
 ### Medicine
+
 | 코드 | HTTP | 메시지 | 설명 |
 |---|---|---|---|
 | `MEDICINE_001` | 404 | Medicine not found | 존재하지 않는 약물 |
 
+### Medication Schedule
+
+| 코드 | HTTP | 메시지 | 설명 |
+|---|---|---|---|
+| `SCHEDULE_001` | 404 | Schedule not found | 존재하지 않는 복약 일정 |
+| `SCHEDULE_002` | 400 | Schedule does not belong to this medicine | 일정이 해당 약물에 속하지 않음 |
+
 ### Care Relation
+
 | 코드 | HTTP | 메시지 | 설명 |
 |---|---|---|---|
 | `CARE_001` | 403 | No active care relation | 보호자-시니어 연동 관계 없음 |
