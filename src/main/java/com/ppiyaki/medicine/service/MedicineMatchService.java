@@ -28,6 +28,47 @@ public class MedicineMatchService {
         this.fuzzyAutoThreshold = fuzzyAutoThreshold;
     }
 
+    static String normalize(final String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.strip()
+                .replaceAll("[\\s()\\[\\]\\-]", "")
+                .replaceAll("밀리그람|밀리그램", "mg")
+                .replaceAll("그람|그램", "g")
+                .replaceAll("밀리리터", "ml")
+                .toLowerCase();
+    }
+
+    static double levenshteinSimilarity(final String a, final String b) {
+        if (a.isEmpty() && b.isEmpty()) {
+            return 1.0;
+        }
+        final int maxLen = Math.max(a.length(), b.length());
+        return 1.0 - ((double) levenshteinDistance(a, b) / maxLen);
+    }
+
+    static int levenshteinDistance(final String a, final String b) {
+        final int lenA = a.length();
+        final int lenB = b.length();
+        final int[][] dp = new int[lenA + 1][lenB + 1];
+
+        for (int i = 0; i <= lenA; i++) {
+            dp[i][0] = i;
+        }
+        for (int j = 0; j <= lenB; j++) {
+            dp[0][j] = j;
+        }
+        for (int i = 1; i <= lenA; i++) {
+            for (int j = 1; j <= lenB; j++) {
+                final int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                dp[i][j] = Math.min(Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1),
+                        dp[i - 1][j - 1] + cost);
+            }
+        }
+        return dp[lenA][lenB];
+    }
+
     public MatchResult match(
             final String ocrText,
             final Optional<String> dosageHint,
@@ -97,56 +138,10 @@ public class MedicineMatchService {
             final double similarity
     ) {
         final int editDist = levenshteinDistance(normalize(ocrText), normalize(matched.itemName()));
-        final StringBuilder reason = new StringBuilder();
-        reason.append("OCR '").append(ocrText).append("'와 ");
-        if (editDist == 1) {
-            reason.append("1글자 차이. ");
-        } else {
-            reason.append(editDist).append("글자 차이. ");
-        }
-        reason.append("식약처 등록 약물 '").append(matched.itemName()).append("'(으)로 자동 매칭.");
-        return reason.toString();
-    }
-
-    static String normalize(final String text) {
-        if (text == null) {
-            return "";
-        }
-        return text.strip()
-                .replaceAll("[\\s()\\[\\]\\-]", "")
-                .replaceAll("밀리그람|밀리그램", "mg")
-                .replaceAll("그람|그램", "g")
-                .replaceAll("밀리리터", "ml")
-                .toLowerCase();
-    }
-
-    static double levenshteinSimilarity(final String a, final String b) {
-        if (a.isEmpty() && b.isEmpty()) {
-            return 1.0;
-        }
-        final int maxLen = Math.max(a.length(), b.length());
-        return 1.0 - ((double) levenshteinDistance(a, b) / maxLen);
-    }
-
-    static int levenshteinDistance(final String a, final String b) {
-        final int lenA = a.length();
-        final int lenB = b.length();
-        final int[][] dp = new int[lenA + 1][lenB + 1];
-
-        for (int i = 0; i <= lenA; i++) {
-            dp[i][0] = i;
-        }
-        for (int j = 0; j <= lenB; j++) {
-            dp[0][j] = j;
-        }
-        for (int i = 1; i <= lenA; i++) {
-            for (int j = 1; j <= lenB; j++) {
-                final int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
-                dp[i][j] = Math.min(Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1),
-                        dp[i - 1][j - 1] + cost);
-            }
-        }
-        return dp[lenA][lenB];
+        String reason = "OCR '" + ocrText + "'와 "
+                + editDist + "글자 차이. "
+                + "식약처 등록 약물 '" + matched.itemName() + "'(으)로 자동 매칭.";
+        return reason;
     }
 
     private record ScoredCandidate(
