@@ -19,7 +19,6 @@ import com.ppiyaki.user.repository.OAuthIdentityRepository;
 import com.ppiyaki.user.repository.RefreshTokenRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
-import java.util.Objects;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -45,28 +44,25 @@ public class AuthService {
             final OAuthIdentityRepository oAuthIdentityRepository,
             final RefreshTokenRepository refreshTokenRepository
     ) {
-        this.kakaoIdTokenVerifier = Objects.requireNonNull(kakaoIdTokenVerifier,
-                "kakaoIdTokenVerifier must not be null");
-        this.jwtProvider = Objects.requireNonNull(jwtProvider, "jwtProvider must not be null");
-        this.jwtProperties = Objects.requireNonNull(jwtProperties, "jwtProperties must not be null");
-        this.passwordEncoder = Objects.requireNonNull(passwordEncoder, "passwordEncoder must not be null");
-        this.userRepository = Objects.requireNonNull(userRepository, "userRepository must not be null");
-        this.oAuthIdentityRepository = Objects.requireNonNull(oAuthIdentityRepository,
-                "oAuthIdentityRepository must not be null");
-        this.refreshTokenRepository = Objects.requireNonNull(refreshTokenRepository,
-                "refreshTokenRepository must not be null");
+        this.kakaoIdTokenVerifier = kakaoIdTokenVerifier;
+        this.jwtProvider = jwtProvider;
+        this.jwtProperties = jwtProperties;
+        this.passwordEncoder = passwordEncoder;
+        this.userRepository = userRepository;
+        this.oAuthIdentityRepository = oAuthIdentityRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
     }
 
     @Transactional
     public LoginResponse loginWithKakao(final KakaoLoginRequest kakaoLoginRequest) {
-        Objects.requireNonNull(kakaoLoginRequest, "kakaoLoginRequest must not be null");
-
         final KakaoIdTokenPayload payload = kakaoIdTokenVerifier.verify(kakaoLoginRequest.idToken());
 
         final String providerUserId = payload.sub();
         final User user = oAuthIdentityRepository
                 .findByProviderAndProviderUserId(OAuthProvider.KAKAO, providerUserId)
-                .map(identity -> userRepository.findById(identity.getUserId()).orElseThrow())
+                .map(identity -> userRepository.findById(identity.getUserId())
+                        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND,
+                                "User not found: " + identity.getUserId())))
                 .orElseGet(() -> createNewUser(payload, providerUserId));
 
         final String accessToken = jwtProvider.createAccessToken(user.getId());
@@ -80,8 +76,6 @@ public class AuthService {
 
     @Transactional
     public LoginResponse signup(final SignupRequest signupRequest) {
-        Objects.requireNonNull(signupRequest, "signupRequest must not be null");
-
         if (userRepository.existsByLoginId(signupRequest.loginId())) {
             throw new BusinessException(ErrorCode.AUTH_DUPLICATE_LOGIN_ID);
         }
@@ -105,8 +99,6 @@ public class AuthService {
 
     @Transactional
     public LoginResponse login(final LoginRequest loginRequest) {
-        Objects.requireNonNull(loginRequest, "loginRequest must not be null");
-
         final User user = userRepository.findByLoginId(loginRequest.loginId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS));
 
@@ -135,8 +127,6 @@ public class AuthService {
 
     @Transactional
     public TokenResponse refresh(final String refreshTokenValue) {
-        Objects.requireNonNull(refreshTokenValue, "refreshTokenValue must not be null");
-
         final RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenValue)
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_INVALID_TOKEN));
 
@@ -157,14 +147,12 @@ public class AuthService {
 
     @Transactional
     public void logout(final String refreshTokenValue) {
-        Objects.requireNonNull(refreshTokenValue, "refreshTokenValue must not be null");
         refreshTokenRepository.findByToken(refreshTokenValue)
                 .ifPresent(refreshTokenRepository::delete);
     }
 
     @Transactional(readOnly = true)
     public User findUserById(final Long userId) {
-        Objects.requireNonNull(userId, "userId must not be null");
         return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
     }

@@ -140,18 +140,42 @@
 | drinking_status | boolean | 음주 여부 |
 | created_at | timestamp | `CreatedTimeEntity` (updated_at 없음) |
 
-### prescriptions (`@Table(name = "prescriptions")`, extends `CreatedTimeEntity`)
-처방전 업로드 + OCR 원문 보관.
+### prescriptions (`@Table(name = "prescriptions")`, extends `BaseTimeEntity`)
+처방전 업로드 단위. OCR → LLM 파싱 결과는 `prescription_medicine_candidates`에 저장.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| senior_id | bigint | `users.id` 참조 (대상 시니어) |
-| caregiver_id | bigint | `users.id` 참조 (업로드 수행자) |
-| ocr_image_url | varchar | 원본 이미지 저장 경로 |
-| extracted_text | TEXT | OCR 원문 (`columnDefinition = "TEXT"`) |
-| status | varchar | `UPLOADED`/`PROCESSING`/`SUCCESS`/`FAILED` (후보, enum 미정) |
+| owner_id | bigint | `users.id` 참조 (업로드 수행자 — 보호자 또는 시니어 본인) |
+| status | varchar | `PrescriptionStatus` enum: `UPLOADED`/`PROCESSING`/`REVIEW_NEEDED`/`COMPLETED`/`FAILED` |
+| masked_image_object_key | varchar nullable | Object Storage 업로드 키 (마스킹된 이미지) |
+| failure_reason | text nullable | OCR/LLM 실패 사유 |
+| created_at / updated_at | timestamp | `BaseTimeEntity` |
+
+> **코드 갭**: 이전 스키마(`senior_id`, `caregiver_id`, `ocr_image_url`, `extracted_text`)에서 재설계됨. 엔티티 코드 갱신 필요. 추적: §7-A 항목 추가.
+
+### prescription_medicine_candidates (target: `@Table(name = "prescription_medicine_candidates")`, extends `CreatedTimeEntity`)
+OCR + LLM 파싱으로 추출된 약물 후보. 처방전 1건당 N행. 보호자가 검토·확정하면 `medicines` 레코드가 생성된다.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | bigint PK | |
+| prescription_id | bigint | `prescriptions.id` 참조 |
+| ocr_raw_text | varchar nullable | OCR이 인식한 원문 약물 텍스트 |
+| extracted_name | varchar nullable | LLM이 추출한 약물명 |
+| extracted_dosage | varchar nullable | LLM이 추출한 용량 |
+| extracted_schedule | varchar nullable | LLM이 추출한 복약 일정 |
+| matched_item_seq | varchar nullable | 식약처 DB 매칭된 품목 일련번호 |
+| matched_item_name | varchar nullable | 식약처 DB 매칭된 품목명 |
+| match_type | varchar nullable | `MatchType` enum: 매칭 방식(예: `EXACT`/`FUZZY`/`MANUAL` 등) |
+| match_reason | text nullable | 매칭 근거 설명 |
+| caregiver_decision | varchar | `CaregiverDecision` enum: 보호자 검토 결과(`PENDING`/`APPROVED`/`REJECTED`/`MODIFIED` 등) |
+| caregiver_chosen_item_seq | varchar nullable | 보호자가 직접 선택한 품목 일련번호 (MODIFIED 시) |
+| reviewed_at | datetime nullable | 보호자 검토 완료 시각 |
+| created_medicine_id | bigint nullable | 확정 후 생성된 `medicines.id` 참조 |
 | created_at | timestamp | `CreatedTimeEntity` |
+
+> **코드 갭**: 신규 엔티티 — 엔티티 클래스 및 마이그레이션 미구현. 추적: §7-A 항목 추가.
 
 ### medicines (target: `@Table(name = "medicines")`, extends `CreatedTimeEntity`)
 약물. 처방전에서 파생되거나 **수동 등록**으로 생성.
@@ -164,10 +188,12 @@
 | name | varchar | 약물명 |
 | total_amount | Integer | 처방 총량 |
 | remaining_amount | Integer | 현재 잔량 |
+| item_seq | varchar nullable | 식약처 품목 일련번호. DUR API 호출 키로 사용 |
 | dur_warning_text | varchar | DUR 경고 요약 텍스트(최근 dur_checks에서 복사된 요약) |
 | created_at | timestamp | `CreatedTimeEntity` |
 
-> **코드 갭**: 현재 코드에는 `owner_id`가 없고 `prescription_id`는 non-null. 추적: §7-16.
+> **코드 갭 해소됨**: `owner_id` 추가 및 `prescription_id` nullable 전환 완료 (#15).
+> **코드 갭**: `item_seq` 컬럼 추가 필요. 추적: §7-A 항목 추가.
 
 ### medication_schedules (target: `@Table(name = "medication_schedules")`, extends `CreatedTimeEntity`)
 복약 일정. `medicine` 1건당 시간대별 N행.
@@ -183,7 +209,7 @@
 | end_date | date nullable | 복약 종료일. NULL이면 무기한 |
 | created_at | timestamp | `CreatedTimeEntity` |
 
-> **코드 갭**: 현재 코드에는 `days_of_week`, `start_date`, `end_date`가 없음. 추적: §7-16.
+> **코드 갭 해소됨**: `days_of_week`, `start_date`, `end_date` 추가 완료 (#16). 현재 코드와 타깃 스키마 일치.
 
 ### medication_logs (`@Table(name = "medication_logs")`, extends `CreatedTimeEntity`)
 복약 이행 기록. 일자별 × 스케줄별 1행.
@@ -228,10 +254,12 @@ DUR 점검 결과의 immutable 로그. 약물 정보가 시간에 따라 변할 
 | warning_level | varchar nullable | `NONE`/`INFO`/`WARN`/`BLOCK` 등 enum 후보 |
 | warning_text | text nullable | 경고 요약 텍스트 (UI 표시용) |
 | raw_response | text nullable | 외부 API 원본 응답 (감사용, 민감정보는 마스킹) |
+| combo_hash | varchar nullable | 병용 체크 시 대상 약물 집합의 해시 (중복 조회 방지용) |
 | created_at | timestamp | `CreatedTimeEntity` |
 
 > 가장 최근 결과가 필요하면 `(medicine_id, checked_at DESC)` 인덱스로 조회.
 > 캐싱은 도입하지 않음(약물 정보 변경 가능성 때문). 외부 API 비용이 문제되면 후속 이슈에서 TTL 캐시 검토.
+> **코드 갭**: `combo_hash` 컬럼 추가 필요. 추적: §7-A 항목 추가.
 
 ### device_tokens (target: `@Table(name = "device_tokens")`, extends `BaseTimeEntity`)
 FCM 등 푸시 알림을 위한 디바이스 토큰.
@@ -291,10 +319,11 @@ erDiagram
     users ||--o{ care_relations : "senior"
     users ||--o{ care_relations : "caregiver"
     users ||--|| health_profiles : "has"
-    users ||--o{ prescriptions : "senior"
-    users ||--o{ prescriptions : "uploaded_by"
+    users ||--o{ prescriptions : "owner"
     users ||--o{ medicines : "owns"
+    prescriptions ||--o{ prescription_medicine_candidates : "has"
     prescriptions ||--o{ medicines : "contains"
+    prescription_medicine_candidates }o--o| medicines : "creates"
     medicines ||--o{ medication_schedules : "has"
     medicines ||--o{ dur_checks : "checked"
     medication_schedules ||--o{ medication_logs : "produces"
@@ -344,11 +373,28 @@ erDiagram
     }
     prescriptions {
         bigint id PK
-        bigint senior_id FK
-        bigint caregiver_id FK
-        varchar ocr_image_url
-        text extracted_text
+        bigint owner_id FK
         varchar status
+        varchar masked_image_object_key "nullable"
+        text failure_reason "nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+    prescription_medicine_candidates {
+        bigint id PK
+        bigint prescription_id FK
+        varchar ocr_raw_text "nullable"
+        varchar extracted_name "nullable"
+        varchar extracted_dosage "nullable"
+        varchar extracted_schedule "nullable"
+        varchar matched_item_seq "nullable"
+        varchar matched_item_name "nullable"
+        varchar match_type "nullable"
+        text match_reason "nullable"
+        varchar caregiver_decision
+        varchar caregiver_chosen_item_seq "nullable"
+        datetime reviewed_at "nullable"
+        bigint created_medicine_id FK "nullable"
         timestamp created_at
     }
     medicines {
@@ -358,6 +404,7 @@ erDiagram
         varchar name
         integer total_amount
         integer remaining_amount
+        varchar item_seq "nullable"
         varchar dur_warning_text
         timestamp created_at
     }
@@ -414,6 +461,7 @@ erDiagram
         varchar warning_level
         text warning_text
         text raw_response
+        varchar combo_hash "nullable"
         timestamp created_at
     }
     reports {
@@ -446,13 +494,17 @@ erDiagram
 
 | # | 주제 | 갭 요약 |
 |---|---|---|
-| 7-16 | `users` 필드 확장 | 타깃: `nickname`/`gender`/`dob` 추가, `ppiyaki bigint` → `pet bigint` rename(PK 참조 유지), `password` nullable |
-| 7-17 | `caregiver_senior_mappings` → `care_relations` | 테이블 rename + `deleted_at` soft delete 도입 |
-| 7-18 | `Pet` 공통 시간 엔티티 상속 | `Pet.java`가 `BaseTimeEntity`를 상속하도록 변경해 `created_at`/`updated_at` 추가 |
-| 7-19 | 신규 엔티티 구현 | `oauth_identities`, `dur_checks`, `device_tokens`, `medication_reminders`, `reports` 엔티티 클래스 신설 |
-| 7-20 | `medication_schedules` 필드 확장 | `days_of_week`, `start_date`, `end_date` 추가 |
-| 7-21 | `medication_logs` 필드 확장 | `confirmed_by_user_id` 추가 |
-| 7-22 | `medicines` 소유 관계 | `owner_id` 추가, `prescription_id` nullable 전환 |
+| ~~7-16~~ | ~~`users` 필드 확장~~ | ~~타깃: `nickname`/`gender`/`dob` 추가, `ppiyaki bigint` → `pet bigint` rename, `password` nullable~~ ✅ 해소됨 |
+| ~~7-17~~ | ~~`caregiver_senior_mappings` → `care_relations`~~ | ~~테이블 rename + `deleted_at` soft delete 도입~~ ✅ 해소됨 |
+| ~~7-18~~ | ~~`Pet` 공통 시간 엔티티 상속~~ | ~~`Pet.java`가 `BaseTimeEntity` 상속~~ ✅ 해소됨 |
+| ~~7-19~~ | ~~신규 엔티티 구현~~ | ~~`oauth_identities`, `dur_checks`, `device_tokens`, `medication_reminders`, `reports` 신설~~ ✅ 해소됨 |
+| ~~7-20~~ | ~~`medication_schedules` 필드 확장~~ | ~~`days_of_week`, `start_date`, `end_date` 추가~~ ✅ 해소됨 |
+| ~~7-21~~ | ~~`medication_logs` 필드 확장~~ | ~~`confirmed_by_user_id` 추가~~ ✅ 해소됨 |
+| ~~7-22~~ | ~~`medicines` 소유 관계~~ | ~~`owner_id` 추가, `prescription_id` nullable 전환~~ ✅ 해소됨 |
+| ~~7-24~~ | ~~`medicines.item_seq` 추가~~ | ~~식약처 품목기준코드 컬럼 신설~~ ✅ 해소됨 (#144) |
+| ~~7-25~~ | ~~`dur_checks.combo_hash` 추가~~ | ~~병용 체크 대상 약물 집합 해시 컬럼~~ ✅ 해소됨 (#153) |
+| ~~7-26~~ | ~~`prescriptions` 스키마 재설계~~ | ~~`owner_id`/`masked_image_object_key`/`failure_reason` 도입~~ ✅ 해소됨 (#155) |
+| ~~7-27~~ | ~~`prescription_medicine_candidates` 신규 엔티티~~ | ~~OCR+LLM 파싱 약물 후보 테이블~~ ✅ 해소됨 (#155) |
 
 ### 7-B) 인덱스/제약 후보 (§7-12)
 

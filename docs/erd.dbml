@@ -1,0 +1,200 @@
+// ppiyaki-backend ERD — 2026-04-16
+// https://dbdiagram.io 에 붙여넣기
+
+// User Domain
+Table users {
+  id bigint [pk, increment, not null]
+  login_id varchar [unique]
+  password varchar
+  role varchar [note: 'enum: UserRole']
+  nickname varchar
+  gender varchar [note: 'enum: Gender']
+  dob date
+  pet bigint
+  created_at datetime [not null]
+  updated_at datetime
+}
+
+Table oauth_identities {
+  id bigint [pk, increment, not null]
+  user_id bigint [not null]
+  provider varchar [not null, note: 'enum: OAuthProvider']
+  provider_user_id varchar [not null]
+  created_at datetime [not null]
+}
+
+Table care_relations {
+  id bigint [pk, increment, not null]
+  senior_id bigint
+  caregiver_id bigint
+  invite_code varchar
+  deleted_at datetime
+  created_at datetime [not null]
+  updated_at datetime
+}
+
+Table refresh_tokens {
+  id bigint [pk, increment, not null]
+  user_id bigint [not null]
+  token varchar [not null, unique]
+  expires_at datetime [not null]
+  created_at datetime [not null]
+  updated_at datetime
+}
+
+// Pet Domain
+Table pets {
+  id bigint [pk, increment, not null]
+  point bigint
+  created_at datetime [not null]
+  updated_at datetime
+}
+
+// Medicine Domain
+Table medicines {
+  id bigint [pk, increment, not null]
+  owner_id bigint [not null]
+  prescription_id bigint
+  name varchar [not null]
+  total_amount int [not null]
+  remaining_amount int [not null]
+  item_seq varchar
+  dur_warning_text varchar
+  created_at datetime [not null]
+}
+
+// Medication Domain
+Table medication_schedules {
+  id bigint [pk, increment, not null]
+  medicine_id bigint [not null]
+  scheduled_time time
+  dosage varchar
+  days_of_week varchar
+  start_date date
+  end_date date
+  created_at datetime [not null]
+}
+
+Table medication_logs {
+  id bigint [pk, increment, not null]
+  senior_id bigint
+  schedule_id bigint
+  target_date date
+  taken_at datetime
+  status varchar
+  photo_url varchar
+  ai_status varchar
+  is_proxy boolean
+  confirmed_by_user_id bigint
+  created_at datetime [not null]
+}
+
+Table medication_reminders {
+  id bigint [pk, increment, not null]
+  schedule_id bigint [not null]
+  senior_id bigint [not null]
+  target_date date [not null]
+  scheduled_at datetime [not null]
+  sent_at datetime
+  delivery_status varchar [not null, note: 'enum: DeliveryStatus']
+  channel varchar [not null, note: 'enum: ReminderChannel']
+  error_message varchar
+  created_at datetime [not null]
+  updated_at datetime
+}
+
+Table device_tokens {
+  id bigint [pk, increment, not null]
+  user_id bigint [not null]
+  token varchar [not null, unique]
+  platform varchar [not null, note: 'enum: DevicePlatform']
+  is_active boolean [not null]
+  last_seen_at datetime
+  created_at datetime [not null]
+  updated_at datetime
+}
+
+// Health Domain
+Table dur_checks {
+  id bigint [pk, increment, not null]
+  medicine_id bigint [not null]
+  checked_at datetime [not null]
+  warning_level varchar [note: 'enum: DurWarningLevel']
+  warning_text text
+  raw_response text
+  combo_hash varchar
+  created_at datetime [not null]
+}
+
+Table health_profiles {
+  id bigint [pk, increment, not null]
+  senior_id bigint
+  diet_habits varchar
+  allergies varchar
+  smoking_status boolean
+  drinking_status boolean
+  created_at datetime [not null]
+}
+
+Table reports {
+  id bigint [pk, increment, not null]
+  senior_id bigint [not null]
+  period_type varchar [not null, note: 'enum: ReportPeriodType']
+  period_start date [not null]
+  period_end date [not null]
+  total_scheduled int [not null]
+  total_taken int [not null]
+  total_missed int [not null]
+  adherence_rate decimal(5,2)
+  created_at datetime [not null]
+}
+
+// Prescription Domain
+Table prescriptions {
+  id bigint [pk, increment, not null]
+  owner_id bigint [not null]
+  status varchar [not null, note: 'enum: PrescriptionStatus']
+  masked_image_object_key varchar
+  failure_reason text
+  created_at datetime [not null]
+  updated_at datetime
+}
+
+Table prescription_medicine_candidates {
+  id bigint [pk, increment, not null]
+  prescription_id bigint [not null]
+  ocr_raw_text varchar
+  extracted_name varchar
+  extracted_dosage varchar
+  extracted_schedule varchar
+  matched_item_seq varchar
+  matched_item_name varchar
+  match_type varchar [note: 'enum: MatchType']
+  match_reason text
+  caregiver_decision varchar [not null, note: 'enum: CaregiverDecision']
+  caregiver_chosen_item_seq varchar
+  reviewed_at datetime
+  created_medicine_id bigint
+  created_at datetime [not null]
+}
+
+// Relationships
+Ref: oauth_identities.user_id > users.id
+Ref: refresh_tokens.user_id > users.id
+Ref: device_tokens.user_id > users.id
+Ref: care_relations.senior_id > users.id
+Ref: care_relations.caregiver_id > users.id
+Ref: medicines.owner_id > users.id
+Ref: medicines.prescription_id > prescriptions.id
+Ref: medication_schedules.medicine_id > medicines.id
+Ref: medication_logs.schedule_id > medication_schedules.id
+Ref: medication_logs.senior_id > users.id
+Ref: medication_logs.confirmed_by_user_id > users.id
+Ref: medication_reminders.schedule_id > medication_schedules.id
+Ref: medication_reminders.senior_id > users.id
+Ref: dur_checks.medicine_id > medicines.id
+Ref: health_profiles.senior_id > users.id
+Ref: reports.senior_id > users.id
+Ref: prescriptions.owner_id > users.id
+Ref: prescription_medicine_candidates.prescription_id > prescriptions.id
+Ref: prescription_medicine_candidates.created_medicine_id > medicines.id

@@ -33,3 +33,12 @@ kakao:
     issuer: ${KAKAO_OIDC_ISSUER:https://kauth.kakao.com}
     jwks-uri: ${KAKAO_OIDC_JWKS_URI:https://kauth.kakao.com/.well-known/jwks.json}
     audience: ${KAKAO_OIDC_AUDIENCE:local-kakao-app-key}
+
+mfds:
+  api:
+    base-url: apis.data.go.kr/1471000/DURPrdlstInfoService03
+    connect-timeout: 2000
+    read-timeout: 5000
+
+openai:
+  model: gpt-5.4-nano

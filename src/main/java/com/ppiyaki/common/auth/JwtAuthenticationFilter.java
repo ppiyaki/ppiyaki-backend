@@ -6,7 +6,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
-import java.util.Objects;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -21,7 +20,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtProvider jwtProvider;
 
     public JwtAuthenticationFilter(final JwtProvider jwtProvider) {
-        this.jwtProvider = Objects.requireNonNull(jwtProvider, "jwtProvider must not be null");
+        this.jwtProvider = jwtProvider;
     }
 
     @Override
