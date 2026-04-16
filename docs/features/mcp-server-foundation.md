@@ -24,7 +24,7 @@ last_reviewed: 2026-04-16
 
 ### 기능 요구사항
 - [ ] `spring-ai-starter-mcp-server-webmvc:1.1.4` 의존성 추가.
-- [ ] HTTP/SSE transport로 MCP 엔드포인트 노출 (기본 경로 `/mcp` 또는 명시 설정).
+- [ ] HTTP/SSE transport로 MCP 엔드포인트 노출 (경로: `/mcp`).
 - [ ] 다음 MCP tool들 등록:
   - `search_medicine` — `MedicineSearchService.search` 래핑
   - `match_medicine_from_ocr` — `MedicineMatchService.match` 래핑
@@ -164,9 +164,6 @@ public class MedicineMcpTools {
 
 | # | 질문 | 선택지 | 담당/기한 |
 |---|---|---|---|
-| Q-MCP-1 | MCP path | (a) `/mcp` (default) / (b) `/api/v1/mcp` | @goohong / PR 2 전 |
-| Q-MCP-2 | rate limit 기본 분당 호출 수 | (a) 60 / (b) 120 / (c) 30 | @goohong / PR 6 전 |
-| Q-MCP-3 | sync vs async server type | (a) SYNC / (b) ASYNC (Reactor) | @goohong / PR 2 전 |
 | Q-MCP-4 | tool 호출 audit log 보관 기간 | (a) 30일 / (b) 90일 | @goohong / PR 7 전 |
 
 ## 9) 결정 로그
@@ -175,3 +172,7 @@ public class MedicineMcpTools {
 - 2026-04-16: Spring AI 1.1.4 starter 채택 — webmvc 변종 사용 (기존 스택 유지)
 - 2026-04-16: 어노테이션 기반 (`@McpTool`/`@McpToolParam`) — Spring AI 권장 패턴
 - 2026-04-16: rate limit는 in-memory 시작, Redis 마이그레이션 TODO (medicine-dur 캐시와 동일 패턴)
+- 2026-04-16: **Q-MCP-1 결정** — MCP path `/mcp` (Spring AI 기본 경로) 채택. `/api/v1/mcp`는 REST 컨벤션이나 MCP는 별도 프로토콜이므로 기본 경로 유지.
+- 2026-04-16: **Q-MCP-2 결정** — rate limit 기본 60회/분. 외부 API 쿼터(식약처 10K/일 ÷ 인당 평균 사용 고려) 및 비용 통제 기준. 초과 시 429 반환.
+- 2026-04-16: **Q-MCP-3 결정** — SYNC (Spring MVC 기반). 기존 스택(spring-boot-starter-web) 유지, Reactor 도입 불필요. `spring-ai-starter-mcp-server-webmvc` 변종과 일치.
+- 2026-04-16: **구현 순서 확정** — ① item_seq 컬럼 추가 → ② medicine-search (+ medicine-dur 병렬 가능) → ③ medicine-dur → ④ prescription-ocr 통합본 → ⑤ mcp-server-foundation (현재 spec).

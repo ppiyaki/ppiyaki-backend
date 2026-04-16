@@ -27,7 +27,7 @@ last_reviewed: 2026-04-16
 ## 3) 요구사항
 
 ### 기능 요구사항
-- [ ] `GET /api/v1/medicines/search?q=...&form=...&limit=10` — 검색 API. 부분 일치, 정규화 매칭. 응답: `MedicineCandidate[]` (itemSeq, name, entpName, mainIngr, classCode, formName, etcOtcCode 등).
+- [ ] `GET /api/v1/medicines/search?q=...&form=...&limit=10` — 검색 API. 부분 일치, 정규화 매칭. 응답: `MedicineCandidate[]` (itemSeq, name, entpName, mainIngr, classCode, formName, etcOtcCode 등). limit 기본 10, 최대 50.
 - [ ] `MedicineSearchService.search(query, options)` 인터페이스. 식약처 `getDurPrdlstInfoList03` 호출 + 결과 매핑.
 - [ ] `MedicineMatchService.match(ocrText, dosageHint?, formHint?)` 인터페이스. 검색 결과 + 정책 기반 `MatchResult` 반환.
 - [ ] **MatchResult.matchType** enum: `EXACT` / `FUZZY_AUTO` / `MANUAL_REQUIRED` / `NO_MATCH`.
@@ -216,7 +216,6 @@ generateReason(ocrText, matchedCandidate):
 
 | # | 질문 | 선택지 | 담당/기한 |
 |---|---|---|---|
-| Q-SEARCH-1 | 검색 limit 기본/최대 | (a) 10/50 / (b) 20/100 | @goohong / PR 4 전 |
 | Q-SEARCH-2 | 음성학적 매칭 도입 시점 | (a) Phase 1 포함 / (b) Phase 2 | @goohong / PR 3 전 |
 | Q-SEARCH-3 | 사용자 수동 검색 결과에 cancelDate(취소된 약물) 표시 여부 | (a) 표시 / (b) 제외 / (c) 별도 필터 | @goohong / PR 4 전 |
 
@@ -226,3 +225,5 @@ generateReason(ocrText, matchedCandidate):
 - 2026-04-16: **fuzzy 매칭 임계치 0.90 + 용량/제형 일치 조건** — 한국 약물명 1글자 차이가 완전히 다른 성분일 위험을 감안한 보수적 설정
 - 2026-04-16: **EXACT 후보 자동 매칭, FUZZY_AUTO는 사유 메모 동반** — 보호자가 신경 쓸 항목을 자연스럽게 분리
 - 2026-04-16: 검색 결과 캐시는 `medicine-dur`의 `MfdsResponseCache` 재사용 (인메모리 24h, Redis 마이그레이션 TODO)
+- 2026-04-16: **Q-SEARCH-1 결정** — 검색 limit 기본 10, 최대 50. 페이로드 보수적, `medicine-dur` 이력 조회와 동일 기준. `SearchOptions.limit` 기본값 10, 상한 50으로 구현.
+- 2026-04-16: **구현 순서 확정** — ① item_seq 컬럼 추가 → ② medicine-search (+ medicine-dur 병렬 가능) → ③ medicine-dur → ④ prescription-ocr 통합본 → ⑤ mcp-server-foundation.

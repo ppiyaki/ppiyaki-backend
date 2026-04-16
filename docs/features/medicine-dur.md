@@ -333,3 +333,5 @@ DurCheckService
 - 2026-04-15: **이중 캐시 구조 도입** — Layer 1(사용자 공유, `(operation, itemSeq)` 키, 외부 API 응답 정제본) + Layer 2(사용자별, `dur_checks` + `combo_hash`, 다제 점검 결과). 단일 캐시로는 쿼터 초과·무효화 부정확 문제 해결 불가.
 - 2026-04-15: **Layer 1 저장 방식 — 인메모리 우선, Redis TODO**. 이유: Redis 인프라 부담 회피, 단일 인스턴스 운영 중, 인터페이스 추상화(`MfdsResponseCache`)로 후속 Redis 스왑 용이. 마이그레이션 트리거: 다중 인스턴스 배포 / 엔트리 1만+ / 콜드 캐시 운영 비용 가시화. **TODO는 spec §5-3-A에 명시 유지**.
 - 2026-04-15: **Layer 2 무효화 방식 — `combo_hash` 포함 키**. 시니어가 약물을 추가/제거할 때 자동으로 캐시 미스. 단순 TTL만으로는 부정확하다는 판단.
+- 2026-04-16: **OpenAI 모델 맥락 공유** — prescription-ocr spec의 AI 모델이 gpt-4o-mini에서 gpt-5.4-nano로 변경됨 (OpenAI 라인업 변경, 단가: 입력 $0.20/1M, 출력 $1.25/1M). 본 spec(DUR)은 OpenAI를 직접 호출하지 않으나, prescription-ocr 통합 파이프라인과의 연계 구현 시 참고.
+- 2026-04-16: **구현 순서 확정** — ① item_seq 컬럼 추가 → ② medicine-search (+ medicine-dur 병렬 가능) → ③ medicine-dur (현재 spec) → ④ prescription-ocr 통합본 → ⑤ mcp-server-foundation. medicine-search와 병렬 진행 가능.
