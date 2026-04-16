@@ -42,8 +42,3 @@ mfds:
 
 openai:
   model: gpt-5.4-nano
-
-spring:
-  ai:
-    openai:
-      api-key: ${OPENAI_API_KEY:}
