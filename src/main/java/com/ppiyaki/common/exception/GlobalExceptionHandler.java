@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -52,7 +53,8 @@ public class GlobalExceptionHandler {
         return lastDot < 0 ? propertyPath : propertyPath.substring(lastDot + 1);
     }
 
-    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
+    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class,
+            MissingServletRequestParameterException.class})
     public ResponseEntity<ErrorResponse> handleMalformedRequest(final Exception exception) {
         log.debug("Malformed request: {}", exception.getMessage());
         final ErrorResponse errorResponse = ErrorResponse.of(ErrorCode.MALFORMED_REQUEST);
