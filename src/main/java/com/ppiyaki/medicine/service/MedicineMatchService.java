@@ -40,9 +40,11 @@ public class MedicineMatchService {
                 .toLowerCase();
     }
 
-    static String extractNameForSearch(final String normalizedText) {
-        final String nameOnly = normalizedText.replaceAll("[0-9]+(\\.[0-9]+)?(mg|g|ml|%|mcg|iu)?.*$", "");
-        return nameOnly.isEmpty() ? normalizedText : nameOnly;
+    static String extractSearchQuery(final String ocrText) {
+        final String withoutParenthesized = ocrText.replaceAll("[\\(（][^\\)）]*[\\)）]", "");
+        final String cleaned = normalize(withoutParenthesized);
+        final String nameOnly = cleaned.replaceAll("[0-9]+(\\.[0-9]+)?(mg|g|ml|%|mcg|iu)?.*$", "");
+        return nameOnly.isEmpty() ? cleaned : nameOnly;
     }
 
     static double levenshteinSimilarity(final String a, final String b) {
@@ -80,8 +82,12 @@ public class MedicineMatchService {
             final Optional<String> formHint
     ) {
         final String normalized = normalize(ocrText);
-        final String searchQuery = extractNameForSearch(normalized);
-        final List<MedicineCandidate> candidates = searchService.search(searchQuery, 20);
+        final String searchQuery = extractSearchQuery(ocrText);
+        List<MedicineCandidate> candidates = searchService.search(searchQuery, 20);
+
+        if (candidates.isEmpty()) {
+            candidates = fallbackSearch(searchQuery);
+        }
 
         if (candidates.isEmpty()) {
             return new MatchResult(MatchType.NO_MATCH, Optional.empty(), List.of(), 0.0,
@@ -136,6 +142,19 @@ public class MedicineMatchService {
 
         return new MatchResult(MatchType.NO_MATCH, Optional.empty(), List.of(), top.similarity(),
                 "유사한 약물을 찾지 못함");
+    }
+
+    private List<MedicineCandidate> fallbackSearch(final String query) {
+        final int minLength = 3;
+        for (int i = 1; i <= query.length() - minLength; i++) {
+            final String shortened = query.substring(i);
+            final List<MedicineCandidate> results = searchService.search(shortened, 20);
+            if (!results.isEmpty()) {
+                log.info("Fallback search hit: '{}' → '{}' ({} results)", query, shortened, results.size());
+                return results;
+            }
+        }
+        return List.of();
     }
 
     private String generateReason(

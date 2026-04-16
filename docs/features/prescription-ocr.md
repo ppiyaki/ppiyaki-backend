@@ -313,6 +313,8 @@ created_at
 | Q-OCR-3 | 마스킹본 보존 기간 | **영구 보존** (결정됨 — §9 참조) | ✅ 결정 |
 | Q-CONF-3 | 보호자가 약물을 수동 추가하는 권한 범위 | (a) 후보에 추가만 / (b) Medicine 직접 생성 | @goohong / PR 9 전 |
 | Q-CONF-4 | confirm 후 DUR 자동 점검 | (a) 자동 트리거 / (b) 별도 사용자 액션 | @goohong / DUR 후속 |
+| Q-OCR-5 | 회전된 처방전 이미지 대응 | EXIF orientation 보정 또는 이미지 분석 자동 회전. 현재 90도 회전 이미지는 OCR 텍스트는 추출되나 바운딩박스 좌표가 이미지 픽셀과 불일치하여 PII 마스킹 위치가 틀어짐 | TODO |
+| Q-OCR-6 | PII 키워드 마스킹 범위 | 현재 키워드 다음 토큰 1개만 마스킹. 같은 줄 전체 마스킹으로 개선 필요 (주소 등 여러 토큰에 걸친 PII 누락) | TODO |
 
 ## 9) 결정 로그
 - 2026-04-16: 초안 작성 (`prescription-ocr.md` + `prescription-confirmation.md` 분리 초안)
