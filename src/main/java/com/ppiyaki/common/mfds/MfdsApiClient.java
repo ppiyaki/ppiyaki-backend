@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -18,7 +20,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
 @ConditionalOnProperty(prefix = "mfds.api", name = "service-key")
@@ -66,14 +67,17 @@ public class MfdsApiClient {
         final long startTime = System.currentTimeMillis();
 
         try {
-            final UriComponentsBuilder uriBuilder = UriComponentsBuilder
-                    .fromHttpUrl("https://" + properties.baseUrl() + "/" + operation)
-                    .queryParam("serviceKey", properties.serviceKey())
-                    .queryParam("type", "json");
+            final StringBuilder urlBuilder = new StringBuilder()
+                    .append("https://").append(properties.baseUrl()).append("/").append(operation)
+                    .append("?serviceKey=").append(properties.serviceKey())
+                    .append("&type=json");
 
-            params.forEach(uriBuilder::queryParam);
+            for (final Map.Entry<String, String> entry : params.entrySet()) {
+                urlBuilder.append("&").append(entry.getKey()).append("=")
+                        .append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
+            }
 
-            final URI uri = uriBuilder.build(true).toUri();
+            final URI uri = URI.create(urlBuilder.toString());
             final String responseBody = restClient.get()
                     .uri(uri)
                     .retrieve()
@@ -119,17 +123,25 @@ public class MfdsApiClient {
             final JsonNode itemsNode = body.path("items");
 
             if (!itemsNode.isMissingNode() && !itemsNode.isNull()) {
-                final JsonNode itemNode = itemsNode.path("item");
-                if (itemNode.isArray()) {
-                    for (final JsonNode item : itemNode) {
+                if (itemsNode.isArray()) {
+                    for (final JsonNode item : itemsNode) {
                         items.add(objectMapper.convertValue(item,
                                 new TypeReference<Map<String, Object>>() {
                                 }));
                     }
-                } else if (itemNode.isObject()) {
-                    items.add(objectMapper.convertValue(itemNode,
-                            new TypeReference<Map<String, Object>>() {
-                            }));
+                } else if (itemsNode.isObject()) {
+                    final JsonNode itemNode = itemsNode.path("item");
+                    if (itemNode.isArray()) {
+                        for (final JsonNode item : itemNode) {
+                            items.add(objectMapper.convertValue(item,
+                                    new TypeReference<Map<String, Object>>() {
+                                    }));
+                        }
+                    } else if (itemNode.isObject()) {
+                        items.add(objectMapper.convertValue(itemNode,
+                                new TypeReference<Map<String, Object>>() {
+                                }));
+                    }
                 }
             }
 
