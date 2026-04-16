@@ -1,0 +1,505 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "식품의약품안전처 의약품안전사용서비스 (DUR) 품목정보 OpenAPI. 병용금기, 특정연령대 금기, 임부 금기, 용량주의, 투여기간주의, 노인주의, 효능군 중복주의, 서방정분할주의, DUR 품목 정보 조회 등을 제공.",
+    "version": "1.0.0",
+    "title": "식품의약품안전처_의약품안전사용서비스(DUR)품목정보",
+    "x-public-data-pk": "15059486",
+    "x-source": "공공데이터포털 (data.go.kr) — Swagger 정의 추출본. 변경 시 원본과 동기화 필요.",
+    "x-snapshot-date": "2026-04-15"
+  },
+  "host": "apis.data.go.kr/1471000/DURPrdlstInfoService03",
+  "basePath": "",
+  "schemes": ["https", "http"],
+  "paths": {
+    "/getUsjntTabooInfoList03": {
+      "get": {
+        "summary": "병용금기 정보조회",
+        "description": "DUR품목정보의 병용금기 정보를 목록으로 제공",
+        "operationId": "getUsjntTabooInfoList03",
+        "tags": ["API 목록"],
+        "consumes": ["application/json"],
+        "produces": ["application/json", "application/xml"],
+        "responses": {
+          "200": {
+            "description": "성공",
+            "schema": { "$ref": "#/definitions/getUsjntTabooInfoList03_response" }
+          },
+          "01": { "description": "APPLICATION_ERROR" },
+          "11": { "description": "NO_MANDATORY_REQUEST__PARAMETER_ERROR" }
+        }
+      },
+      "parameters": [
+        { "name": "serviceKey", "description": "공공데이터포털에서 발급 받은 인증키 (URL Encode)", "type": "string", "required": true, "in": "query" },
+        { "name": "pageNo", "type": "integer", "in": "query" },
+        { "name": "numOfRows", "type": "integer", "in": "query" },
+        { "name": "type", "description": "응답 형식 (xml/json), default xml", "type": "string", "in": "query" },
+        { "name": "typeName", "description": "DUR유형", "type": "string", "in": "query" },
+        { "name": "ingrCode", "description": "DUR성분코드", "type": "string", "in": "query" },
+        { "name": "itemName", "description": "품목명", "type": "string", "in": "query" },
+        { "name": "start_change_date", "type": "string", "in": "query" },
+        { "name": "end_change_date", "type": "string", "in": "query" },
+        { "name": "itemSeq", "description": "품목기준코드", "type": "string", "in": "query" },
+        { "name": "bizrno", "description": "사업자등록번호", "type": "string", "in": "query" }
+      ]
+    },
+    "/getOdsnAtentInfoList03": {
+      "get": {
+        "summary": "노인주의 정보조회",
+        "description": "DUR품목정보의 노인주의 정보를 목록으로 제공",
+        "operationId": "getOdsnAtentInfoList03",
+        "tags": ["API 목록"],
+        "responses": {
+          "200": { "description": "성공", "schema": { "$ref": "#/definitions/getOdsnAtentInfoList03_response" } },
+          "01": { "description": "APPLICATION_ERROR" },
+          "11": { "description": "NO_MANDATORY_REQUEST__PARAMETER_ERROR" }
+        }
+      },
+      "parameters": [
+        { "name": "serviceKey", "type": "string", "required": true, "in": "query" },
+        { "name": "pageNo", "type": "integer", "in": "query" },
+        { "name": "numOfRows", "type": "integer", "in": "query" },
+        { "name": "type", "type": "string", "in": "query" },
+        { "name": "typeName", "type": "string", "in": "query" },
+        { "name": "ingrCode", "type": "string", "in": "query" },
+        { "name": "itemName", "type": "string", "in": "query" },
+        { "name": "start_change_date", "type": "string", "in": "query" },
+        { "name": "end_change_date", "type": "string", "in": "query" },
+        { "name": "itemSeq", "type": "string", "in": "query" }
+      ]
+    },
+    "/getDurPrdlstInfoList03": {
+      "get": {
+        "summary": "DUR품목정보 조회",
+        "description": "DUR품목정보(약물 메타데이터)를 목록으로 제공. 약물 검색·매칭 용도.",
+        "operationId": "getDurPrdlstInfoList03",
+        "tags": ["API 목록"],
+        "responses": {
+          "200": { "description": "성공", "schema": { "$ref": "#/definitions/getDurPrdlstInfoList03_response" } }
+        }
+      },
+      "parameters": [
+        { "name": "serviceKey", "type": "string", "required": true, "in": "query" },
+        { "name": "pageNo", "type": "integer", "in": "query" },
+        { "name": "numOfRows", "type": "integer", "in": "query" },
+        { "name": "type", "type": "string", "in": "query" },
+        { "name": "itemName", "type": "string", "in": "query" },
+        { "name": "entpName", "type": "string", "in": "query" },
+        { "name": "start_change_date", "type": "string", "in": "query" },
+        { "name": "end_change_date", "type": "string", "in": "query" },
+        { "name": "itemSeq", "type": "string", "in": "query" },
+        { "name": "bizrno", "type": "string", "in": "query" }
+      ]
+    },
+    "/getSpcifyAgrdeTabooInfoList03": {
+      "get": {
+        "summary": "특정연령대금기 정보조회",
+        "operationId": "getSpcifyAgrdeTabooInfoList03",
+        "tags": ["API 목록"],
+        "responses": {
+          "200": { "description": "성공", "schema": { "$ref": "#/definitions/getSingleTaboo_response" } },
+          "01": { "description": "APPLICATION_ERROR" },
+          "11": { "description": "NO_MANDATORY_REQUESTPARAMETERS_ERROR" }
+        }
+      },
+      "parameters": [
+        { "name": "serviceKey", "type": "string", "required": true, "in": "query" },
+        { "name": "pageNo", "type": "integer", "in": "query" },
+        { "name": "numOfRows", "type": "integer", "in": "query" },
+        { "name": "type", "type": "string", "in": "query" },
+        { "name": "typeName", "type": "string", "in": "query" },
+        { "name": "ingrCode", "type": "string", "in": "query" },
+        { "name": "itemName", "type": "string", "in": "query" },
+        { "name": "start_change_date", "type": "string", "in": "query" },
+        { "name": "end_change_date", "type": "string", "in": "query" },
+        { "name": "itemSeq", "type": "string", "in": "query" }
+      ]
+    },
+    "/getCpctyAtentInfoList03": {
+      "get": {
+        "summary": "용량주의 정보조회",
+        "operationId": "getCpctyAtentInfoList03",
+        "tags": ["API 목록"],
+        "responses": {
+          "200": { "description": "성공", "schema": { "$ref": "#/definitions/getSingleTaboo_response" } },
+          "01": { "description": "APPLICATION_ERROR" },
+          "11": { "description": "NO_MANDATORY_REQUEST__PARAMETER_ERROR" }
+        }
+      },
+      "parameters": [
+        { "name": "serviceKey", "type": "string", "required": true, "in": "query" },
+        { "name": "pageNo", "type": "integer", "in": "query" },
+        { "name": "numOfRows", "type": "integer", "in": "query" },
+        { "name": "type", "type": "string", "in": "query" },
+        { "name": "typeName", "type": "string", "in": "query" },
+        { "name": "ingrCode", "type": "string", "in": "query" },
+        { "name": "itemName", "type": "string", "in": "query" },
+        { "name": "start_change_date", "type": "string", "in": "query" },
+        { "name": "end_change_date", "type": "string", "in": "query" },
+        { "name": "itemSeq", "type": "string", "in": "query" }
+      ]
+    },
+    "/getMdctnPdAtentInfoList03": {
+      "get": {
+        "summary": "투여기간주의 정보조회",
+        "operationId": "getMdctnPdAtentInfoList03",
+        "tags": ["API 목록"],
+        "responses": {
+          "200": { "description": "성공", "schema": { "$ref": "#/definitions/getSingleTaboo_response" } },
+          "01": { "description": "APPLICATION_ERROR" },
+          "11": { "description": "NO_MANDATORY_REQUEST__PARAMETER_ERROR" }
+        }
+      },
+      "parameters": [
+        { "name": "serviceKey", "type": "string", "required": true, "in": "query" },
+        { "name": "pageNo", "type": "integer", "in": "query" },
+        { "name": "numOfRows", "type": "integer", "in": "query" },
+        { "name": "type", "type": "string", "in": "query" },
+        { "name": "typeName", "type": "string", "in": "query" },
+        { "name": "ingrCode", "type": "string", "in": "query" },
+        { "name": "itemName", "type": "string", "in": "query" },
+        { "name": "start_change_date", "type": "string", "in": "query" },
+        { "name": "end_change_date", "type": "string", "in": "query" },
+        { "name": "itemSeq", "type": "string", "in": "query" }
+      ]
+    },
+    "/getEfcyDplctInfoList03": {
+      "get": {
+        "summary": "효능군중복 정보조회",
+        "operationId": "getEfcyDplctInfoList03",
+        "tags": ["API 목록"],
+        "responses": {
+          "200": { "description": "성공", "schema": { "$ref": "#/definitions/getEfcyDplctInfoList03_response" } },
+          "01": { "description": "APPLICATION_ERROR" },
+          "11": { "description": "NO_MANDATORY_REQUEST__PARAMETER_ERROR" }
+        }
+      },
+      "parameters": [
+        { "name": "serviceKey", "type": "string", "required": true, "in": "query" },
+        { "name": "pageNo", "type": "integer", "in": "query" },
+        { "name": "numOfRows", "type": "integer", "in": "query" },
+        { "name": "type", "type": "string", "in": "query" },
+        { "name": "typeName", "type": "string", "in": "query" },
+        { "name": "ingrCode", "type": "string", "in": "query" },
+        { "name": "itemName", "type": "string", "in": "query" },
+        { "name": "start_change_date", "type": "string", "in": "query" },
+        { "name": "end_change_date", "type": "string", "in": "query" },
+        { "name": "itemSeq", "type": "string", "in": "query" },
+        { "name": "bizrno", "type": "string", "in": "query" }
+      ]
+    },
+    "/getSeobangjeongPartitnAtentInfoList03": {
+      "get": {
+        "summary": "서방정분할주의 정보조회",
+        "operationId": "getSeobangjeongPartitnAtentInfoList03",
+        "tags": ["API 목록"],
+        "responses": {
+          "200": { "description": "성공", "schema": { "$ref": "#/definitions/getSeobangjeongPartitnAtentInfoList03_response" } },
+          "01": { "description": "APPLICATION_ERROR" },
+          "11": { "description": "NO_MANDATORY_REQUEST__PARAMETER_ERROR" }
+        }
+      },
+      "parameters": [
+        { "name": "serviceKey", "type": "string", "required": true, "in": "query" },
+        { "name": "pageNo", "type": "integer", "in": "query" },
+        { "name": "numOfRows", "type": "integer", "in": "query" },
+        { "name": "type", "type": "string", "in": "query" },
+        { "name": "typeName", "type": "string", "in": "query" },
+        { "name": "itemName", "type": "string", "in": "query" },
+        { "name": "entpName", "type": "string", "in": "query" },
+        { "name": "start_change_date", "type": "string", "in": "query" },
+        { "name": "end_change_date", "type": "string", "in": "query" },
+        { "name": "itemSeq", "type": "string", "in": "query" }
+      ]
+    },
+    "/getPwnmTabooInfoList03": {
+      "get": {
+        "summary": "임부금기 정보조회",
+        "operationId": "getPwnmTabooInfoList03",
+        "tags": ["API 목록"],
+        "responses": {
+          "200": { "description": "성공", "schema": { "$ref": "#/definitions/getSingleTaboo_response" } },
+          "01": { "description": "APPLICATION_ERROR" },
+          "11": { "description": "NO_MANDATORY_REQUEST__PARAMETER_ERROR" }
+        }
+      },
+      "parameters": [
+        { "name": "serviceKey", "type": "string", "required": true, "in": "query" },
+        { "name": "pageNo", "type": "integer", "in": "query" },
+        { "name": "numOfRows", "type": "integer", "in": "query" },
+        { "name": "type", "type": "string", "in": "query" },
+        { "name": "typeName", "type": "string", "in": "query" },
+        { "name": "ingrCode", "type": "string", "in": "query" },
+        { "name": "itemName", "type": "string", "in": "query" },
+        { "name": "start_change_date", "type": "string", "in": "query" },
+        { "name": "end_change_date", "type": "string", "in": "query" },
+        { "name": "itemSeq", "type": "string", "in": "query" }
+      ]
+    }
+  },
+  "definitions": {
+    "header": {
+      "type": "object",
+      "properties": {
+        "resultCode": { "type": "string", "description": "결과코드 (00=정상, 01=APPLICATION_ERROR, 11=필수파라미터누락)" },
+        "resultMsg": { "type": "string", "description": "결과메시지" }
+      }
+    },
+    "getUsjntTabooInfoList03_response": {
+      "type": "object",
+      "properties": {
+        "header": { "$ref": "#/definitions/header" },
+        "body": {
+          "type": "object",
+          "properties": {
+            "numOfRows": { "type": "integer" },
+            "pageNo": { "type": "integer" },
+            "totalCount": { "type": "integer" },
+            "items": {
+              "type": "object",
+              "properties": {
+                "item": {
+                  "type": "object",
+                  "description": "병용금기 점검 결과. ITEM_SEQ는 입력 약물, MIXTURE_*는 병용금기 상대 약물.",
+                  "properties": {
+                    "INGR_CODE": { "type": "string", "description": "DUR성분코드 (입력 약물)" },
+                    "INGR_KOR_NAME": { "type": "string" },
+                    "DUR_SEQ": { "type": "string" },
+                    "TYPE_CODE": { "type": "string" },
+                    "TYPE_NAME": { "type": "string" },
+                    "MIX": { "type": "string", "description": "단일/복합" },
+                    "INGR_ENG_NAME": { "type": "string" },
+                    "MIX_INGR": { "type": "string" },
+                    "ITEM_SEQ": { "type": "string", "description": "입력 약물의 품목기준코드" },
+                    "ITEM_NAME": { "type": "string" },
+                    "ENTP_NAME": { "type": "string" },
+                    "CHART": { "type": "string" },
+                    "FORM_CODE": { "type": "string" },
+                    "ETC_OTC_CODE": { "type": "string" },
+                    "CLASS_CODE": { "type": "string" },
+                    "FORM_NAME": { "type": "string" },
+                    "ETC_OTC_NAME": { "type": "string" },
+                    "CLASS_NAME": { "type": "string" },
+                    "MAIN_INGR": { "type": "string" },
+                    "MIXTURE_DUR_SEQ": { "type": "string" },
+                    "MIXTURE_MIX": { "type": "string" },
+                    "MIXTURE_INGR_CODE": { "type": "string" },
+                    "MIXTURE_INGR_KOR_NAME": { "type": "string" },
+                    "MIXTURE_INGR_ENG_NAME": { "type": "string" },
+                    "MIXTURE_ITEM_SEQ": { "type": "string", "description": "병용금기 상대 약물의 품목기준코드 (다제 매칭 키)" },
+                    "MIXTURE_ITEM_NAME": { "type": "string" },
+                    "MIXTURE_ENTP_NAME": { "type": "string" },
+                    "MIXTURE_FORM_CODE": { "type": "string" },
+                    "MIXTURE_ETC_OTC_CODE": { "type": "string" },
+                    "MIXTURE_CLASS_CODE": { "type": "string" },
+                    "MIXTURE_FORM_NAME": { "type": "string" },
+                    "MIXTURE_ETC_OTC_NAME": { "type": "string" },
+                    "MIXTURE_CLASS_NAME": { "type": "string" },
+                    "MIXTURE_MAIN_INGR": { "type": "string" },
+                    "NOTIFICATION_DATE": { "type": "string" },
+                    "PROHBT_CONTENT": { "type": "string", "description": "금기내용 (사용자 표시용 텍스트)" },
+                    "REMARK": { "type": "string" },
+                    "ITEM_PERMIT_DATE": { "type": "string" },
+                    "MIXTURE_ITEM_PERMIT_DATE": { "type": "string" },
+                    "MIXTURE_CHART": { "type": "string" },
+                    "CHANGE_DATE": { "type": "string" },
+                    "MIXTURE_CHANGE_DATE": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "getSingleTaboo_response": {
+      "type": "object",
+      "description": "노인주의/특정연령대금기/임부금기/용량주의/투여기간주의 공통 응답 (단일 약물 경고)",
+      "properties": {
+        "header": { "$ref": "#/definitions/header" },
+        "body": {
+          "type": "object",
+          "properties": {
+            "numOfRows": { "type": "integer" },
+            "pageNo": { "type": "integer" },
+            "totalCount": { "type": "integer" },
+            "items": {
+              "type": "object",
+              "properties": {
+                "item": {
+                  "type": "object",
+                  "properties": {
+                    "TYPE_NAME": { "type": "string" },
+                    "MIX_TYPE": { "type": "string" },
+                    "INGR_CODE": { "type": "string" },
+                    "INGR_ENG_NAME": { "type": "string" },
+                    "INGR_NAME": { "type": "string" },
+                    "MIX_INGR": { "type": "string" },
+                    "FORM_NAME": { "type": "string" },
+                    "ITEM_SEQ": { "type": "string" },
+                    "ITEM_NAME": { "type": "string" },
+                    "ITEM_PERMIT_DATE": { "type": "string" },
+                    "ENTP_NAME": { "type": "string" },
+                    "CHART": { "type": "string" },
+                    "CLASS_CODE": { "type": "string" },
+                    "CLASS_NAME": { "type": "string" },
+                    "ETC_OTC_NAME": { "type": "string" },
+                    "MAIN_INGR": { "type": "string" },
+                    "NOTIFICATION_DATE": { "type": "string" },
+                    "PROHBT_CONTENT": { "type": "string", "description": "주의 내용" },
+                    "REMARK": { "type": "string" },
+                    "INGR_ENG_NAME_FULL": { "type": "string" },
+                    "CHANGE_DATE": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "getOdsnAtentInfoList03_response": { "$ref": "#/definitions/getSingleTaboo_response" },
+    "getEfcyDplctInfoList03_response": {
+      "type": "object",
+      "description": "효능군중복 — 단일약물 응답에 EFFECT_NAME / SERS_NAME / DUR_SEQ / FORM_CODE 등 추가",
+      "properties": {
+        "header": { "$ref": "#/definitions/header" },
+        "body": {
+          "type": "object",
+          "properties": {
+            "numOfRows": { "type": "integer" },
+            "pageNo": { "type": "integer" },
+            "totalCount": { "type": "integer" },
+            "items": {
+              "type": "object",
+              "properties": {
+                "item": {
+                  "type": "object",
+                  "properties": {
+                    "DUR_SEQ": { "type": "string" },
+                    "EFFECT_NAME": { "type": "string", "description": "효능" },
+                    "TYPE_NAME": { "type": "string" },
+                    "INGR_CODE": { "type": "string" },
+                    "INGR_NAME": { "type": "string" },
+                    "INGR_ENG_NAME": { "type": "string" },
+                    "FORM_CODE_NAME": { "type": "string" },
+                    "MIX": { "type": "string" },
+                    "MIX_INGR": { "type": "string" },
+                    "ITEM_SEQ": { "type": "string" },
+                    "ITEM_NAME": { "type": "string" },
+                    "ITEM_PERMIT_DATE": { "type": "string" },
+                    "CHART": { "type": "string" },
+                    "ENTP_NAME": { "type": "string" },
+                    "FORM_CODE": { "type": "string" },
+                    "FORM_NAME": { "type": "string" },
+                    "ETC_OTC_CODE": { "type": "string" },
+                    "ETC_OTC_NAME": { "type": "string" },
+                    "CLASS_CODE": { "type": "string" },
+                    "CLASS_NAME": { "type": "string" },
+                    "MAIN_INGR": { "type": "string" },
+                    "NOTIFICATION_DATE": { "type": "string" },
+                    "PROHBT_CONTENT": { "type": "string" },
+                    "REMARK": { "type": "string" },
+                    "INGR_ENG_NAME_FULL": { "type": "string" },
+                    "CHANGE_DATE": { "type": "string" },
+                    "BIZRNO": { "type": "string" },
+                    "SERS_NAME": { "type": "string", "description": "계열명" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "getSeobangjeongPartitnAtentInfoList03_response": {
+      "type": "object",
+      "description": "서방정분할주의 — 성분코드 없이 제형 기반 경고",
+      "properties": {
+        "header": { "$ref": "#/definitions/header" },
+        "body": {
+          "type": "object",
+          "properties": {
+            "numOfRows": { "type": "integer" },
+            "pageNo": { "type": "integer" },
+            "totalCount": { "type": "integer" },
+            "items": {
+              "type": "object",
+              "properties": {
+                "item": {
+                  "type": "object",
+                  "properties": {
+                    "TYPE_NAME": { "type": "string" },
+                    "ITEM_SEQ": { "type": "string" },
+                    "ITEM_NAME": { "type": "string" },
+                    "ITEM_PERMIT_DATE": { "type": "string" },
+                    "FORM_CODE_NAME": { "type": "string" },
+                    "ENTP_NAME": { "type": "string" },
+                    "CHART": { "type": "string" },
+                    "CLASS_CODE": { "type": "string" },
+                    "CLASS_NAME": { "type": "string" },
+                    "ETC_OTC_NAME": { "type": "string" },
+                    "MIX": { "type": "string" },
+                    "MAIN_INGR": { "type": "string" },
+                    "PROHBT_CONTENT": { "type": "string" },
+                    "REMARK": { "type": "string" },
+                    "CHANGE_DATE": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "getDurPrdlstInfoList03_response": {
+      "type": "object",
+      "description": "DUR 품목 메타데이터 (약물 검색·매칭용)",
+      "properties": {
+        "header": { "$ref": "#/definitions/header" },
+        "body": {
+          "type": "object",
+          "properties": {
+            "numOfRows": { "type": "integer" },
+            "pageNo": { "type": "integer" },
+            "totalCount": { "type": "integer" },
+            "items": {
+              "type": "object",
+              "properties": {
+                "item": {
+                  "type": "object",
+                  "properties": {
+                    "CHANGE_DATE": { "type": "string" },
+                    "ITEM_SEQ": { "type": "string" },
+                    "ITEM_NAME": { "type": "string" },
+                    "ENTP_NAME": { "type": "string" },
+                    "ITEM_PERMIT_DATE": { "type": "string" },
+                    "ETC_OTC_CODE": { "type": "string" },
+                    "CLASS_NO": { "type": "string" },
+                    "CHART": { "type": "string" },
+                    "BAR_CODE": { "type": "string" },
+                    "MATERIAL_NAME": { "type": "string" },
+                    "EE_DOC_ID": { "type": "string" },
+                    "UD_DOC_ID": { "type": "string" },
+                    "NB_DOC_ID": { "type": "string" },
+                    "INSERT_FILE": { "type": "string" },
+                    "STORAGE_METHOD": { "type": "string" },
+                    "VALID_TERM": { "type": "string" },
+                    "REEXAM_TARGET": { "type": "string" },
+                    "REEXAM_DATE": { "type": "string" },
+                    "PACK_UNIT": { "type": "string" },
+                    "EDI_CODE": { "type": "string" },
+                    "CANCEL_DATE": { "type": "string" },
+                    "CANCEL_NAME": { "type": "string" },
+                    "TYPE_CODE": { "type": "string" },
+                    "TYPE_NAME": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
