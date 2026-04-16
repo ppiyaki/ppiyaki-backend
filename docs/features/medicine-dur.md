@@ -32,7 +32,7 @@ last_reviewed: 2026-04-15
 - [ ] `warnings[]` 각 항목: `type`, `withMedicine`, `severity`, `description`(정제된 한글), `rawText`(원문 발췌, nullable) (Q-DUR-5 결정).
 - [ ] 점검 이력 조회 (`GET /api/v1/medicines/{id}/dur-checks?limit=10`) — limit 기본 10, 최대 50 (Q-DUR-3 결정).
 - [ ] 최신 점검 결과 조회 (`GET /api/v1/medicines/{id}/dur-check/latest`).
-- [ ] `force_refresh` 쿼리 파라미터 (기본 false) — false면 이중 캐시(Layer 1 + Layer 2) 활용해 외부 호출 최소화, true면 두 레이어 모두 우회하여 항상 외부 호출 + 새 `dur_checks` 레코드 생성.
+- [ ] `force_refresh` 쿼리 파라미터 (기본 false) — false면 이중 캐시(Layer 1 + Layer 2) 활용해 외부 호출 최소화, true면 **Layer 2만 우회** (combo_hash 무시, 재분석 강제). Layer 1(MFDS 응답 캐시)은 force_refresh에서도 유지 — 식약처 원본 데이터는 24h TTL 만료에 일임, 쿼터 보호.
 - [ ] **Layer 1 캐시**(사용자 공유, 인메모리): `(operation, itemSeq)` 키로 외부 API 응답 정제본 24h 보관. `MfdsResponseCache` 인터페이스 기반 — Redis 스왑 염두.
 - [ ] **Layer 2 캐시**(사용자별, `dur_checks`): `(medicine_id, combo_hash, checked_at)` 기준. `combo_hash`는 시니어의 활성 약물 itemSeq 정렬·해시값. 약물 추가/제거 시 자동 무효화.
 - [ ] 권한: medicine 접근권과 동일 (약물 소유자 + 활성 `care_relations` 보호자).
@@ -215,7 +215,7 @@ List<MfdsItem> items   // 응답 items 정제본 (DUR 산정에 필요한 필드
 #### 무효화 정책
 - Layer 1: TTL 24h 만료 또는 운영자가 수동 invalidate (DB row 삭제)
 - Layer 2: combo_hash 변경 시 자동 미스. 명시적 invalidate 없음 (immutable 로그 유지)
-- force_refresh=true는 두 레이어 모두 우회
+- force_refresh=true는 **Layer 2만 우회**. Layer 1은 TTL 만료에 일임 (식약처 원본 데이터는 사용자 조합과 무관, 쿼터 보호)
 
 ### 5-4) 데이터 흐름
 
