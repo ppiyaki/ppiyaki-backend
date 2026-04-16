@@ -42,6 +42,3 @@ mfds:
 
 openai:
   model: gpt-5.4-nano
-
-spring.ai.mcp.server:
-  type: SYNC
