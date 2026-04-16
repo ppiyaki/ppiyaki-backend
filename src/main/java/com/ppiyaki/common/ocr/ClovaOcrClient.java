@@ -50,13 +50,14 @@ public class ClovaOcrClient {
             final String base64Image = Base64.getEncoder().encodeToString(imageBytes);
             final String requestBody = buildRequestBody(base64Image, imageFormat);
 
-            final String responseBody = restClient.post()
+            final byte[] responseBytes = restClient.post()
                     .uri(properties.invokeUrl())
                     .header("X-OCR-SECRET", properties.secret())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(requestBody)
                     .retrieve()
-                    .body(String.class);
+                    .body(byte[].class);
+            final String responseBody = new String(responseBytes, java.nio.charset.StandardCharsets.UTF_8);
 
             final long elapsed = System.currentTimeMillis() - startTime;
             log.info("Clova OCR response: elapsed={}ms", elapsed);
