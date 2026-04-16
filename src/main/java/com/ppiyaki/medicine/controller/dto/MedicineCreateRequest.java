@@ -8,6 +8,7 @@ public record MedicineCreateRequest(
         @NotBlank String name,
         @NotNull Integer totalAmount,
         @NotNull Integer remainingAmount,
+        String itemSeq,
         String durWarningText
 ) {
 }
