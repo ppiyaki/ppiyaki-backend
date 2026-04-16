@@ -37,6 +37,9 @@ public class Medicine extends CreatedTimeEntity {
     @Column(name = "remaining_amount")
     private Integer remainingAmount;
 
+    @Column(name = "item_seq")
+    private String itemSeq;
+
     @Column(name = "dur_warning_text")
     private String durWarningText;
 
@@ -46,6 +49,7 @@ public class Medicine extends CreatedTimeEntity {
             final String name,
             final Integer totalAmount,
             final Integer remainingAmount,
+            final String itemSeq,
             final String durWarningText
     ) {
         this.ownerId = Objects.requireNonNull(ownerId, "ownerId must not be null");
@@ -53,6 +57,7 @@ public class Medicine extends CreatedTimeEntity {
         this.name = Objects.requireNonNull(name, "name must not be null");
         this.totalAmount = Objects.requireNonNull(totalAmount, "totalAmount must not be null");
         this.remainingAmount = Objects.requireNonNull(remainingAmount, "remainingAmount must not be null");
+        this.itemSeq = itemSeq;
         this.durWarningText = durWarningText;
     }
 
@@ -60,6 +65,7 @@ public class Medicine extends CreatedTimeEntity {
             final String name,
             final Integer totalAmount,
             final Integer remainingAmount,
+            final String itemSeq,
             final String durWarningText
     ) {
         if (name != null) {
@@ -70,6 +76,9 @@ public class Medicine extends CreatedTimeEntity {
         }
         if (remainingAmount != null) {
             this.remainingAmount = remainingAmount;
+        }
+        if (itemSeq != null) {
+            this.itemSeq = itemSeq;
         }
         if (durWarningText != null) {
             this.durWarningText = durWarningText;

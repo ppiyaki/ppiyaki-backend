@@ -9,6 +9,7 @@ public record MedicineResponse(
         Integer totalAmount,
         Integer remainingAmount,
         Long prescriptionId,
+        String itemSeq,
         String durWarningText,
         LocalDateTime createdAt
 ) {
@@ -20,6 +21,7 @@ public record MedicineResponse(
                 medicine.getTotalAmount(),
                 medicine.getRemainingAmount(),
                 medicine.getPrescriptionId(),
+                medicine.getItemSeq(),
                 medicine.getDurWarningText(),
                 medicine.getCreatedAt()
         );
