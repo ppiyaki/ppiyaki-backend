@@ -47,6 +47,7 @@ public class MedicineService {
                 medicineCreateRequest.name(),
                 medicineCreateRequest.totalAmount(),
                 medicineCreateRequest.remainingAmount(),
+                medicineCreateRequest.itemSeq(),
                 medicineCreateRequest.durWarningText()
         );
 
@@ -85,6 +86,7 @@ public class MedicineService {
                 medicineUpdateRequest.name(),
                 medicineUpdateRequest.totalAmount(),
                 medicineUpdateRequest.remainingAmount(),
+                medicineUpdateRequest.itemSeq(),
                 medicineUpdateRequest.durWarningText()
         );
 

@@ -237,7 +237,7 @@ class MedicationScheduleControllerE2ETest {
         final Long userId = readUserId(token);
 
         final Medicine medicine = medicineRepository.save(
-                new Medicine(userId, null, name, totalAmount, remainingAmount, null));
+                new Medicine(userId, null, name, totalAmount, remainingAmount, null, null));
         return medicine.getId().intValue();
     }
 
