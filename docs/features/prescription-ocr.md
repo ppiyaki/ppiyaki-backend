@@ -15,7 +15,7 @@ last_reviewed: 2026-04-16
 - 시니어가 촬영한 처방전 이미지를 받아 OCR + 텍스트 마스킹 + AI 구조화로 약물 후보 리스트를 추출한다.
 - AI가 추출한 약물 후보는 인간(보호자 또는 시니어 본인) 검증 후에만 활성화한다.
 - 자동 보정된 항목(OCR 오인식 → fuzzy 매칭으로 보정)은 사유 메모와 함께 강조 표시.
-- 원본 이미지는 영구 보관하지 않는다 (ADR 0009). 마스킹본은 영구 보존.
+- 원본 이미지는 영구 보관하지 않는다 (ADR 0009, PR #141 머지됨). 마스킹본은 영구 보존.
 - 약물명 → itemSeq 매칭은 별도 spec(`medicine-search`)의 `MedicineMatchService` 사용.
 - 의료 안전·법적 책임 분산·UX 강화를 동시에 달성한다.
 - **보호자 연동 전제**: 모든 처방전 등록 흐름은 보호자가 연동된 시니어를 기준으로 설계한다.
@@ -56,7 +56,7 @@ last_reviewed: 2026-04-16
 - [ ] **FUZZY_AUTO 후보**: ⚠️ 보정 사유 메모 표시. 보호자 명시 확인 필요(opt-in).
 - [ ] **MANUAL_REQUIRED 후보**: 후보 리스트 표시, 보호자 선택.
 - [ ] **NO_MATCH 후보**: 수동 검색 UI(별도 search API), 또는 건너뛰기.
-- [ ] `PATCH /api/v1/prescriptions/{id}/medicines/{candidateId}` — 보호자 결정 기록 (ACCEPTED / MANUALLY_CORRECTED / REJECTED + chosenItemSeq + note).
+- [ ] `PATCH /api/v1/prescriptions/{id}/medicines/{candidateId}` — 보호자 결정 기록 (ACCEPTED / MANUALLY_CORRECTED / REJECTED + chosenItemSeq).
 - [ ] `POST /api/v1/prescriptions/{id}/medicines` — 처방전에 누락된 약물 수동 추가.
 - [ ] `POST /api/v1/prescriptions/{id}/confirm` — 전체 확인. 모든 후보의 `caregiver_decision != PENDING` 검증 후 `Prescription.status = CONFIRMED`로 전이. 활성화된 후보들로 `Medicine` row 생성·연결.
 - [ ] `POST /api/v1/prescriptions/{id}/reject` — 처방전 폐기 (재촬영 요청). 마스킹본 + 후보들 모두 삭제. `Prescription.status = REJECTED`.
@@ -317,8 +317,8 @@ created_at
 ## 9) 결정 로그
 - 2026-04-16: 초안 작성 (`prescription-ocr.md` + `prescription-confirmation.md` 분리 초안)
 - 2026-04-16: 원본 이미지 영구 미보관 (ADR 0009)
-- 2026-04-16: OCR = Clova General OCR, AI = gpt-4o-mini text only (vision 미사용). 근거: Clova가 한국어 인쇄 텍스트 정확도 우위, vision 추가는 비용·복잡도 증가 대비 이득 미미
-- 2026-04-16: 비용 추정 약 3.3원/건 (Clova 3원 + GPT 0.3원) — 초기 추정치
+- 2026-04-16: OCR = Clova General OCR, AI = gpt-4o-mini text only (vision 미사용). 근거: Clova가 한국어 인쇄 텍스트 정확도 우위, vision 추가는 비용·복잡도 증가 대비 이득 미미 (→ gpt-5.4-nano로 변경, 하단 참조)
+- 2026-04-16: 비용 추정 약 3.3원/건 (Clova 3원 + GPT 0.3원) — 초기 추정치 (→ 3.4원으로 갱신, 하단 참조)
 - 2026-04-16: PII 마스킹은 **이미지·텍스트 둘 다** 수행. 이미지 마스킹은 보호자 검증용, 텍스트 마스킹은 LLM 입력용
 - 2026-04-16: 약물 매칭은 `medicine-search` spec의 `MedicineMatchService`에 위임 (책임 분리)
 - 2026-04-16: **EXACT 포함 모든 후보에 보호자 확인** — 처방전 자체 검증(시니어 것인지·중단된 약 포함 여부 등) 의미. UX는 "한 번에 전체 확인" 패턴으로 마찰 최소화. EXACT는 기본 체크 상태.

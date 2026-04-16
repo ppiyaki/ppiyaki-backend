@@ -68,6 +68,7 @@ last_reviewed: 2026-04-15
 ### 5-1) 도메인 모델
 - **기존 재사용**:
   - `DurCheck`(엔티티), `DurWarningLevel`(enum) — `src/main/java/com/ppiyaki/health/`에 이미 존재
+- **기존 `DurCheck` 엔티티의 의존 컬럼**: `id`, `medicine_id`, `checked_at`, `warning_level`, `warning_text`, `raw_response`(외부 API 원본, 감사용), `created_at`. 이 중 `raw_response`는 외부 호출 실패 시 에러 사유도 기록.
 - **`DurCheck` 컬럼 추가**: `combo_hash`(varchar, indexed) — Layer 2 캐시 키 일부. 시니어의 활성 약물 itemSeq 정렬·해시값.
 - **medicines 확장**: `item_seq`(varchar, indexed, nullable) 추가. 식약처 품목기준코드. **모든 DUR 호출의 입력 키**. 별도 PR로 선행.
 - **Layer 1 캐시는 인메모리**(빈만 등록, DB 엔티티 아님). §5-3-A 참조.
@@ -286,7 +287,7 @@ DurCheckService
 > **별도 spec (작성 완료, 의존성)**:
 > - `medicine-search.md` — `MedicineSearchService` + `MedicineMatchService`. 본 spec의 itemSeq 매칭은 이쪽에 위임
 > - `mcp-server-foundation.md` — Spring AI MCP starter. `check_dur` tool 노출은 본 spec 머지 후 등록
-> - `prescription-ocr.md` / `prescription-confirmation.md` — 처방전 등록 흐름. medicine 엔티티에 itemSeq를 채워주는 주된 경로
+> - `prescription-ocr.md` — 처방전 등록 및 보호자 확인 통합 흐름. medicine 엔티티에 itemSeq를 채워주는 주된 경로
 
 ## 7) 테스트 전략
 - **단위**:

@@ -102,11 +102,12 @@ public class MedicineMcpTools {
     @McpTool(name = "register_medicine",
              description = "Register a medicine for the authenticated user. itemSeq required.")
     public Medicine registerMedicine(
-            @McpToolParam(required = true) Long itemSeq,
+            @McpToolParam(required = true) String itemSeq,
             @McpToolParam(required = true) String name,
             @McpToolParam Integer totalAmount
     ) {
         Long userId = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        // TODO: 실제 구현 시 MedicineResponse DTO 반환 (도메인 엔티티 직접 반환 금지)
         return medicineService.create(userId, ...);
     }
 }

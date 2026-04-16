@@ -22,7 +22,7 @@ last_reviewed: 2026-04-16
 ## 2) 사용자 시나리오
 - **AI 에이전트(MCP)** — 처방전 OCR 텍스트 "이부프로멘정 200mg" → `match_medicine_from_ocr` tool → 자동 매칭 시도 → 결과를 `prescription-ocr` 파이프라인에 반영.
 - **사용자 수동 등록** — 검색창에 약물명 입력 → `search_medicine` API → 후보 리스트에서 선택 → Medicine 등록.
-- **보호자 검토** — `prescription-confirmation` 화면에서 NO_MATCH 항목을 직접 검색해 매칭.
+- **보호자 검토** — `prescription-ocr` (보호자 확인) 화면에서 NO_MATCH 항목을 직접 검색해 매칭.
 
 ## 3) 요구사항
 
@@ -55,7 +55,7 @@ last_reviewed: 2026-04-16
 - **MCP 서버 인프라** → `mcp-server-foundation`
 - **DUR 점검** → `medicine-dur`
 - **OCR 처리** → `prescription-ocr`
-- **보호자 확인 UX** → `prescription-confirmation`
+- **보호자 확인 UX** → `prescription-ocr`
 - **음성학적 매칭(한글 자모 기반)** — Phase 2
 - **사용자 학습 기반 개인화 매칭** — 후속
 
