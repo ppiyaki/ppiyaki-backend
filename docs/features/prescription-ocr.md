@@ -105,35 +105,30 @@ last_reviewed: 2026-04-16
 
 **신규 엔티티 — `Prescription`** (`com.ppiyaki.prescription`)
 ```
-id                    bigint PK
-owner_id              bigint     // 시니어 user_id
-status                enum       // PROCESSING / PENDING_REVIEW / CONFIRMED / REJECTED / PROCESSING_FAILED
-masked_image_object_key varchar  // NCP objectKey, presigned GET 발급용
-ocr_raw_text          text nullable  // PII 마스킹된 OCR 원문 (감사용)
-ai_model              varchar    // ex: "gpt-5.4-nano"
-processed_at          datetime
-failure_reason        text nullable
-created_at / updated_at
+id                         bigint PK
+owner_id                   bigint     // 시니어 user_id
+status                     enum       // PROCESSING / PENDING_REVIEW / CONFIRMED / REJECTED / PROCESSING_FAILED
+masked_image_object_key    varchar    // NCP objectKey, presigned GET 발급용
+failure_reason             text nullable
+created_at / updated_at              // BaseTimeEntity
 ```
 
 **신규 엔티티 — `PrescriptionMedicineCandidate`**
 ```
-id                    bigint PK
-prescription_id       bigint FK
-ocr_raw_text          varchar    // OCR 원문 (예: "이부프로멘정 200mg, 1일 3회")
-extracted_name        varchar    // AI 파싱 약물명
-extracted_dosage      varchar nullable
-extracted_schedule    varchar nullable
-matched_item_seq      varchar nullable  // MedicineMatchService 결과
-matched_item_name     varchar nullable
-match_type            enum       // EXACT / FUZZY_AUTO / MANUAL_REQUIRED / NO_MATCH
-match_similarity      float nullable
-match_reason          text nullable
-caregiver_decision    enum       // PENDING / ACCEPTED / REJECTED / MANUALLY_CORRECTED
-caregiver_chosen_item_seq varchar nullable  // 보호자가 다른 약물 선택 시
-caregiver_note        text nullable
-reviewed_at           datetime nullable
-created_medicine_id   bigint nullable FK to medicines  // confirm 시 생성된 Medicine
+id                          bigint PK
+prescription_id             bigint FK
+ocr_raw_text                varchar    // OCR 원문 (예: "이부프로멘정 200mg, 1일 3회")
+extracted_name              varchar    // AI 파싱 약물명
+extracted_dosage            varchar nullable
+extracted_schedule          varchar nullable
+matched_item_seq            varchar nullable  // MedicineMatchService 결과
+matched_item_name           varchar nullable
+match_type                  enum       // EXACT / FUZZY_AUTO / MANUAL_REQUIRED / NO_MATCH
+match_reason                text nullable
+caregiver_decision          enum       // PENDING / ACCEPTED / REJECTED / MANUALLY_CORRECTED
+caregiver_chosen_item_seq   varchar nullable  // 보호자가 다른 약물 선택 시
+reviewed_at                 datetime nullable
+created_medicine_id         bigint nullable FK to medicines
 created_at
 ```
 
@@ -338,3 +333,5 @@ created_at
 - 2026-04-16: **보호자 연동 전제** (Q-CONF-1 해소) — 처방전 등록 흐름은 항상 보호자가 연동된 시니어 기준. 보호자 없는 시니어 단독 흐름은 현 MVP 범위 밖.
 - 2026-04-16: **EXACT 후보 처리 방식** (Q-CONF-2 해소) — 자동 통과(opt-out 없이) 대신 "기본 체크 + 한 번 확인" 패턴 채택. 보호자가 전체 목록 한 번 보고 확인하는 UX.
 - 2026-04-16: **구현 순서 확정** — ① item_seq 컬럼 추가 → ② medicine-search (+ medicine-dur 병렬 가능) → ③ medicine-dur → ④ prescription-ocr 통합본 → ⑤ mcp-server-foundation.
+- 2026-04-16: **Prescription 엔티티에서 ai_model, processed_at, ocr_raw_text 제거** — ai_model은 config/git history로 추적, processed_at은 동기 처리라 created_at과 동일, ocr_raw_text는 candidate별 원문으로 충분하고 전체 원문 보관은 추가 PII 리스크.
+- 2026-04-16: **PrescriptionMedicineCandidate에서 match_similarity, caregiver_note 제거** — similarity는 match_reason에 사람 가독형 포함, note는 MVP 불필요(행위 자체가 의사 표현).
