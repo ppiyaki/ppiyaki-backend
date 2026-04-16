@@ -52,7 +52,7 @@ public class OpenAiClient {
 
             final String responseBody = restClient.post()
                     .uri(API_URL)
-                    .header("Authorization", "Bearer " + properties.apiKey().strip())
+                    .header("Authorization", "Bearer " + properties.apiKey())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(requestBody)
                     .retrieve()
