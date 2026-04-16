@@ -40,6 +40,11 @@ public class MedicineMatchService {
                 .toLowerCase();
     }
 
+    static String extractNameForSearch(final String normalizedText) {
+        final String nameOnly = normalizedText.replaceAll("[0-9]+(\\.[0-9]+)?(mg|g|ml|%|mcg|iu)?.*$", "");
+        return nameOnly.isEmpty() ? normalizedText : nameOnly;
+    }
+
     static double levenshteinSimilarity(final String a, final String b) {
         if (a.isEmpty() && b.isEmpty()) {
             return 1.0;
@@ -75,7 +80,8 @@ public class MedicineMatchService {
             final Optional<String> formHint
     ) {
         final String normalized = normalize(ocrText);
-        final List<MedicineCandidate> candidates = searchService.search(normalized, 20);
+        final String searchQuery = extractNameForSearch(normalized);
+        final List<MedicineCandidate> candidates = searchService.search(searchQuery, 20);
 
         if (candidates.isEmpty()) {
             return new MatchResult(MatchType.NO_MATCH, Optional.empty(), List.of(), 0.0,
