@@ -73,6 +73,7 @@ jobs:
               -e NCP_STORAGE_ACCESS_KEY='${{ secrets.NCP_STORAGE_ACCESS_KEY }}' \
               -e NCP_STORAGE_SECRET_KEY='${{ secrets.NCP_STORAGE_SECRET_KEY }}' \
               -e NCP_STORAGE_BUCKET_NAME='${{ secrets.NCP_STORAGE_BUCKET_NAME }}' \
+              -e MFDS_API_SERVICE_KEY='${{ secrets.MFDS_API_SERVICE_KEY }}' \
               ${{ secrets.NCP_REGISTRY }}/ppiyaki-server:latest
             
             echo "Cleaning up old images..."
