@@ -40,16 +40,21 @@ public class DurCheck extends CreatedTimeEntity {
     @Column(columnDefinition = "TEXT", name = "raw_response")
     private String rawResponse;
 
+    @Column(name = "combo_hash", length = 64)
+    private String comboHash;
+
     public DurCheck(
             final Long medicineId,
             final LocalDateTime checkedAt,
             final DurWarningLevel warningLevel,
             final String warningText,
-            final String rawResponse) {
+            final String rawResponse,
+            final String comboHash) {
         this.medicineId = medicineId;
         this.checkedAt = checkedAt;
         this.warningLevel = warningLevel;
         this.warningText = warningText;
         this.rawResponse = rawResponse;
+        this.comboHash = comboHash;
     }
 }

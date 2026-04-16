@@ -2,6 +2,7 @@ package com.ppiyaki.medicine.controller;
 
 import com.ppiyaki.medicine.controller.dto.MedicineCandidate;
 import com.ppiyaki.medicine.service.MedicineSearchService;
+import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +24,7 @@ public class MedicineSearchController {
 
     @GetMapping("/search")
     public ResponseEntity<MedicineSearchResponse> search(
-            @RequestParam final String q,
+            @RequestParam @NotBlank final String q,
             @RequestParam(defaultValue = "10") final int limit
     ) {
         final List<MedicineCandidate> candidates = medicineSearchService.search(q, limit);

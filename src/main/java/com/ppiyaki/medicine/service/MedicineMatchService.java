@@ -149,6 +149,9 @@ public class MedicineMatchService {
         return dp[lenA][lenB];
     }
 
-    private record ScoredCandidate(MedicineCandidate candidate, double similarity) {
+    private record ScoredCandidate(
+            MedicineCandidate candidate,
+            double similarity
+    ) {
     }
 }
