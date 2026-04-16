@@ -170,7 +170,7 @@ created_at
 [Client] 처방전 사진 촬영
    │
    │ 1. presigned PUT URL 발급 (POST /api/v1/uploads/presigned)
-   │ 2. NCP Object Storage에 직접 업로드 (24h 만료 객체로)
+   │ 2. NCP Object Storage `upload/prescription/` prefix에 업로드 (Lifecycle 24h 만료)
    ▼
 [Client] objectKey 획득
    │
@@ -187,7 +187,7 @@ created_at
    │ 6. ClovaOcrClient.ocr(image) → text + bboxes
    │ 7. PiiMaskingService.identifyPii(text, bboxes) → [bbox]
    │ 8. ImageMaskingService.mask(image, [bbox]) → maskedImage
-   │ 9. NCP에 마스킹본 저장 (영구 보존)
+   │ 9. NCP `masked/prescription/` prefix에 마스킹본 저장 (영구)
    │ 10. PiiMaskingService.maskText(text, [bbox]) → maskedText
    │ 11. OpenAiClient.extractMedicines(maskedText) → [extractedItem]
    │
@@ -280,7 +280,7 @@ created_at
 - [ ] PR 10 `feat(prescription)`: 72h fallback — 시니어 본인 확인 권한 활성화 로직 (`@Scheduled` 배치 또는 요청 시점 계산).
 - [ ] PR 11 `feat(prescription)`: audit log (선택, MVP에서는 candidate row의 변경 시각만 활용 후 후속 PR로 분리 가능).
 - [ ] PR 12 `test(prescription)`: E2E — 보호자 확인 / 시니어 자동 fallback / 권한 실패 / 잘못된 상태 전이.
-- [ ] PR 13 `chore(infra)`: NCP Object Storage Lifecycle Policy "원본 prefix 24h 만료" 설정 (코드 외 콘솔 작업, 운영 메모 필요)
+- [ ] PR 13 `chore(infra)`: NCP Object Storage Lifecycle Policy `upload/prescription/` prefix에 24h 만료 규칙 설정 (NCP 콘솔 작업)
 
 ## 7) 테스트 전략
 
@@ -335,3 +335,5 @@ created_at
 - 2026-04-16: **구현 순서 확정** — ① item_seq 컬럼 추가 → ② medicine-search (+ medicine-dur 병렬 가능) → ③ medicine-dur → ④ prescription-ocr 통합본 → ⑤ mcp-server-foundation.
 - 2026-04-16: **Prescription 엔티티에서 ai_model, processed_at, ocr_raw_text 제거** — ai_model은 config/git history로 추적, processed_at은 동기 처리라 created_at과 동일, ocr_raw_text는 candidate별 원문으로 충분하고 전체 원문 보관은 추가 PII 리스크.
 - 2026-04-16: **PrescriptionMedicineCandidate에서 match_similarity, caregiver_note 제거** — similarity는 match_reason에 사람 가독형 포함, note는 MVP 불필요(행위 자체가 의사 표현).
+- 2026-04-16: **NCP Object Storage prefix 네이밍 확정** — 원본(24h 만료): `upload/prescription/{userId}/{uuid}.{ext}`, 마스킹본(영구): `masked/prescription/{userId}/{uuid}.{ext}`. Lifecycle Policy는 `upload/prescription/` prefix에 1일 만료 규칙. `UploadPurpose` enum에 `PRESCRIPTION_TEMP` / `PRESCRIPTION_MASKED` 추가.
+- 2026-04-16: **PII 마스킹 패턴 선제 확장** — 주민번호/전화번호/이름키워드("환자명","성명","수진자","처방의","의사","약사") 외 면허번호/주소키워드/보험번호/이메일/생년월일까지 포함. Phase 1에서 넓게 적용, 오탐 시 축소.
