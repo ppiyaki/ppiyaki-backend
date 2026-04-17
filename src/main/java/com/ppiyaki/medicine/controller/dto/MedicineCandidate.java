@@ -8,9 +8,8 @@ public record MedicineCandidate(
         String entpName,
         String mainIngr,
         String formName,
-        String etcOtcName,
-        String className,
-        String ingrCode
+        String etcOtcCode,
+        String className
 ) {
 
     public static MedicineCandidate fromMfdsItem(final Map<String, Object> item) {
@@ -21,8 +20,7 @@ public record MedicineCandidate(
                 getString(item, "MATERIAL_NAME"),
                 getString(item, "CHART"),
                 getString(item, "ETC_OTC_CODE"),
-                getString(item, "CLASS_NO"),
-                null
+                getString(item, "CLASS_NO")
         );
     }
 
