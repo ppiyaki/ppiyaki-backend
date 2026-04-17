@@ -12,7 +12,6 @@ import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,12 +27,9 @@ public class MedicationScheduleService {
             final MedicineRepository medicineRepository,
             final CareRelationRepository careRelationRepository
     ) {
-        this.medicationScheduleRepository = Objects.requireNonNull(
-                medicationScheduleRepository, "medicationScheduleRepository must not be null");
-        this.medicineRepository = Objects.requireNonNull(
-                medicineRepository, "medicineRepository must not be null");
-        this.careRelationRepository = Objects.requireNonNull(
-                careRelationRepository, "careRelationRepository must not be null");
+        this.medicationScheduleRepository = medicationScheduleRepository;
+        this.medicineRepository = medicineRepository;
+        this.careRelationRepository = careRelationRepository;
     }
 
     @Transactional
@@ -42,10 +38,6 @@ public class MedicationScheduleService {
             final Long medicineId,
             final ScheduleCreateRequest scheduleCreateRequest
     ) {
-        Objects.requireNonNull(userId, "userId must not be null");
-        Objects.requireNonNull(medicineId, "medicineId must not be null");
-        Objects.requireNonNull(scheduleCreateRequest, "scheduleCreateRequest must not be null");
-
         final Medicine medicine = findMedicineAndValidateAccess(userId, medicineId);
 
         final String daysOfWeek = scheduleCreateRequest.daysOfWeek() != null
@@ -68,9 +60,6 @@ public class MedicationScheduleService {
 
     @Transactional(readOnly = true)
     public List<ScheduleResponse> readAll(final Long userId, final Long medicineId) {
-        Objects.requireNonNull(userId, "userId must not be null");
-        Objects.requireNonNull(medicineId, "medicineId must not be null");
-
         findMedicineAndValidateAccess(userId, medicineId);
 
         final List<MedicationSchedule> schedules = medicationScheduleRepository.findByMedicineId(medicineId);
@@ -85,10 +74,6 @@ public class MedicationScheduleService {
             final Long medicineId,
             final Long scheduleId
     ) {
-        Objects.requireNonNull(userId, "userId must not be null");
-        Objects.requireNonNull(medicineId, "medicineId must not be null");
-        Objects.requireNonNull(scheduleId, "scheduleId must not be null");
-
         findMedicineAndValidateAccess(userId, medicineId);
         final MedicationSchedule schedule = findScheduleAndValidateMedicine(scheduleId, medicineId);
 
@@ -102,11 +87,6 @@ public class MedicationScheduleService {
             final Long scheduleId,
             final ScheduleUpdateRequest scheduleUpdateRequest
     ) {
-        Objects.requireNonNull(userId, "userId must not be null");
-        Objects.requireNonNull(medicineId, "medicineId must not be null");
-        Objects.requireNonNull(scheduleId, "scheduleId must not be null");
-        Objects.requireNonNull(scheduleUpdateRequest, "scheduleUpdateRequest must not be null");
-
         findMedicineAndValidateAccess(userId, medicineId);
         final MedicationSchedule schedule = findScheduleAndValidateMedicine(scheduleId, medicineId);
 
@@ -127,10 +107,6 @@ public class MedicationScheduleService {
             final Long medicineId,
             final Long scheduleId
     ) {
-        Objects.requireNonNull(userId, "userId must not be null");
-        Objects.requireNonNull(medicineId, "medicineId must not be null");
-        Objects.requireNonNull(scheduleId, "scheduleId must not be null");
-
         findMedicineAndValidateAccess(userId, medicineId);
         final MedicationSchedule schedule = findScheduleAndValidateMedicine(scheduleId, medicineId);
 

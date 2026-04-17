@@ -29,10 +29,10 @@ last_reviewed: 2026-04-16
 ### 기능 요구사항
 - [ ] `GET /api/v1/medicines/search?q=...&form=...&limit=10` — 검색 API. 부분 일치, 정규화 매칭. 응답: `MedicineCandidate[]` (itemSeq, name, entpName, mainIngr, classCode, formName, etcOtcCode 등). limit 기본 10, 최대 50.
 - [ ] `MedicineSearchService.search(query, options)` 인터페이스. 식약처 `getDurPrdlstInfoList03` 호출 + 결과 매핑.
-- [ ] `MedicineMatchService.match(ocrText, dosageHint?, formHint?)` 인터페이스. 검색 결과 + 정책 기반 `MatchResult` 반환.
-- [ ] **MatchResult.matchType** enum: `EXACT` / `FUZZY_AUTO` / `MANUAL_REQUIRED` / `NO_MATCH`.
-- [ ] **MatchResult.reason** — 사람 가독 메모 (예: "OCR '이부프로멘정'과 1글자 차이, 식약처 등록 약물 중 가장 유사한 항목으로 자동 매칭").
-- [ ] **자동 매칭 임계치 설정 가능** — `application.yml`로 노출. 기본 0.90 + 용량/제형 일치 조건.
+- [ ] `MedicineMatchService.match(name, ingredientName?)` 인터페이스. 검색 결과 개수 기반 `MatchResult` 반환.
+- [ ] **MatchResult.matchType** enum: `EXACT` / `CANDIDATES` / `NO_MATCH`.
+- [ ] **MatchResult.reason** — 사람 가독 메모 (예: "정확 일치", "성분명 '클로피도그렐'(으)로 동일 성분 약물 5개 발견").
+- [ ] name 검색 0건 시 ingredientName(처방전 원문 괄호 성분명)으로 재검색.
 - [ ] 검색 결과 응답에 식약처 메타데이터 포함 (entpName, classCode 등) — 보호자 화면에서 약물 식별에 도움.
 - [ ] 검색·매칭 외부 호출은 `MfdsResponseCache`(인메모리 24h, `medicine-dur` spec과 공유) 거쳐 쿼터 보호.
 
@@ -110,62 +110,51 @@ public record SearchOptions(
 
 public record MatchResult(
         MatchType matchType,
-        Optional<MedicineCandidate> matched,
-        List<MedicineCandidate> alternatives,
-        double similarity,
+        Optional<MedicineCandidate> recommended,
+        List<MedicineCandidate> candidates,
         String reason
 ) {}
 
 public enum MatchType {
-    EXACT,             // 정확 일치
-    FUZZY_AUTO,        // 유사도 임계치 통과, 자동 매칭
-    MANUAL_REQUIRED,   // 후보 여러 개 또는 임계치 미달, 수동 선택 필요
-    NO_MATCH           // 매칭 실패
+    EXACT,       // 정규화 후 정확 일치 — 기본 체크
+    CANDIDATES,  // 후보 있으나 정확 일치 없음 — 보호자 선택
+    NO_MATCH     // 매칭 실패 — 수동 검색
 }
 ```
 
 ### 5-4) 매칭 알고리즘
 
 ```
-input: ocrText, dosageHint?, formHint?
+input: name (GPT 추출 약물명), ingredientName? (처방전 원문 괄호 성분명)
 
-1. 정확 매칭
-   normalized = normalize(ocrText)  // 공백·특수문자 제거, "정"/"캡슐" 등 제형 표기 통일
-   candidates = searchService.search(normalized, ...)
-   for each c in candidates:
-       if normalize(c.itemName) == normalized:
-           return MatchResult(EXACT, c, [], 1.0, "정확 일치")
+1. 검색 쿼리 정제
+   searchQuery = extractSearchQuery(name)  // 괄호·용량 제거
 
-2. 정규화 매칭
-   if 정규화 후 일치하는 c가 정확히 1개:
-       return MatchResult(EXACT, c, [], 1.0, "공백·표기 정규화 후 일치")
+2. 식약처 API 검색
+   candidates = search(searchQuery, 20)
 
-3. 편집거리(Levenshtein) 매칭
-   for each c in candidates:
-       sim = 1 - (editDistance(ocrText, c.itemName) / max(len(ocrText), len(c.itemName)))
-   sort by sim desc
-   top = candidates[0]
-   
-   if top.sim >= 0.90 AND
-      (dosageHint absent OR dosageHint matches top.dosage) AND
-      (formHint absent OR formHint compatible with top.form) AND
-      no other candidate has sim >= 0.90:
-       return MatchResult(FUZZY_AUTO, top, [], top.sim, generateReason(ocrText, top))
+3. 결과 있으면 분류
+   if candidates not empty:
+       for each c in candidates:
+           if normalizeForComparison(c.itemName) == normalizeForComparison(name):
+               return MatchResult(EXACT, c, [], "정확 일치")
+       return MatchResult(CANDIDATES, empty, candidates[0..5], "후보 약물 N개")
 
-4. 후보 여러 개
-   eligible = candidates.filter(sim >= 0.50)
-   if eligible.size > 1:
-       return MatchResult(MANUAL_REQUIRED, None, eligible[0..5], top.sim, "동명이품 또는 유사 약물 N개")
+4. 성분명 재검색 (원문에 성분명이 있는 경우만)
+   if ingredientName present:
+       ingredientCandidates = search(normalize(ingredientName), 20)
+       if not empty:
+           return MatchResult(CANDIDATES, empty, ingredientCandidates[0..5],
+               "성분명 '{ingredientName}'(으)로 동일 성분 약물 N개 발견")
 
 5. 매칭 실패
-   return MatchResult(NO_MATCH, None, [], top.sim if any else 0.0, "유사한 약물을 찾지 못함")
+   return MatchResult(NO_MATCH, empty, [], "유사한 약물을 찾지 못함")
 ```
 
 #### 정규화 규칙
-- 공백 제거
-- 특수문자(괄호·하이픈) 제거
-- "정"/"캡슐"/"시럽" 등 제형 표기 통일
+- 공백·괄호·하이픈 제거
 - 용량 표기 통일 (예: "500밀리그람" → "500mg")
+- `normalizeForComparison`: 추가로 괄호 안 내용(성분명) 제거 후 비교
 - 한글 자모 단순화 (선택, Phase 2)
 
 #### 사유 메모 자동 생성

@@ -35,16 +35,11 @@ public class MedicineMcpTools {
         return searchService.search(query, effectiveLimit);
     }
 
-    @Tool(description = "Match OCR-extracted drug text to MFDS itemSeq with auto-correction. Returns match type (EXACT/FUZZY_AUTO/MANUAL_REQUIRED/NO_MATCH) and reason.")
+    @Tool(description = "Match drug name to MFDS itemSeq. Returns match type (EXACT/CANDIDATES/NO_MATCH), recommended match, and candidates.")
     public MatchResult matchMedicineFromOcr(
-            @ToolParam(description = "OCR raw text of the drug name") final String ocrText,
-            @ToolParam(description = "Optional dosage hint (e.g. '500mg')") final String dosage,
-            @ToolParam(description = "Optional form hint (e.g. '정', '캡슐')") final String form
+            @ToolParam(description = "Drug name extracted from prescription") final String name,
+            @ToolParam(description = "Optional ingredient name for fallback search") final String ingredientName
     ) {
-        return matchService.match(
-                ocrText,
-                Optional.ofNullable(dosage),
-                Optional.ofNullable(form)
-        );
+        return matchService.match(name, Optional.ofNullable(ingredientName));
     }
 }

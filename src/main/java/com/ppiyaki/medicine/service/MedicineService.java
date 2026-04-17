@@ -57,7 +57,7 @@ public class MedicineService {
 
     @Transactional(readOnly = true)
     public List<MedicineResponse> readAll(final Long userId, final Long seniorId) {
-        final Long ownerId = resolveOwnerIdForRead(userId, seniorId);
+        final Long ownerId = resolveOwnerId(userId, seniorId);
 
         final List<Medicine> medicines = medicineRepository.findByOwnerId(ownerId);
         return medicines.stream()
@@ -117,24 +117,6 @@ public class MedicineService {
     }
 
     private Long resolveOwnerId(final Long userId, final Long seniorId) {
-        final User user = findUserById(userId);
-
-        if (seniorId == null) {
-            if (user.getRole() == UserRole.CAREGIVER) {
-                throw new BusinessException(ErrorCode.CARE_RELATION_REQUIRED);
-            }
-            return userId;
-        }
-
-        if (user.getRole() != UserRole.CAREGIVER) {
-            throw new BusinessException(ErrorCode.CARE_RELATION_NOT_CAREGIVER);
-        }
-
-        validateCareRelation(userId, seniorId);
-        return seniorId;
-    }
-
-    private Long resolveOwnerIdForRead(final Long userId, final Long seniorId) {
         final User user = findUserById(userId);
 
         if (seniorId == null) {
