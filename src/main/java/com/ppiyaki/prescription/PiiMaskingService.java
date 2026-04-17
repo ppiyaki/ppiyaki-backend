@@ -25,11 +25,13 @@ public class PiiMaskingService {
             "주소", "거소", "건강보험", "피보험자"
     );
 
+    private static final int LINE_Y_TOLERANCE = 10;
+
     public List<OcrToken> identifyPiiTokens(final List<OcrToken> tokens) {
         final List<OcrToken> piiTokens = new ArrayList<>();
 
-        boolean nextTokenIsPii = false;
-        for (final OcrToken token : tokens) {
+        for (int i = 0; i < tokens.size(); i++) {
+            final OcrToken token = tokens.get(i);
             final String text = token.text();
 
             if (RESIDENT_NUMBER.matcher(text).find()
@@ -42,21 +44,33 @@ public class PiiMaskingService {
                 continue;
             }
 
-            if (nextTokenIsPii) {
-                piiTokens.add(token);
-                nextTokenIsPii = false;
-                continue;
-            }
-
+            boolean isKeyword = false;
             for (final String keyword : PII_KEYWORDS) {
                 if (text.contains(keyword)) {
-                    nextTokenIsPii = true;
+                    isKeyword = true;
                     break;
+                }
+            }
+
+            if (isKeyword) {
+                final int keywordLineY = token.y();
+                for (int j = i + 1; j < tokens.size(); j++) {
+                    final OcrToken next = tokens.get(j);
+                    if (isSameLine(keywordLineY, next.y(), token.height())) {
+                        piiTokens.add(next);
+                    } else {
+                        break;
+                    }
                 }
             }
         }
 
         return piiTokens;
+    }
+
+    private boolean isSameLine(final int baseY, final int tokenY, final int lineHeight) {
+        final int tolerance = Math.max(LINE_Y_TOLERANCE, lineHeight / 2);
+        return Math.abs(baseY - tokenY) <= tolerance;
     }
 
     public String maskText(final String fullText, final List<OcrToken> piiTokens) {

@@ -44,7 +44,8 @@ dependencies {
     implementation platform('software.amazon.awssdk:bom:2.28.29')
     implementation 'software.amazon.awssdk:s3'
     implementation platform('org.springframework.ai:spring-ai-bom:1.1.4')
-    implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter'
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+    implementation 'com.drewnoakes:metadata-extractor:2.19.0'
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
