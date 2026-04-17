@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.common.mfds.MfdsApiProperties;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -20,7 +21,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 @Component
-@ConditionalOnProperty(prefix = "druginfo.api", name = "service-key")
+@ConditionalOnProperty(prefix = "mfds.api", name = "service-key")
 public class DrugInfoClient {
 
     private static final Logger log = LoggerFactory.getLogger(DrugInfoClient.class);
@@ -33,7 +34,7 @@ public class DrugInfoClient {
     private final Map<String, CachedDrugInfo> cache = new ConcurrentHashMap<>();
 
     public DrugInfoClient(
-            final DrugInfoProperties properties,
+            final MfdsApiProperties properties,
             final RestClient.Builder restClientBuilder,
             final ObjectMapper objectMapper
     ) {

@@ -9,7 +9,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConditionalOnProperty(prefix = "druginfo.api", name = "service-key")
+@ConditionalOnProperty(prefix = "mfds.api", name = "service-key")
 public class DrugInfoMcpTools {
 
     private final DrugInfoClient drugInfoClient;
