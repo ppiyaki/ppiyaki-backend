@@ -7,7 +7,6 @@ import com.ppiyaki.medication.controller.dto.ScheduleUpdateRequest;
 import com.ppiyaki.medication.service.MedicationScheduleService;
 import jakarta.validation.Valid;
 import java.util.List;
-import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,8 +26,7 @@ public class MedicationScheduleController {
     private final MedicationScheduleService medicationScheduleService;
 
     public MedicationScheduleController(final MedicationScheduleService medicationScheduleService) {
-        this.medicationScheduleService = Objects.requireNonNull(
-                medicationScheduleService, "medicationScheduleService must not be null");
+        this.medicationScheduleService = medicationScheduleService;
     }
 
     @PostMapping

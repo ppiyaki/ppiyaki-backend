@@ -6,9 +6,8 @@ import java.util.Optional;
 
 public record MatchResult(
         MatchType matchType,
-        Optional<MedicineCandidate> matched,
-        List<MedicineCandidate> alternatives,
-        double similarity,
+        Optional<MedicineCandidate> recommended,
+        List<MedicineCandidate> candidates,
         String reason
 ) {
 }

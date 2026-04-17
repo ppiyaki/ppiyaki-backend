@@ -97,10 +97,16 @@ public class OpenAiClient {
                     - 약물이 없으면 빈 배열 반환.
 
                     ## 출력 형식
-                    {"medicines": [{"name": "약물명", "dosage": "용량", "schedule": "복약주기"}]}
-                    - name: 제품명+제형+용량까지만. 괄호 안 성분명·성분코드는 **제외**.
-                      예: "에빅사정10밀리그램" (O), "에빅사정(메만틴염산염)" (X)
-                      예: "타이레놀정500밀리그람" (O), "타이레놀정500밀리그람(아세트아미노펜)" (X)
+                    {"medicines": [{"name": "약물명", "manufacturer": "제약사명", "ingredientName": "성분명", "dosage": "용량", "schedule": "복약주기"}]}
+                    - name: 제품명+제형+용량. 제약사명과 괄호 안 내용은 **제외**.
+                      예: "위더스세파클러캡슐250밀리그람" → name: "세파클러캡슐250밀리그람", manufacturer: "위더스"
+                      예: "에빅사정(메만틴염산염)_(10mg/1정)" → name: "에빅사정10밀리그램"
+                      예: "타이레놀정500밀리그람" → name: "타이레놀정500밀리그람"
+                    - manufacturer: 제약사명이 약물명 앞에 붙어있으면 분리. 없으면 null.
+                    - ingredientName: 텍스트에 괄호로 표기된 성분명이 있으면 추출. **텍스트에 없으면 null (추측 금지)**.
+                      예: "에빅사정(메만틴염산염)" → ingredientName: "메만틴염산염"
+                      예: "타이레놀정500밀리그람" → ingredientName: null (텍스트에 성분명 없음)
+                      주의: "(10mg/1정)" 같은 용량 표기는 성분명이 아님. 성분명은 한글 화학명.
                     - dosage: 1회 투약량 (예: "1정", "0.5정", "2캡슐"). 모르면 null.
                     - schedule: 복약주기 (예: "1일 3회 식후 30분"). 모르면 null.
                     - JSON만 반환. 다른 텍스트 없이.
@@ -144,6 +150,8 @@ public class OpenAiClient {
             for (final JsonNode item : medicines) {
                 result.add(new ExtractedMedicine(
                         item.path("name").asText(null),
+                        item.path("manufacturer").asText(null),
+                        item.path("ingredientName").asText(null),
                         item.path("dosage").asText(null),
                         item.path("schedule").asText(null)
                 ));
@@ -160,6 +168,8 @@ public class OpenAiClient {
 
     public record ExtractedMedicine(
             String name,
+            String manufacturer,
+            String ingredientName,
             String dosage,
             String schedule
     ) {

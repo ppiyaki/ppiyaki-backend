@@ -21,8 +21,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(final BusinessException exception) {
         final ErrorCode errorCode = exception.getErrorCode();
-        log.debug("BusinessException: {} - {}", errorCode.getCode(), exception.getMessage());
-        final ErrorResponse errorResponse = ErrorResponse.of(errorCode, exception.getMessage());
+        log.warn("BusinessException: {} - {}", errorCode.getCode(), exception.getMessage());
+        final ErrorResponse errorResponse = errorCode == ErrorCode.INTERNAL_SERVER_ERROR
+                ? ErrorResponse.of(errorCode)
+                : ErrorResponse.of(errorCode, exception.getMessage());
         return ResponseEntity.status(errorCode.getStatus()).body(errorResponse);
     }
 

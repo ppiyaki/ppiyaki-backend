@@ -108,13 +108,18 @@ public class PrescriptionService {
                 }
 
                 final MatchResult matchResult = medicineMatchService.match(
-                        med.name(), Optional.ofNullable(med.dosage()), Optional.empty());
+                        med.name(), Optional.ofNullable(med.ingredientName()));
 
-                final MedicineCandidate matched = matchResult.matched().orElse(null);
+                final MedicineCandidate matched = matchResult.recommended().orElse(null);
+
+                final String mfr = med.manufacturer() != null ? med.manufacturer() : "";
+                final String namePrefix = mfr.isEmpty() || med.name().startsWith(mfr) ? "" : mfr;
+                final String rawText = namePrefix + med.name()
+                        + (med.dosage() != null ? " " + med.dosage() : "");
 
                 candidateRepository.save(new PrescriptionMedicineCandidate(
                         prescription.getId(),
-                        med.name() + (med.dosage() != null ? " " + med.dosage() : ""),
+                        rawText,
                         med.name(),
                         med.dosage(),
                         med.schedule(),
@@ -133,11 +138,9 @@ public class PrescriptionService {
             return PrescriptionDetailResponse.from(prescription, candidates);
 
         } catch (final Exception e) {
-            log.error("Prescription processing failed: prescriptionId={} error={}",
-                    prescription.getId(), e.getMessage());
-            prescription.fail(e.getMessage() != null ? e.getMessage() : "Unknown error");
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
-                    "Prescription processing failed: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
+            log.error("Prescription processing failed: prescriptionId={}", prescription.getId(), e);
+            prescription.fail("처방전 처리 중 오류 발생");
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "처방전 처리 중 오류가 발생했습니다");
         }
     }
 

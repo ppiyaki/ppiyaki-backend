@@ -52,9 +52,8 @@ last_reviewed: 2026-04-16
 ### 기능 요구사항 — 보호자 확인 워크플로우
 - [ ] 보호자가 시니어와 활성 `care_relations` 관계일 때 시니어의 PENDING 처방전 조회 가능.
 - [ ] `GET /api/v1/prescriptions/{id}` 응답에 모든 후보(`PrescriptionMedicineCandidate`)의 matchType·매칭 사유 포함.
-- [ ] **EXACT 후보**: 기본 체크 상태로 표시. 보호자가 명시 해제하면 제외(opt-out). (기본 체크 + 한 번 확인 패턴)
-- [ ] **FUZZY_AUTO 후보**: ⚠️ 보정 사유 메모 표시. 보호자 명시 확인 필요(opt-in).
-- [ ] **MANUAL_REQUIRED 후보**: 후보 리스트 표시, 보호자 선택.
+- [ ] **EXACT 후보**: 기본 체크 상태로 표시. 보호자가 명시 해제하면 제외(opt-out).
+- [ ] **CANDIDATES 후보**: 후보 리스트 표시, 보호자 선택. 성분명 재검색 결과인 경우 사유 표시.
 - [ ] **NO_MATCH 후보**: 수동 검색 UI(별도 search API), 또는 건너뛰기.
 - [ ] `PATCH /api/v1/prescriptions/{id}/medicines/{candidateId}` — 보호자 결정 기록 (ACCEPTED / MANUALLY_CORRECTED / REJECTED + chosenItemSeq).
 - [ ] `POST /api/v1/prescriptions/{id}/medicines` — 처방전에 누락된 약물 수동 추가.
@@ -123,7 +122,7 @@ extracted_dosage            varchar nullable
 extracted_schedule          varchar nullable
 matched_item_seq            varchar nullable  // MedicineMatchService 결과
 matched_item_name           varchar nullable
-match_type                  enum       // EXACT / FUZZY_AUTO / MANUAL_REQUIRED / NO_MATCH
+match_type                  enum       // EXACT / CANDIDATES / NO_MATCH
 match_reason                text nullable
 caregiver_decision          enum       // PENDING / ACCEPTED / REJECTED / MANUALLY_CORRECTED
 caregiver_chosen_item_seq   varchar nullable  // 보호자가 다른 약물 선택 시
@@ -193,7 +192,7 @@ created_at
    │
    │ FOR each extractedItem:
    │   12. medicineMatchService.match(item.name, item.dosage, item.form)
-   │       → MatchResult (matchType, itemSeq, similarity, reason)
+   │       → MatchResult (matchType, recommended, candidates, reason)
    │   13. PrescriptionMedicineCandidate row 생성
    │
    │ 14. Prescription.status = PENDING_REVIEW
