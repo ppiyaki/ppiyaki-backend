@@ -42,7 +42,7 @@ public class ChatSessionController {
                 .body(new ChatSessionResponse(chatSession.getId()));
     }
 
-    @PostMapping(value = "/{sessionId}/messages", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @PostMapping("/{sessionId}/messages")
     public SseEmitter sendMessage(
             @AuthenticationPrincipal final Long userId,
             @PathVariable final Long sessionId,
@@ -50,8 +50,7 @@ public class ChatSessionController {
         return chatSessionService.sendMessageStream(userId, sessionId, chatMessageRequest.message());
     }
 
-    @PostMapping(value = "/{sessionId}/voice-messages", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = {
-            MediaType.TEXT_EVENT_STREAM_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    @PostMapping(value = "/{sessionId}/voice-messages", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public SseEmitter sendVoiceMessage(
             @AuthenticationPrincipal final Long userId,
             @PathVariable final Long sessionId,
