@@ -3,6 +3,8 @@ spring:
     name: ppiyaki-backend
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:default}
+  reactor:
+    context-propagation: auto
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:sk-placeholder}
