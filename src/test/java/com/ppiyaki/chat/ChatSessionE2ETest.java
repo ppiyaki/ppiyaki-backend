@@ -63,6 +63,7 @@ class ChatSessionE2ETest {
     @Test
     @DisplayName("세션 생성 성공")
     void createSession_success() {
+        // given & when & then
         given()
                 .header("Authorization", "Bearer " + accessToken)
                 .when()
@@ -75,10 +76,12 @@ class ChatSessionE2ETest {
     @Test
     @DisplayName("인증 없이 요청하면 401을 반환한다")
     void createSession_unauthorized_returns401() {
+        // given & when & then
         given()
                 .when()
                 .post("/api/v1/chat/sessions")
                 .then()
                 .statusCode(401);
     }
+
 }
