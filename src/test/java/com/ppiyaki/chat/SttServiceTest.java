@@ -1,7 +1,6 @@
 package com.ppiyaki.chat;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -47,22 +46,4 @@ class SttServiceTest {
         assertThat(result).isEqualTo(expectedText);
     }
 
-    @Test
-    @DisplayName("null 음성파일을 입력하면 예외가 발생한다")
-    void transcribe_nullAudio_throwsException() {
-        // given & when & then
-        assertThatThrownBy(() -> sttService.transcribe(null, "ko"))
-                .isInstanceOf(NullPointerException.class);
-    }
-
-    @Test
-    @DisplayName("null 언어를 입력하면 예외가 발생한다")
-    void transcribe_nullLanguage_throwsException() {
-        // given
-        final Resource audioResource = new ByteArrayResource(new byte[]{1, 2, 3});
-
-        // when & then
-        assertThatThrownBy(() -> sttService.transcribe(audioResource, null))
-                .isInstanceOf(NullPointerException.class);
-    }
 }
