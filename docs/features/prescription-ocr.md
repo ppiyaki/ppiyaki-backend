@@ -38,7 +38,7 @@ last_reviewed: 2026-04-16
 - [ ] `POST /api/v1/prescriptions` — 처방전 등록 트리거. 입력: 사전 업로드된 원본 이미지의 `objectKey`. 응답: `prescriptionId` + 초기 상태 `PROCESSING`.
 - [ ] 백엔드는 NCP Object Storage에서 원본 이미지를 fetch해 메모리에 로드한다.
 - [ ] **Clova General OCR** 호출로 텍스트 + 토큰별 좌표(boundingBox) 추출.
-- [ ] **PII 영역 식별** — 정규식(주민번호·전화번호) + 키워드("환자명:", "처방의:" 다음 토큰) + 위치 휴리스틱(상단 환자정보 영역).
+- [ ] **PII 영역 식별** — 정규식 패턴(주민번호·휴대전화번호)만 사용. 키워드 기반 마스킹 및 위치 휴리스틱은 제거됨 (Q-OCR-6 해소).
 - [ ] **이미지 마스킹** — 식별된 좌표에 검은 박스 합성 (java.awt.Graphics2D). 마스킹본을 NCP에 별도 저장. **마스킹본은 영구 보존**.
 - [ ] **텍스트 마스킹** — OCR 텍스트에서 PII 토큰 제거/대체. AI에 보내는 입력은 마스킹된 텍스트만.
 - [ ] **AI 구조화** — gpt-5.4-nano(text-only)에 마스킹된 텍스트 입력. 응답: 약물 후보 리스트 (이름·용량·복약주기 raw).
@@ -122,7 +122,7 @@ extracted_dosage            varchar nullable
 extracted_schedule          varchar nullable
 matched_item_seq            varchar nullable  // MedicineMatchService 결과
 matched_item_name           varchar nullable
-match_type                  enum       // EXACT / CANDIDATES / NO_MATCH
+match_type                  enum       // EXACT / CANDIDATES / NO_MATCH (Levenshtein 제거됨)
 match_reason                text nullable
 caregiver_decision          enum       // PENDING / ACCEPTED / REJECTED / MANUALLY_CORRECTED
 caregiver_chosen_item_seq   varchar nullable  // 보호자가 다른 약물 선택 시
@@ -191,7 +191,7 @@ created_at
    │ 11. OpenAiClient.extractMedicines(maskedText) → [extractedItem]
    │
    │ FOR each extractedItem:
-   │   12. medicineMatchService.match(item.name, item.dosage, item.form)
+   │   12. medicineMatchService.match(item.name, item.ingredientName)
    │       → MatchResult (matchType, recommended, candidates, reason)
    │   13. PrescriptionMedicineCandidate row 생성
    │
@@ -272,7 +272,7 @@ created_at
 - [ ] PR 3 `feat(prescription)`: `Prescription`/`PrescriptionMedicineCandidate` 엔티티 + Repository
 - [ ] PR 4 `feat(infra)`: `ClovaOcrClient` 어댑터 + 단위 테스트 (mock)
 - [ ] PR 5 `feat(infra)`: `OpenAiClient`(text completions, gpt-5.4-nano) 어댑터 + 단위 테스트 (mock)
-- [ ] PR 6 `feat(prescription)`: `PiiMaskingService` (텍스트·이미지 마스킹). 정규식 + 키워드 기반. 단위 테스트.
+- [ ] PR 6 `feat(prescription)`: `PiiMaskingService` (텍스트·이미지 마스킹). 정규식 패턴 기반(주민번호·휴대전화). 단위 테스트.
 - [ ] PR 7 `feat(prescription)`: `PrescriptionProcessingService` 통합 + `PrescriptionController`. 동기 처리. E2E 테스트.
 - [ ] PR 8 `feat(prescription)`: 후보별 PATCH·삭제·추가 API + Service. `caregiver_decision` 전이 검증.
 - [ ] PR 9 `feat(prescription)`: confirm/reject API + Medicine 생성 연동. 권한(소유자/보호자) 검증.
@@ -286,7 +286,7 @@ created_at
 ### 단위
 - `ClovaOcrClient` — 요청 형식, 응답 파싱, 실패 분기
 - `OpenAiClient` — JSON Mode 검증, 응답 파싱, 토큰 한도
-- `PiiMaskingService` — 정규식 정확도(주민번호/전화/면허번호), 키워드 매칭, bbox 계산
+- `PiiMaskingService` — 정규식 정확도(주민번호/휴대전화), bbox 계산
 - `ImageMaskingService` — 박스 좌표 합성 정확도
 - 상태 머신 전이 검증 (잘못된 전이 reject)
 - 권한 검증 (소유자/보호자/72h fallback)
@@ -312,8 +312,8 @@ created_at
 | Q-OCR-3 | 마스킹본 보존 기간 | **영구 보존** (결정됨 — §9 참조) | ✅ 결정 |
 | Q-CONF-3 | 보호자가 약물을 수동 추가하는 권한 범위 | (a) 후보에 추가만 / (b) Medicine 직접 생성 | @goohong / PR 9 전 |
 | Q-CONF-4 | confirm 후 DUR 자동 점검 | (a) 자동 트리거 / (b) 별도 사용자 액션 | @goohong / DUR 후속 |
-| Q-OCR-5 | 회전된 처방전 이미지 대응 | EXIF orientation 보정 또는 이미지 분석 자동 회전. 현재 90도 회전 이미지는 OCR 텍스트는 추출되나 바운딩박스 좌표가 이미지 픽셀과 불일치하여 PII 마스킹 위치가 틀어짐 | TODO |
-| Q-OCR-6 | PII 키워드 마스킹 범위 | 현재 키워드 다음 토큰 1개만 마스킹. 같은 줄 전체 마스킹으로 개선 필요 (주소 등 여러 토큰에 걸친 PII 누락) | TODO |
+| Q-OCR-5 | 회전된 처방전 이미지 대응 | ✅ 해소됨 — `ImageOrientationCorrector` 구현. metadata-extractor 라이브러리로 EXIF orientation 태그를 읽어 이미지 로드 시 자동 회전 보정. 바운딩박스 좌표와 픽셀 정렬 문제 해결. | ✅ 결정 |
+| Q-OCR-6 | PII 키워드 마스킹 범위 | ✅ 해소됨 — 패턴 기반 마스킹만 유지(주민번호, 휴대전화). 키워드 기반 마스킹(환자명/처방의 다음 토큰 등) 전면 제거. 오탐 리스크 없는 최소 범위로 단순화. | ✅ 결정 |
 
 ## 9) 결정 로그
 - 2026-04-16: 초안 작성 (`prescription-ocr.md` + `prescription-confirmation.md` 분리 초안)
@@ -337,4 +337,9 @@ created_at
 - 2026-04-16: **Prescription 엔티티에서 ai_model, processed_at, ocr_raw_text 제거** — ai_model은 config/git history로 추적, processed_at은 동기 처리라 created_at과 동일, ocr_raw_text는 candidate별 원문으로 충분하고 전체 원문 보관은 추가 PII 리스크.
 - 2026-04-16: **PrescriptionMedicineCandidate에서 match_similarity, caregiver_note 제거** — similarity는 match_reason에 사람 가독형 포함, note는 MVP 불필요(행위 자체가 의사 표현).
 - 2026-04-16: **NCP Object Storage prefix 네이밍 확정** — 원본(24h 만료): `upload/prescription/{userId}/{uuid}.{ext}`, 마스킹본(영구): `masked/prescription/{userId}/{uuid}.{ext}`. Lifecycle Policy는 `upload/prescription/` prefix에 1일 만료 규칙. `UploadPurpose` enum에 `PRESCRIPTION_TEMP` / `PRESCRIPTION_MASKED` 추가.
-- 2026-04-16: **PII 마스킹 패턴 선제 확장** — 주민번호/전화번호/이름키워드("환자명","성명","수진자","처방의","의사","약사") 외 면허번호/주소키워드/보험번호/이메일/생년월일까지 포함. Phase 1에서 넓게 적용, 오탐 시 축소.
+- 2026-04-16: ~~**PII 마스킹 패턴 선제 확장**~~ — ~~주민번호/전화번호/이름키워드("환자명","성명","수진자","처방의","의사","약사") 외 면허번호/주소키워드/보험번호/이메일/생년월일까지 포함~~ → **철회**: 키워드 기반 마스킹 전면 제거. 패턴 기반(주민번호·휴대전화)만 유지. 오탐 리스크와 구현 복잡도 제거 우선.
+- 2026-04-16: **PII 마스킹 최소화 확정** (Q-OCR-6 해소) — 정규식 패턴(주민번호 `\d{6}-[1-4]\d{6}`, 휴대전화 `01[0-9]-\d{3,4}-\d{4}`)만 마스킹. 키워드/위치 휴리스틱 접근 불채택.
+- 2026-04-16: **이미지 자동 회전 보정 구현** (Q-OCR-5 해소) — `ImageOrientationCorrector`가 metadata-extractor 라이브러리로 EXIF orientation 태그 판독 후 이미지 로드 전 자동 보정. 바운딩박스 좌표와 마스킹 픽셀 정렬 보장.
+- 2026-04-16: **GPT 프롬프트 필드 확장** — `manufacturer`(제조사), `ingredientName`(주성분명) 추가. `ExtractedMedicine` record 반영. 성분명은 약물명 검색 실패 시 fallback 검색에 활용.
+- 2026-04-16: **MatchType 단순화** — `EXACT`/`FUZZY_AUTO`/`MANUAL_REQUIRED`/`NO_MATCH` → `EXACT`/`CANDIDATES`/`NO_MATCH`. Levenshtein 유사도 기반 자동 보정 제거. `MatchResult`에서 `similarity` 필드 제거, `matched`→`recommended`, `alternatives`→`candidates` 리네임.
+- 2026-04-16: **검색 전략 변경** — 약물명 검색 실패 시 prefix 축소 fallback 제거, `ingredientName` fallback 검색으로 대체. 성분명 동일 약물 후보군 반환 → `CANDIDATES` 결과로 처리.
