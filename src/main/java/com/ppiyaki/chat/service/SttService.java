@@ -1,6 +1,5 @@
 package com.ppiyaki.chat.service;
 
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.audio.transcription.AudioTranscriptionPrompt;
 import org.springframework.ai.openai.OpenAiAudioTranscriptionModel;
@@ -16,9 +15,6 @@ public class SttService {
     private final OpenAiAudioTranscriptionModel transcriptionModel;
 
     public String transcribe(final Resource audioResource, final String language) {
-        Objects.requireNonNull(audioResource, "audioResource must not be null");
-        Objects.requireNonNull(language, "language must not be null");
-
         final OpenAiAudioTranscriptionOptions options = OpenAiAudioTranscriptionOptions.builder()
                 .language(language)
                 .responseFormat(OpenAiAudioApi.TranscriptResponseFormat.TEXT)
