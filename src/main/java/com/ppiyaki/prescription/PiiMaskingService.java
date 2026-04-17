@@ -44,13 +44,7 @@ public class PiiMaskingService {
                 continue;
             }
 
-            boolean isKeyword = false;
-            for (final String keyword : PII_KEYWORDS) {
-                if (text.contains(keyword)) {
-                    isKeyword = true;
-                    break;
-                }
-            }
+            final boolean isKeyword = PII_KEYWORDS.stream().anyMatch(text::contains);
 
             if (isKeyword) {
                 final int keywordLineY = token.y();
@@ -58,8 +52,6 @@ public class PiiMaskingService {
                     final OcrToken next = tokens.get(j);
                     if (isSameLine(keywordLineY, next.y(), token.height())) {
                         piiTokens.add(next);
-                    } else {
-                        break;
                     }
                 }
             }
@@ -84,15 +76,15 @@ public class PiiMaskingService {
     public BufferedImage maskImage(final BufferedImage original, final List<OcrToken> piiTokens) {
         final BufferedImage masked = new BufferedImage(
                 original.getWidth(), original.getHeight(), original.getType());
-        final Graphics2D g = masked.createGraphics();
-        g.drawImage(original, 0, 0, null);
-        g.setColor(Color.BLACK);
+        final Graphics2D graphics = masked.createGraphics();
+        graphics.drawImage(original, 0, 0, null);
+        graphics.setColor(Color.BLACK);
 
         for (final OcrToken token : piiTokens) {
-            g.fillRect(token.x(), token.y(), token.width(), token.height());
+            graphics.fillRect(token.x(), token.y(), token.width(), token.height());
         }
 
-        g.dispose();
+        graphics.dispose();
         return masked;
     }
 }
