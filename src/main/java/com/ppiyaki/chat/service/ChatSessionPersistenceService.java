@@ -5,11 +5,12 @@ import com.ppiyaki.chat.domain.ChatSession;
 import com.ppiyaki.chat.domain.MessageRole;
 import com.ppiyaki.chat.repository.ChatMessageRepository;
 import com.ppiyaki.chat.repository.ChatSessionRepository;
+import com.ppiyaki.common.exception.BusinessException;
+import com.ppiyaki.common.exception.ErrorCode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -28,43 +29,37 @@ public class ChatSessionPersistenceService {
 
     @Transactional
     public ChatSession createSession(final Long userId) {
-        Objects.requireNonNull(userId, "userId must not be null");
         return chatSessionRepository.save(ChatSession.create(userId));
     }
 
     @Transactional(readOnly = true)
     public void validateSession(final Long userId, final Long sessionId) {
-        Objects.requireNonNull(userId, "userId must not be null");
-        Objects.requireNonNull(sessionId, "sessionId must not be null");
-
         final ChatSession chatSession = chatSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new SessionNotFoundException(sessionId));
+                .orElseThrow(
+                        () -> new BusinessException(ErrorCode.CHAT_SESSION_NOT_FOUND, "세션을 찾을 수 없습니다: " + sessionId));
 
         if (!chatSession.isOwnedBy(userId)) {
-            throw new SessionAccessDeniedException(sessionId);
+            throw new BusinessException(ErrorCode.CHAT_SESSION_ACCESS_DENIED, "세션에 대한 접근 권한이 없습니다: " + sessionId);
         }
 
         if (chatSession.isExpired(LocalDateTime.now(), EXPIRATION_MINUTES)) {
-            throw new SessionExpiredException(sessionId);
+            throw new BusinessException(ErrorCode.CHAT_SESSION_EXPIRED, "세션이 만료되었습니다. 새 세션을 생성해주세요: " + sessionId);
         }
     }
 
     @Transactional(readOnly = true)
     public List<Message> loadSessionAndBuildPrompt(
             final Long userId, final Long sessionId, final String message) {
-        Objects.requireNonNull(userId, "userId must not be null");
-        Objects.requireNonNull(sessionId, "sessionId must not be null");
-        Objects.requireNonNull(message, "message must not be null");
-
         final ChatSession chatSession = chatSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new SessionNotFoundException(sessionId));
+                .orElseThrow(
+                        () -> new BusinessException(ErrorCode.CHAT_SESSION_NOT_FOUND, "세션을 찾을 수 없습니다: " + sessionId));
 
         if (!chatSession.isOwnedBy(userId)) {
-            throw new SessionAccessDeniedException(sessionId);
+            throw new BusinessException(ErrorCode.CHAT_SESSION_ACCESS_DENIED, "세션에 대한 접근 권한이 없습니다: " + sessionId);
         }
 
         if (chatSession.isExpired(LocalDateTime.now(), EXPIRATION_MINUTES)) {
-            throw new SessionExpiredException(sessionId);
+            throw new BusinessException(ErrorCode.CHAT_SESSION_EXPIRED, "세션이 만료되었습니다. 새 세션을 생성해주세요: " + sessionId);
         }
 
         final List<ChatMessage> recentMessages = chatMessageRepository.findTop20BySessionOrderByCreatedAtDescIdDesc(
@@ -75,12 +70,9 @@ public class ChatSessionPersistenceService {
 
     @Transactional
     public void saveMessages(final Long sessionId, final String userMessage, final String assistantResponse) {
-        Objects.requireNonNull(sessionId, "sessionId must not be null");
-        Objects.requireNonNull(userMessage, "userMessage must not be null");
-        Objects.requireNonNull(assistantResponse, "assistantResponse must not be null");
-
         final ChatSession chatSession = chatSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new SessionNotFoundException(sessionId));
+                .orElseThrow(
+                        () -> new BusinessException(ErrorCode.CHAT_SESSION_NOT_FOUND, "세션을 찾을 수 없습니다: " + sessionId));
 
         chatMessageRepository.save(new ChatMessage(chatSession, MessageRole.USER, userMessage));
         chatMessageRepository.save(new ChatMessage(chatSession, MessageRole.ASSISTANT, assistantResponse));

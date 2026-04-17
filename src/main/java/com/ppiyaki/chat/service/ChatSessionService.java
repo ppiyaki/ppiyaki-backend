@@ -2,7 +2,6 @@ package com.ppiyaki.chat.service;
 
 import java.util.Base64;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.Executor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
@@ -23,10 +22,6 @@ public class ChatSessionService {
     private final Executor chatStreamExecutor;
 
     public SseEmitter sendMessageStream(final Long userId, final Long sessionId, final String message) {
-        Objects.requireNonNull(userId, "userId must not be null");
-        Objects.requireNonNull(sessionId, "sessionId must not be null");
-        Objects.requireNonNull(message, "message must not be null");
-
         final List<Message> promptMessages = persistenceService.loadSessionAndBuildPrompt(userId, sessionId, message);
 
         final SseEmitter emitter = new SseEmitter(SSE_TIMEOUT);
@@ -69,11 +64,6 @@ public class ChatSessionService {
             final Long sessionId,
             final String transcribedText,
             final TtsService ttsService) {
-        Objects.requireNonNull(userId, "userId must not be null");
-        Objects.requireNonNull(sessionId, "sessionId must not be null");
-        Objects.requireNonNull(transcribedText, "transcribedText must not be null");
-        Objects.requireNonNull(ttsService, "ttsService must not be null");
-
         final List<Message> promptMessages = persistenceService.loadSessionAndBuildPrompt(userId, sessionId,
                 transcribedText);
 

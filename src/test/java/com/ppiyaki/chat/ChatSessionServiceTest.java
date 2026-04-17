@@ -10,9 +10,8 @@ import static org.mockito.Mockito.when;
 
 import com.ppiyaki.chat.service.ChatSessionPersistenceService;
 import com.ppiyaki.chat.service.ChatSessionService;
-import com.ppiyaki.chat.service.SessionAccessDeniedException;
-import com.ppiyaki.chat.service.SessionExpiredException;
-import com.ppiyaki.chat.service.SessionNotFoundException;
+import com.ppiyaki.common.exception.BusinessException;
+import com.ppiyaki.common.exception.ErrorCode;
 import java.util.Collections;
 import java.util.concurrent.Executor;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,11 +43,11 @@ class ChatSessionServiceTest {
     void sendMessageStream_notFound_throwsException() {
         // given
         when(persistenceService.loadSessionAndBuildPrompt(anyLong(), anyLong(), anyString()))
-                .thenThrow(new SessionNotFoundException(999L));
+                .thenThrow(new BusinessException(ErrorCode.CHAT_SESSION_NOT_FOUND));
 
         // when & then
         assertThatThrownBy(() -> chatSessionService.sendMessageStream(USER_ID, 999L, "hello"))
-                .isInstanceOf(SessionNotFoundException.class);
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test
@@ -56,11 +55,11 @@ class ChatSessionServiceTest {
     void sendMessageStream_expired_throwsException() {
         // given
         when(persistenceService.loadSessionAndBuildPrompt(anyLong(), anyLong(), anyString()))
-                .thenThrow(new SessionExpiredException(1L));
+                .thenThrow(new BusinessException(ErrorCode.CHAT_SESSION_EXPIRED));
 
         // when & then
         assertThatThrownBy(() -> chatSessionService.sendMessageStream(USER_ID, 1L, "hello"))
-                .isInstanceOf(SessionExpiredException.class);
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test
@@ -68,11 +67,11 @@ class ChatSessionServiceTest {
     void sendMessageStream_accessDenied_throwsException() {
         // given
         when(persistenceService.loadSessionAndBuildPrompt(anyLong(), anyLong(), anyString()))
-                .thenThrow(new SessionAccessDeniedException(1L));
+                .thenThrow(new BusinessException(ErrorCode.CHAT_SESSION_ACCESS_DENIED));
 
         // when & then
         assertThatThrownBy(() -> chatSessionService.sendMessageStream(2L, 1L, "hello"))
-                .isInstanceOf(SessionAccessDeniedException.class);
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test
@@ -94,29 +93,5 @@ class ChatSessionServiceTest {
 
         // then
         assertThat(result).isNotNull();
-    }
-
-    @Test
-    @DisplayName("null userId면 예외가 발생한다")
-    void sendMessageStream_nullUserId_throwsException() {
-        // given & when & then
-        assertThatThrownBy(() -> chatSessionService.sendMessageStream(null, 1L, "hello"))
-                .isInstanceOf(NullPointerException.class);
-    }
-
-    @Test
-    @DisplayName("null 세션ID면 예외가 발생한다")
-    void sendMessageStream_nullSessionId_throwsException() {
-        // given & when & then
-        assertThatThrownBy(() -> chatSessionService.sendMessageStream(USER_ID, null, "hello"))
-                .isInstanceOf(NullPointerException.class);
-    }
-
-    @Test
-    @DisplayName("null 메시지면 예외가 발생한다")
-    void sendMessageStream_nullMessage_throwsException() {
-        // given & when & then
-        assertThatThrownBy(() -> chatSessionService.sendMessageStream(USER_ID, 1L, null))
-                .isInstanceOf(NullPointerException.class);
     }
 }
