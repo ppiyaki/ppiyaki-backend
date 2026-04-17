@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  sql:
+    init:
+      mode: never
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:test-dummy-key}
+      chat:
+        options:
+          model: gpt-4o-mini
+
+jwt:
+  secret: ${JWT_SECRET:test-secret-key-must-be-at-least-32-bytes-long-for-hmac}
+  access-token-expiry: 1800000
+  refresh-token-expiry: 1209600000
+
+kakao:
+  oidc:
+    issuer: https://kauth.kakao.com
+    jwks-uri: https://kauth.kakao.com/.well-known/jwks.json
+    audience: test-kakao-app-key

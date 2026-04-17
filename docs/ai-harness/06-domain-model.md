@@ -35,6 +35,7 @@
 | Medication | `medication` | 복약 일정, 알림 발송, FCM 토큰 | `medication_schedules`, `medication_reminders`, `device_tokens` |
 | Health | `health` | 복약 기록, 리포트, DUR 점검 결과 | `medication_logs`, `reports`, `dur_checks` |
 | Pet | `pet` | 게이미피케이션: 삐약이 캐릭터 성장 | `pets` |
+| Chat | `chat` | AI 채팅 세션, 대화 히스토리, STT/TTS | `chat_sessions`, `chat_messages` |
 | Infra | `infra` | OCR/LLM/FCM/Storage 외부 연동 어댑터 | (테이블 없음) |
 
 ### 컨텍스트 의존성
@@ -71,6 +72,8 @@
 | 약 개수 인식 | Pill Count Recognition | 복약 확인용 비전 기반 약 개수 판정. 세부 구현 보류 |
 | 삐약이 | Ppiyaki / Pet Character | 복약 성공 시 성장하는 게이미피케이션 캐릭터 |
 | 리포트 | Report | 보호자용 복약 리포트 (스키마 미정) |
+| 채팅 세션 | Chat Session | AI 챗봇과의 대화 단위. 마지막 메시지 후 5분 경과 시 만료 |
+| 채팅 메시지 | Chat Message | 세션 내 개별 메시지. 사용자(USER) 또는 AI 응답(ASSISTANT) |
 
 ## 5) 엔티티 (코드 기준)
 
@@ -309,6 +312,26 @@ FCM 등 푸시 알림을 위한 디바이스 토큰.
 > `(senior_id, period_type, period_start)` UNIQUE 권장 (§7-12).
 > 보호자는 `care_relations`를 통해 시니어의 리포트를 열람한다 — 리포트 자체에 `caregiver_id`는 두지 않는다.
 
+### chat_sessions (`@Table(name = "chat_sessions")`, extends `BaseTimeEntity`)
+AI 채팅 세션. 마지막 활동 후 5분 경과 시 만료.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | bigint PK | |
+| user_id | bigint FK | `users.id` 참조. 세션 소유자 |
+| created_at / updated_at | timestamp | `BaseTimeEntity`. `updated_at`으로 만료 판단 |
+
+### chat_messages (`@Table(name = "chat_messages")`, extends `CreatedTimeEntity`)
+세션 내 개별 메시지. 사용자 입력과 LLM 응답을 모두 저장.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | bigint PK | |
+| session_id | bigint FK | `chat_sessions.id` 참조 |
+| role | varchar | `USER` / `ASSISTANT`. Java는 `MessageRole` enum |
+| content | text | 메시지 내용 |
+| created_at | timestamp | `CreatedTimeEntity` |
+
 ## 6) ERD (Mermaid)
 
 > DBML을 Mermaid `erDiagram`으로 재구성. 오타/오픈 이슈는 일단 합리적 해석으로 그림.
@@ -333,6 +356,8 @@ erDiagram
     users ||--o{ device_tokens : "has"
     users ||--o{ reports : "target"
     users ||--o| pets : "owns (senior only)"
+    users ||--o{ chat_sessions : "owns"
+    chat_sessions ||--o{ chat_messages : "contains"
 
     users {
         bigint id PK
@@ -481,6 +506,19 @@ erDiagram
         bigint point
         timestamp created_at
         timestamp updated_at
+    }
+    chat_sessions {
+        bigint id PK
+        bigint user_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+    chat_messages {
+        bigint id PK
+        bigint session_id FK
+        varchar role
+        text content
+        timestamp created_at
     }
 ```
 

@@ -48,11 +48,12 @@
 ## 4) 네이밍 / 스타일 (BDD)
 
 - **BDD 스타일을 기본 규칙**으로 한다. 본문은 `given / when / then` 블록으로 나눈다.
-- 메서드명은 한글 또는 `given_when_then` 스타일 중 파일 내 일관 사용.
+- 메서드명은 **영어**(`given_when_then` 스타일 또는 간결한 영어)로 작성하고, `@DisplayName`에 **한국어** 설명을 붙인다. 파일 내 일관 사용.
 
 ```java
 @Test
-void softDelete_호출하면_isActive는_false가_된다() {
+@DisplayName("softDelete 호출하면 isActive는 false가 된다")
+void softDelete_called_isActiveBecomesFalse() {
     // given
     final CareRelation relation = new CareRelation(1L, 2L, "CODE");
 
