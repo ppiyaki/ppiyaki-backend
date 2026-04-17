@@ -126,8 +126,7 @@ public class DurCheckService {
 
         final DurCheck latest = durCheckRepository
                 .findFirstByMedicineIdAndWarningLevelIsNotNullOrderByCheckedAtDesc(medicineId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MEDICINE_NOT_FOUND,
-                        "No DUR check found for medicine: " + medicineId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEDICINE_NOT_FOUND));
 
         return DurCheckResponse.from(latest, List.of(), false);
     }
@@ -312,8 +311,7 @@ public class DurCheckService {
 
     private Medicine findMedicineById(final Long medicineId) {
         return medicineRepository.findById(medicineId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MEDICINE_NOT_FOUND,
-                        "Medicine not found: " + medicineId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEDICINE_NOT_FOUND));
     }
 
     private void validateAccess(final Long userId, final Long ownerId) {

@@ -179,8 +179,7 @@ public class PrescriptionService {
         validateAccess(userId, prescription.getOwnerId());
 
         final PrescriptionMedicineCandidate candidate = candidateRepository.findById(candidateId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MEDICINE_NOT_FOUND,
-                        "Candidate not found: " + candidateId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEDICINE_NOT_FOUND));
 
         switch (request.decision()) {
             case ACCEPTED -> candidate.accept();
@@ -291,8 +290,7 @@ public class PrescriptionService {
 
     private Prescription findPrescription(final Long prescriptionId) {
         return prescriptionRepository.findById(prescriptionId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MEDICINE_NOT_FOUND,
-                        "Prescription not found: " + prescriptionId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEDICINE_NOT_FOUND));
     }
 
     private void validateAccess(final Long userId, final Long ownerId) {

@@ -36,14 +36,14 @@ public class ChatSessionPersistenceService {
     public void validateSession(final Long userId, final Long sessionId) {
         final ChatSession chatSession = chatSessionRepository.findById(sessionId)
                 .orElseThrow(
-                        () -> new BusinessException(ErrorCode.CHAT_SESSION_NOT_FOUND, "세션을 찾을 수 없습니다: " + sessionId));
+                        () -> new BusinessException(ErrorCode.CHAT_SESSION_NOT_FOUND));
 
         if (!chatSession.isOwnedBy(userId)) {
-            throw new BusinessException(ErrorCode.CHAT_SESSION_ACCESS_DENIED, "세션에 대한 접근 권한이 없습니다: " + sessionId);
+            throw new BusinessException(ErrorCode.CHAT_SESSION_ACCESS_DENIED);
         }
 
         if (chatSession.isExpired(LocalDateTime.now(), EXPIRATION_MINUTES)) {
-            throw new BusinessException(ErrorCode.CHAT_SESSION_EXPIRED, "세션이 만료되었습니다. 새 세션을 생성해주세요: " + sessionId);
+            throw new BusinessException(ErrorCode.CHAT_SESSION_EXPIRED);
         }
     }
 
@@ -52,14 +52,14 @@ public class ChatSessionPersistenceService {
             final Long userId, final Long sessionId, final String message) {
         final ChatSession chatSession = chatSessionRepository.findById(sessionId)
                 .orElseThrow(
-                        () -> new BusinessException(ErrorCode.CHAT_SESSION_NOT_FOUND, "세션을 찾을 수 없습니다: " + sessionId));
+                        () -> new BusinessException(ErrorCode.CHAT_SESSION_NOT_FOUND));
 
         if (!chatSession.isOwnedBy(userId)) {
-            throw new BusinessException(ErrorCode.CHAT_SESSION_ACCESS_DENIED, "세션에 대한 접근 권한이 없습니다: " + sessionId);
+            throw new BusinessException(ErrorCode.CHAT_SESSION_ACCESS_DENIED);
         }
 
         if (chatSession.isExpired(LocalDateTime.now(), EXPIRATION_MINUTES)) {
-            throw new BusinessException(ErrorCode.CHAT_SESSION_EXPIRED, "세션이 만료되었습니다. 새 세션을 생성해주세요: " + sessionId);
+            throw new BusinessException(ErrorCode.CHAT_SESSION_EXPIRED);
         }
 
         final List<ChatMessage> recentMessages = chatMessageRepository.findTop20BySessionOrderByCreatedAtDescIdDesc(
@@ -72,7 +72,7 @@ public class ChatSessionPersistenceService {
     public void saveMessages(final Long sessionId, final String userMessage, final String assistantResponse) {
         final ChatSession chatSession = chatSessionRepository.findById(sessionId)
                 .orElseThrow(
-                        () -> new BusinessException(ErrorCode.CHAT_SESSION_NOT_FOUND, "세션을 찾을 수 없습니다: " + sessionId));
+                        () -> new BusinessException(ErrorCode.CHAT_SESSION_NOT_FOUND));
 
         chatMessageRepository.save(new ChatMessage(chatSession, MessageRole.USER, userMessage));
         chatMessageRepository.save(new ChatMessage(chatSession, MessageRole.ASSISTANT, assistantResponse));

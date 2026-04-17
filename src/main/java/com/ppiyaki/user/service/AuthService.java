@@ -61,8 +61,7 @@ public class AuthService {
         final User user = oAuthIdentityRepository
                 .findByProviderAndProviderUserId(OAuthProvider.KAKAO, providerUserId)
                 .map(identity -> userRepository.findById(identity.getUserId())
-                        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND,
-                                "User not found: " + identity.getUserId())))
+                        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)))
                 .orElseGet(() -> createNewUser(payload, providerUserId));
 
         final String accessToken = jwtProvider.createAccessToken(user.getId());
@@ -154,7 +153,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public User findUserById(final Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "User not found: " + userId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
     private void saveRefreshToken(final Long userId, final String tokenValue) {
