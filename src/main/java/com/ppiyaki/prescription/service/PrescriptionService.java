@@ -14,6 +14,7 @@ import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.medicine.service.MatchResult;
 import com.ppiyaki.medicine.service.MedicineMatchService;
 import com.ppiyaki.prescription.CaregiverDecision;
+import com.ppiyaki.prescription.ImageOrientationCorrector;
 import com.ppiyaki.prescription.PiiMaskingService;
 import com.ppiyaki.prescription.Prescription;
 import com.ppiyaki.prescription.PrescriptionMedicineCandidate;
@@ -55,6 +56,7 @@ public class PrescriptionService {
     private final OpenAiClient openAiClient;
     private final MedicineMatchService medicineMatchService;
     private final PiiMaskingService piiMaskingService;
+    private final ImageOrientationCorrector orientationCorrector;
     private final NcpStorageProperties storageProperties;
     private final S3Client s3Client;
 
@@ -67,6 +69,7 @@ public class PrescriptionService {
             final OpenAiClient openAiClient,
             final MedicineMatchService medicineMatchService,
             final PiiMaskingService piiMaskingService,
+            final ImageOrientationCorrector orientationCorrector,
             final NcpStorageProperties storageProperties,
             final S3Client s3Client
     ) {
@@ -78,6 +81,7 @@ public class PrescriptionService {
         this.openAiClient = openAiClient;
         this.medicineMatchService = medicineMatchService;
         this.piiMaskingService = piiMaskingService;
+        this.orientationCorrector = orientationCorrector;
         this.storageProperties = storageProperties;
         this.s3Client = s3Client;
     }
@@ -88,8 +92,9 @@ public class PrescriptionService {
         prescriptionRepository.save(prescription);
 
         try {
-            final byte[] imageBytes = fetchImage(objectKey);
+            final byte[] rawImageBytes = fetchImage(objectKey);
             final String format = extractFormat(objectKey);
+            final byte[] imageBytes = orientationCorrector.correctOrientation(rawImageBytes, format);
 
             final OcrResult ocrResult = clovaOcrClient.ocr(imageBytes, format);
             log.info("OCR completed: prescriptionId={} tokens={}", prescription.getId(), ocrResult.tokens().size());
