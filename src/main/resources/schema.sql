@@ -3,6 +3,7 @@
         caregiver_id bigint,
         created_at datetime(6),
         deleted_at datetime(6),
+        expires_at datetime(6),
         id bigint not null auto_increment,
         senior_id bigint,
         updated_at datetime(6),

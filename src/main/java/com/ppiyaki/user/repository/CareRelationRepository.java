@@ -10,4 +10,6 @@ public interface CareRelationRepository extends JpaRepository<CareRelation, Long
             final Long caregiverId,
             final Long seniorId
     );
+
+    Optional<CareRelation> findByInviteCodeAndCaregiverIdIsNull(final String inviteCode);
 }

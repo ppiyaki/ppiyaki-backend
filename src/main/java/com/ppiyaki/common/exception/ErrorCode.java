@@ -32,7 +32,11 @@ public enum ErrorCode {
     // Care Relation
     CARE_RELATION_NOT_FOUND(HttpStatus.FORBIDDEN, "CARE_001", "No active care relation"),
     CARE_RELATION_REQUIRED(HttpStatus.FORBIDDEN, "CARE_002", "Caregiver must specify seniorId"),
-    CARE_RELATION_NOT_CAREGIVER(HttpStatus.FORBIDDEN, "CARE_003", "Only caregivers can specify seniorId");
+    CARE_RELATION_NOT_CAREGIVER(HttpStatus.FORBIDDEN, "CARE_003", "Only caregivers can specify seniorId"),
+    CARE_RELATION_INVITE_EXPIRED(HttpStatus.BAD_REQUEST, "CARE_004", "Invite code has expired"),
+    CARE_RELATION_INVITE_NOT_FOUND(HttpStatus.NOT_FOUND, "CARE_005", "Invite code not found"),
+    CARE_RELATION_ALREADY_EXISTS(HttpStatus.CONFLICT, "CARE_006", "Care relation already exists"),
+    CARE_RELATION_ROLE_MISMATCH(HttpStatus.FORBIDDEN, "CARE_007", "Role does not match the required action");
 
     private final HttpStatus status;
     private final String code;
