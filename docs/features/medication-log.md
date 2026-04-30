@@ -42,7 +42,7 @@ last_reviewed: 2026-04-18
 ## 4) 범위 / 비범위
 
 ### 포함
-- 복약 기록 생성/조회 API (POST, GET)
+- 복약 기록 생성/조회 API (PUT 멱등 업서트, GET)
 - 본인/보호자 권한 검증 (기존 `MedicationScheduleService` 패턴 재사용 — `CareRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull`)
 - `LogStatus` enum 신설 (ADR 0006: Java enum / DB varchar)
 - `(schedule_id, target_date)` UNIQUE 인덱스 도입
@@ -98,7 +98,7 @@ last_reviewed: 2026-04-18
 ```
 
 - `takenAt`은 null 허용. null이면 서버 시각으로 채움.
-- `photoObjectKey`는 null 허용. 제공 시 형식(`{purpose}/{userId}/{uuid}.{ext}`) + `{userId}`가 요청자와 일치하는지 서버에서 검증 — 불일치 시 400/403.
+- `photoObjectKey`는 null 허용. 제공 시 형식(`{purpose}/{userId}/{uuid}.{ext}`) + `{userId}`가 요청자와 일치하는지 서버에서 검증 — 불일치 시 400 `INVALID_INPUT` (§5-3과 동일 규칙).
 - `status`는 enum 문자열 (`TAKEN`/`MISSED`/`PENDING`).
 
 **MedicationLogResponse**

@@ -31,6 +31,7 @@
   - `docs/features/voice-chat.md`: 음성 채팅 통합
   - `docs/features/stt.md`: OpenAI Whisper STT
   - `docs/features/tts.md`: OpenAI TTS 음성 합성
+  - `docs/features/medication-log.md`: 복약 기록 API (인증 사진 첨부 포함, Phase 1)
 - `docs/decisions/`: Architecture Decision Records (ADR). 횡단 결정의 영속 이력
 - `docs/error-codes.md`: API 에러 코드 목록 (프론트엔드 참고용, ErrorCode enum과 동기화)
 - `CLAUDE.md`: Claude Code 세션 자동 로드 룰 요약
