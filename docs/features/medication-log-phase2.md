@@ -37,7 +37,7 @@ last_reviewed: 2026-04-30
 
 ### 비기능 요구사항
 - **응답 시간**: 동기 처리 — PUT API가 최대 약 5~10초 지연 가능 (Vision API 호출 시간). p95 10초 이내 목표.
-- **비용**: GPT-4o Vision 한 호출당 약 $0.005~0.01 (이미지 해상도 의존). 일일 트래픽 추정으로 모니터링 권장.
+- **비용**: gpt-5.4-nano 호출당 약 0.4~1원 수준 추정 (이미지 토큰 포함). 처방전 OCR 비용 대비 차수 동일. 일일 트래픽 모니터링 권장.
 - **보안**: 사진은 메모리에서만 처리 (이미 NCP S3에 저장된 것을 fetch). Vision API에 사용자 ID/PII 전송 안 함.
 - **타임아웃**: 30초 (Vision LLM 처리 시간 여유). 클라이언트 측 타임아웃 30초 이상 권장.
 - **민감정보 로깅 금지**: dosage·objectKey·결과 카운트는 로그에 남기지 않음 (id/userId만).
@@ -85,7 +85,7 @@ public enum LogAiStatus {
 ### 5-3) 외부 연동 — OpenAI GPT-4o Vision
 
 - 엔드포인트: `https://api.openai.com/v1/chat/completions` (이미 사용 중)
-- 모델: `gpt-4o` 또는 `gpt-4o-mini` (vision 지원). 비용·정확도 trade-off로 우선 `gpt-4o-mini` 채택, 정확도 부족 시 `gpt-4o`로 상향
+- 모델: **`gpt-5.4-nano`** — 프로젝트 표준 (prescription-ocr와 동일, `OpenAiProperties.model`로 주입). vision 입력 지원.
 - 입력: `messages` 배열에 image_url(base64 data URL) + system prompt
 - 출력: JSON Mode로 `{"count": <integer>}` 강제. 파싱 실패 시 retry 1회.
 - System prompt 초안:
@@ -160,12 +160,12 @@ public enum LogAiStatus {
 ## 8) 오픈 질문
 | # | 질문 | 선택지 | 담당/기한 |
 |---|---|---|---|
-| Q1 | gpt-4o vs gpt-4o-mini | 우선 mini로 시작, 정확도 부족 시 상향 | 운영 후 데이터 보고 결정 |
-| Q2 | 동일 시각 정렬 허용 오차 | 동일 `scheduledTime` 정확 일치만 합산. 인접 시각 합산은 후속 | ✅ 결정 |
+| Q1 | 동일 시각 정렬 허용 오차 | 동일 `scheduledTime` 정확 일치만 합산. 인접 시각 합산은 후속 | ✅ 결정 |
+| Q2 | gpt-5.4-nano vision 정확도 | 운영 데이터로 측정 후 모델 변경 여부 결정 | 운영 모니터링 |
 
 ## 9) 결정 로그
 - 2026-04-30: 초안 작성. Phase 1 머지 직후 진행.
-- 2026-04-30: **Vision LLM = OpenAI gpt-4o(-mini)** — 기존 `OpenAiClient` 인프라 확장. Clova Vision 미채택.
+- 2026-04-30: **Vision LLM = OpenAI gpt-5.4-nano** — 프로젝트 표준 모델 사용 (prescription-ocr와 동일). 기존 `OpenAiClient` + `OpenAiProperties.model` 인프라 그대로 확장. Clova Vision 미채택.
 - 2026-04-30: **동기 처리** — UX 단순성 우선. 응답 5~10s 지연 감수. 비동기는 운영 데이터 기반 후속 spec.
 - 2026-04-30: **트리거 = `photoObjectKey != null && status == TAKEN`** — 미복용/사진 없음은 검증 무의미.
 - 2026-04-30: **동일 시각 schedule 합산** — 시니어가 같은 시각에 여러 약 한 번에 촬영하는 실제 행동 패턴 정합.
