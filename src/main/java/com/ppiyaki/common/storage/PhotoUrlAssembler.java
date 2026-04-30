@@ -17,6 +17,7 @@ public class PhotoUrlAssembler {
         if (objectKey == null || objectKey.isBlank()) {
             return null;
         }
-        return properties.endpoint() + "/" + properties.bucketName() + "/" + objectKey;
+        final String trimmedEndpoint = properties.endpoint().replaceAll("/+$", "");
+        return trimmedEndpoint + "/" + properties.bucketName() + "/" + objectKey;
     }
 }

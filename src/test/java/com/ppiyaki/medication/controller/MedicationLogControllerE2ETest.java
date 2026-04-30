@@ -64,7 +64,8 @@ class MedicationLogControllerE2ETest {
         final SignupResult senior = signup("시니어A");
         final Long medicineId = seedMedicine(senior.userId());
         final Long scheduleId = seedSchedule(medicineId);
-        final String objectKey = "medication-log/" + senior.userId() + "/abc-uuid.jpg";
+        final String objectKey = "medication-log/" + senior.userId()
+                + "/9b3e7a1c-8d55-4f0a-b2e1-5f9a7b3d8c21.jpg";
 
         // when — PUT
         RestAssured.given()
@@ -193,7 +194,7 @@ class MedicationLogControllerE2ETest {
                             "scheduleId": %d,
                             "targetDate": "2026-04-22",
                             "status": "TAKEN",
-                            "photoObjectKey": "medication-log/9999999/uuid.jpg"
+                            "photoObjectKey": "medication-log/9999999/9b3e7a1c-8d55-4f0a-b2e1-5f9a7b3d8c21.jpg"
                         }
                         """.formatted(scheduleId))
                 .when()

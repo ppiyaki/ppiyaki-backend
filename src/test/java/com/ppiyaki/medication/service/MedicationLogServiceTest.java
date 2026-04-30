@@ -64,7 +64,7 @@ class MedicationLogServiceTest {
         givenScheduleAndMedicine();
         when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
                 .thenReturn(Optional.empty());
-        when(medicationLogRepository.save(any(MedicationLog.class)))
+        when(medicationLogRepository.saveAndFlush(any(MedicationLog.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
         when(photoUrlAssembler.toFullUrl(any())).thenReturn(null);
 
@@ -76,7 +76,7 @@ class MedicationLogServiceTest {
 
         // then
         final ArgumentCaptor<MedicationLog> captor = ArgumentCaptor.forClass(MedicationLog.class);
-        verify(medicationLogRepository).save(captor.capture());
+        verify(medicationLogRepository).saveAndFlush(captor.capture());
         final MedicationLog saved = captor.getValue();
         assertThat(saved.getIsProxy()).isFalse();
         assertThat(saved.getConfirmedByUserId()).isEqualTo(SENIOR_ID);
@@ -93,7 +93,7 @@ class MedicationLogServiceTest {
                 .thenReturn(Optional.of(new CareRelation(SENIOR_ID, CAREGIVER_ID, "INVITE")));
         when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
                 .thenReturn(Optional.empty());
-        when(medicationLogRepository.save(any(MedicationLog.class)))
+        when(medicationLogRepository.saveAndFlush(any(MedicationLog.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
         when(photoUrlAssembler.toFullUrl(any())).thenReturn(null);
 
@@ -105,7 +105,7 @@ class MedicationLogServiceTest {
 
         // then
         final ArgumentCaptor<MedicationLog> captor = ArgumentCaptor.forClass(MedicationLog.class);
-        verify(medicationLogRepository).save(captor.capture());
+        verify(medicationLogRepository).saveAndFlush(captor.capture());
         final MedicationLog saved = captor.getValue();
         assertThat(saved.getIsProxy()).isTrue();
         assertThat(saved.getConfirmedByUserId()).isEqualTo(CAREGIVER_ID);
@@ -150,7 +150,7 @@ class MedicationLogServiceTest {
         medicationLogService.upsert(SENIOR_ID, request);
 
         // then
-        verify(medicationLogRepository, never()).save(any()); // update via dirty checking, no explicit save
+        verify(medicationLogRepository, never()).saveAndFlush(any()); // update via dirty checking
         assertThat(existing.getStatus()).isEqualTo(LogStatus.MISSED);
         assertThat(existing.getTakenAt()).isEqualTo(LocalDateTime.of(2026, 4, 18, 10, 0));
     }
@@ -163,7 +163,7 @@ class MedicationLogServiceTest {
 
         final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
                 SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN,
-                "medication-log/999/uuid.jpg"); // 999 != SENIOR_ID
+                "medication-log/999/9b3e7a1c-8d55-4f0a-b2e1-5f9a7b3d8c21.jpg"); // 999 != SENIOR_ID
 
         // when & then
         assertThatThrownBy(() -> medicationLogService.upsert(SENIOR_ID, request))
@@ -180,7 +180,7 @@ class MedicationLogServiceTest {
 
         final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
                 SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN,
-                "medication-log/100/../etc/passwd");
+                "medication-log/100/../9b3e7a1c-8d55-4f0a-b2e1-5f9a7b3d8c21.jpg");
 
         // when & then
         assertThatThrownBy(() -> medicationLogService.upsert(SENIOR_ID, request))
@@ -198,6 +198,54 @@ class MedicationLogServiceTest {
 
         // when & then
         assertThatThrownBy(() -> medicationLogService.readByPeriod(SENIOR_ID, null, from, to))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_INPUT);
+    }
+
+    @Test
+    @DisplayName("조회 from이 to보다 뒤면 INVALID_INPUT")
+    void 조회_from이_to보다_뒤() {
+        // given
+        final LocalDate from = LocalDate.of(2026, 4, 20);
+        final LocalDate to = LocalDate.of(2026, 4, 18);
+
+        // when & then
+        assertThatThrownBy(() -> medicationLogService.readByPeriod(SENIOR_ID, null, from, to))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_INPUT);
+    }
+
+    @Test
+    @DisplayName("photoObjectKey purpose가 medication-log가 아니면 INVALID_INPUT")
+    void photoObjectKey_purpose_불일치() throws Exception {
+        // given
+        givenScheduleAndMedicine();
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN,
+                "prescription/100/9b3e7a1c-8d55-4f0a-b2e1-5f9a7b3d8c21.jpg");
+
+        // when & then
+        assertThatThrownBy(() -> medicationLogService.upsert(SENIOR_ID, request))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_INPUT);
+    }
+
+    @Test
+    @DisplayName("photoObjectKey UUID 형식이 아니면 INVALID_INPUT")
+    void photoObjectKey_UUID_아님() throws Exception {
+        // given
+        givenScheduleAndMedicine();
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN,
+                "medication-log/100/not-a-uuid.jpg");
+
+        // when & then
+        assertThatThrownBy(() -> medicationLogService.upsert(SENIOR_ID, request))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INVALID_INPUT);
