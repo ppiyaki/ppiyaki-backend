@@ -48,7 +48,7 @@ last_reviewed: 2026-04-18
 - `(schedule_id, target_date)` UNIQUE 인덱스 도입
 
 ### 제외 (Out of Scope)
-- **약 개수/종류 AI 검증** — Phase 2 (#184), Phase 3 (#185)
+- **약 개수/종류 AI 검증** — Phase 2 (#184, spec: `medication-log-phase2.md`), Phase 3 (#185)
 - **Vision LLM 호출** — Phase 2에서 도입
 - **미복용 자동 판정 스케줄러** — 예정 시각 + N분 경과 시 자동 MISSED 처리하는 배치. 별도 이슈로 분리(Q3 결정). 대신 조회 API가 실제 저장된 row만 반환하고, **프론트가 "스케줄 × 해당 기간 날짜 조합 vs 기록"을 교차 계산해 "기록 없음 = 시니어 미확인"으로 표시** — 이 방식으로 UX는 동일 품질 유지.
 - **리포트 집계/PDF 생성 API** — `Report` 엔티티는 placeholder 상태. 보호자 조회 API로 사진 확인 가능한 수준까지만.
