@@ -22,12 +22,18 @@ import com.ppiyaki.prescription.PrescriptionStatus;
 import com.ppiyaki.prescription.controller.dto.CandidateDecisionRequest;
 import com.ppiyaki.prescription.controller.dto.PrescriptionDetailResponse;
 import com.ppiyaki.prescription.controller.dto.PrescriptionListResponse;
+import com.ppiyaki.prescription.controller.dto.PrescriptionMedicineAddRequest;
 import com.ppiyaki.prescription.repository.PrescriptionMedicineCandidateRepository;
 import com.ppiyaki.prescription.repository.PrescriptionRepository;
+import com.ppiyaki.user.CareMode;
+import com.ppiyaki.user.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
+import com.ppiyaki.user.repository.UserRepository;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -48,10 +54,13 @@ public class PrescriptionService {
 
     private static final Logger log = LoggerFactory.getLogger(PrescriptionService.class);
 
+    private static final Duration MANAGED_FALLBACK_AFTER = Duration.ofHours(72);
+
     private final PrescriptionRepository prescriptionRepository;
     private final PrescriptionMedicineCandidateRepository candidateRepository;
     private final MedicineRepository medicineRepository;
     private final CareRelationRepository careRelationRepository;
+    private final UserRepository userRepository;
     private final ClovaOcrClient clovaOcrClient;
     private final OpenAiClient openAiClient;
     private final MedicineMatchService medicineMatchService;
@@ -65,6 +74,7 @@ public class PrescriptionService {
             final PrescriptionMedicineCandidateRepository candidateRepository,
             final MedicineRepository medicineRepository,
             final CareRelationRepository careRelationRepository,
+            final UserRepository userRepository,
             final ClovaOcrClient clovaOcrClient,
             final OpenAiClient openAiClient,
             final MedicineMatchService medicineMatchService,
@@ -77,6 +87,7 @@ public class PrescriptionService {
         this.candidateRepository = candidateRepository;
         this.medicineRepository = medicineRepository;
         this.careRelationRepository = careRelationRepository;
+        this.userRepository = userRepository;
         this.clovaOcrClient = clovaOcrClient;
         this.openAiClient = openAiClient;
         this.medicineMatchService = medicineMatchService;
@@ -152,7 +163,7 @@ public class PrescriptionService {
     @Transactional(readOnly = true)
     public PrescriptionDetailResponse getDetail(final Long userId, final Long prescriptionId) {
         final Prescription prescription = findPrescription(prescriptionId);
-        validateAccess(userId, prescription.getOwnerId());
+        validateReadAccess(userId, prescription);
         final List<PrescriptionMedicineCandidate> candidates = candidateRepository.findByPrescriptionId(prescriptionId);
         return PrescriptionDetailResponse.from(prescription, candidates);
     }
@@ -176,7 +187,7 @@ public class PrescriptionService {
             final CandidateDecisionRequest request
     ) {
         final Prescription prescription = findPrescription(prescriptionId);
-        validateAccess(userId, prescription.getOwnerId());
+        validateMutationAccess(userId, prescription);
 
         final PrescriptionMedicineCandidate candidate = candidateRepository.findById(candidateId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEDICINE_NOT_FOUND));
@@ -190,9 +201,35 @@ public class PrescriptionService {
     }
 
     @Transactional
+    public PrescriptionDetailResponse addManualMedicine(
+            final Long userId,
+            final Long prescriptionId,
+            final PrescriptionMedicineAddRequest request
+    ) {
+        final Prescription prescription = findPrescription(prescriptionId);
+        validateMutationAccess(userId, prescription);
+
+        if (prescription.getStatus() != PrescriptionStatus.PENDING_REVIEW) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT,
+                    "Prescription must be in PENDING_REVIEW to add medicines.");
+        }
+
+        candidateRepository.save(PrescriptionMedicineCandidate.manualAdd(
+                prescription.getId(),
+                request.itemSeq(),
+                request.itemName(),
+                request.dosage(),
+                request.schedule()
+        ));
+
+        final List<PrescriptionMedicineCandidate> candidates = candidateRepository.findByPrescriptionId(prescriptionId);
+        return PrescriptionDetailResponse.from(prescription, candidates);
+    }
+
+    @Transactional
     public PrescriptionDetailResponse confirm(final Long userId, final Long prescriptionId) {
         final Prescription prescription = findPrescription(prescriptionId);
-        validateAccess(userId, prescription.getOwnerId());
+        validateMutationAccess(userId, prescription);
 
         final List<PrescriptionMedicineCandidate> candidates = candidateRepository.findByPrescriptionId(prescriptionId);
 
@@ -229,7 +266,7 @@ public class PrescriptionService {
     @Transactional
     public void reject(final Long userId, final Long prescriptionId) {
         final Prescription prescription = findPrescription(prescriptionId);
-        validateAccess(userId, prescription.getOwnerId());
+        validateMutationAccess(userId, prescription);
         prescription.reject();
     }
 
@@ -293,9 +330,38 @@ public class PrescriptionService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEDICINE_NOT_FOUND));
     }
 
-    private void validateAccess(final Long userId, final Long ownerId) {
+    /**
+     * 처방전 조회 권한 검증 (모드 무관). 시니어 본인 또는 활성 보호자만 통과.
+     */
+    private void validateReadAccess(final Long userId, final Prescription prescription) {
+        final Long ownerId = prescription.getOwnerId();
         if (userId.equals(ownerId)) {
             return;
+        }
+        careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(userId, ownerId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
+    }
+
+    /**
+     * 처방전 변경 권한 검증 (모드별 분기, spec §5-2-1).
+     * - AUTONOMOUS 시니어/보호자: 즉시 통과
+     * - MANAGED 시니어 0~72h: CARE_MODE_RESTRICTED
+     * - MANAGED 시니어 72h+: fallback 통과
+     * - 활성 보호자: 모드 무관 통과
+     */
+    private void validateMutationAccess(final Long userId, final Prescription prescription) {
+        final Long ownerId = prescription.getOwnerId();
+        if (userId.equals(ownerId)) {
+            final User senior = userRepository.findById(ownerId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+            if (senior.getCareMode() == CareMode.AUTONOMOUS) {
+                return;
+            }
+            final Duration elapsed = Duration.between(prescription.getCreatedAt(), LocalDateTime.now());
+            if (elapsed.compareTo(MANAGED_FALLBACK_AFTER) >= 0) {
+                return;
+            }
+            throw new BusinessException(ErrorCode.CARE_MODE_RESTRICTED);
         }
         careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(userId, ownerId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
