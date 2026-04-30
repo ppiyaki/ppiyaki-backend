@@ -24,9 +24,15 @@ import com.ppiyaki.prescription.PrescriptionStatus;
 import com.ppiyaki.prescription.controller.dto.PrescriptionMedicineAddRequest;
 import com.ppiyaki.prescription.repository.PrescriptionMedicineCandidateRepository;
 import com.ppiyaki.prescription.repository.PrescriptionRepository;
+import com.ppiyaki.user.CareMode;
 import com.ppiyaki.user.CareRelation;
+import com.ppiyaki.user.Gender;
+import com.ppiyaki.user.User;
+import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.repository.CareRelationRepository;
+import com.ppiyaki.user.repository.UserRepository;
 import java.lang.reflect.Field;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -51,6 +57,8 @@ class PrescriptionServiceManualAddTest {
     @Mock
     private CareRelationRepository careRelationRepository;
     @Mock
+    private UserRepository userRepository;
+    @Mock
     private ClovaOcrClient clovaOcrClient;
     @Mock
     private OpenAiClient openAiClient;
@@ -69,13 +77,14 @@ class PrescriptionServiceManualAddTest {
     private PrescriptionService prescriptionService;
 
     @Test
-    @DisplayName("PENDING_REVIEW 상태 처방전에 보호자가 약물을 수동 추가하면 ACCEPTED 후보가 생성된다")
-    void 보호자_수동_추가_성공() throws Exception {
+    @DisplayName("AUTONOMOUS 시니어 본인이 약물을 수동 추가하면 ACCEPTED 후보가 생성된다")
+    void 자율형_시니어_수동_추가_성공() throws Exception {
         // given
         final Long ownerId = 100L;
         final Long prescriptionId = 1L;
         final Prescription prescription = givenPrescription(prescriptionId, ownerId, PrescriptionStatus.PENDING_REVIEW);
         when(prescriptionRepository.findById(prescriptionId)).thenReturn(Optional.of(prescription));
+        when(userRepository.findById(ownerId)).thenReturn(Optional.of(givenSenior(ownerId, CareMode.AUTONOMOUS)));
         when(candidateRepository.findByPrescriptionId(prescriptionId)).thenReturn(List.of());
 
         final PrescriptionMedicineAddRequest request = new PrescriptionMedicineAddRequest(
@@ -154,6 +163,7 @@ class PrescriptionServiceManualAddTest {
         final Long prescriptionId = 1L;
         final Prescription prescription = givenPrescription(prescriptionId, ownerId, PrescriptionStatus.CONFIRMED);
         when(prescriptionRepository.findById(prescriptionId)).thenReturn(Optional.of(prescription));
+        when(userRepository.findById(ownerId)).thenReturn(Optional.of(givenSenior(ownerId, CareMode.AUTONOMOUS)));
 
         final PrescriptionMedicineAddRequest request = new PrescriptionMedicineAddRequest(
                 "199500096", "타이레놀정 500mg", null, null);
@@ -189,6 +199,15 @@ class PrescriptionServiceManualAddTest {
         setField(prescription, "id", id);
         setField(prescription, "status", targetStatus);
         return prescription;
+    }
+
+    private User givenSenior(final Long id, final CareMode careMode) throws Exception {
+        final User user = new User(
+                "loginid" + id, "password", UserRole.SENIOR, "시니어",
+                Gender.UNKNOWN, LocalDate.of(1950, 1, 1), null);
+        setField(user, "id", id);
+        user.changeCareMode(careMode);
+        return user;
     }
 
     private static void setField(final Object target, final String fieldName, final Object value) throws Exception {
