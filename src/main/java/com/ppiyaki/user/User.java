@@ -47,6 +47,10 @@ public class User extends BaseTimeEntity {
     @Column(name = "pet")
     private Long pet;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "care_mode", nullable = false)
+    private CareMode careMode = CareMode.MANAGED;
+
     public User(
             final String loginId,
             final String password,
@@ -63,5 +67,10 @@ public class User extends BaseTimeEntity {
         this.gender = gender;
         this.dob = dob;
         this.pet = pet;
+        this.careMode = CareMode.MANAGED;
+    }
+
+    public void changeCareMode(final CareMode careMode) {
+        this.careMode = careMode;
     }
 }
