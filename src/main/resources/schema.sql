@@ -149,6 +149,7 @@
         login_id varchar(255),
         nickname varchar(255),
         password varchar(255),
+        care_mode enum ('AUTONOMOUS','MANAGED') not null,
         gender enum ('FEMALE','MALE','OTHER','UNKNOWN'),
         role enum ('CAREGIVER','SENIOR'),
         primary key (id)
