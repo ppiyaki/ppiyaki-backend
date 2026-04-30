@@ -33,6 +33,8 @@ public enum ErrorCode {
     CARE_RELATION_NOT_FOUND(HttpStatus.FORBIDDEN, "CARE_001", "No active care relation"),
     CARE_RELATION_REQUIRED(HttpStatus.FORBIDDEN, "CARE_002", "Caregiver must specify seniorId"),
     CARE_RELATION_NOT_CAREGIVER(HttpStatus.FORBIDDEN, "CARE_003", "Only caregivers can specify seniorId"),
+    CARE_MODE_RESTRICTED(HttpStatus.FORBIDDEN, "CARE_004",
+            "Senior cannot mutate prescription before caregiver review window"),
 
     // Chat
     CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_001", "Chat session not found"),

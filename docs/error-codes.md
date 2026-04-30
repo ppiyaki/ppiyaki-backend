@@ -65,6 +65,7 @@
 | `CARE_001` | 403 | No active care relation | 보호자-시니어 연동 관계 없음 |
 | `CARE_002` | 403 | Caregiver must specify seniorId | 보호자는 seniorId 필수 |
 | `CARE_003` | 403 | Only caregivers can specify seniorId | 시니어는 seniorId 지정 불가 |
+| `CARE_004` | 403 | Senior cannot mutate prescription before caregiver review window | MANAGED 모드 0~72h 사이 시니어 본인이 처방전 변경 시도. 보호자 검토 대기 중. 72h 경과 시 fallback 통과 |
 
 ## 프론트엔드 처리 가이드
 
@@ -86,7 +87,8 @@ if (!response.ok) {
     case 'CARE_001':
     case 'CARE_002':
     case 'CARE_003':
-      // 권한 없음 안내
+    case 'CARE_004':
+      // 권한 없음 안내 (CARE_004는 "보호자 검토를 기다리고 있어요" 메시지 권장)
       break;
     default:
       // body.error.message로 일반 에러 표시
