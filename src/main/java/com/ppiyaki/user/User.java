@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -49,7 +50,7 @@ public class User extends BaseTimeEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "care_mode", nullable = false)
-    private CareMode careMode = CareMode.MANAGED;
+    private CareMode careMode;
 
     public User(
             final String loginId,
@@ -71,6 +72,6 @@ public class User extends BaseTimeEntity {
     }
 
     public void changeCareMode(final CareMode careMode) {
-        this.careMode = careMode;
+        this.careMode = Objects.requireNonNull(careMode, "careMode must not be null");
     }
 }

@@ -1,6 +1,7 @@
 package com.ppiyaki.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
@@ -30,6 +31,18 @@ class UserCareModeTest {
 
         // then
         assertThat(user.getCareMode()).isEqualTo(CareMode.AUTONOMOUS);
+    }
+
+    @Test
+    @DisplayName("changeCareMode에 null을 전달하면 NullPointerException")
+    void careMode_null_전달_실패() {
+        // given
+        final User user = newUser();
+
+        // when & then
+        assertThatThrownBy(() -> user.changeCareMode(null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessageContaining("careMode");
     }
 
     @Test
