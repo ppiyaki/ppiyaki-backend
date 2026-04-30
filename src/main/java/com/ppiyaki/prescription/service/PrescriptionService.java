@@ -22,6 +22,7 @@ import com.ppiyaki.prescription.PrescriptionStatus;
 import com.ppiyaki.prescription.controller.dto.CandidateDecisionRequest;
 import com.ppiyaki.prescription.controller.dto.PrescriptionDetailResponse;
 import com.ppiyaki.prescription.controller.dto.PrescriptionListResponse;
+import com.ppiyaki.prescription.controller.dto.PrescriptionMedicineAddRequest;
 import com.ppiyaki.prescription.repository.PrescriptionMedicineCandidateRepository;
 import com.ppiyaki.prescription.repository.PrescriptionRepository;
 import com.ppiyaki.user.repository.CareRelationRepository;
@@ -187,6 +188,32 @@ public class PrescriptionService {
             case MANUALLY_CORRECTED -> candidate.correctManually(request.chosenItemSeq());
             default -> throw new BusinessException(ErrorCode.INVALID_INPUT, "Invalid decision: " + request.decision());
         }
+    }
+
+    @Transactional
+    public PrescriptionDetailResponse addManualMedicine(
+            final Long userId,
+            final Long prescriptionId,
+            final PrescriptionMedicineAddRequest request
+    ) {
+        final Prescription prescription = findPrescription(prescriptionId);
+        validateAccess(userId, prescription.getOwnerId());
+
+        if (prescription.getStatus() != PrescriptionStatus.PENDING_REVIEW) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT,
+                    "Prescription must be in PENDING_REVIEW to add medicines.");
+        }
+
+        candidateRepository.save(PrescriptionMedicineCandidate.manualAdd(
+                prescription.getId(),
+                request.itemSeq(),
+                request.itemName(),
+                request.dosage(),
+                request.schedule()
+        ));
+
+        final List<PrescriptionMedicineCandidate> candidates = candidateRepository.findByPrescriptionId(prescriptionId);
+        return PrescriptionDetailResponse.from(prescription, candidates);
     }
 
     @Transactional
