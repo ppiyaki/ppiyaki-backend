@@ -30,8 +30,8 @@ last_reviewed: 2026-04-30
   - 잘못된 항목 삭제 가능
   - 처방전에 누락된 약물 수동 추가 가능
 - "전체 확인 완료" 버튼을 누르면 약물·복약 일정 등록 화면으로 자동 이동.
-- **보호자 승인 모드 (관리형/자율형)** 에 따라 시니어 본인 확정 권한이 달라진다 (§3-3 참조).
-- `MANAGED` 모드에서 보호자가 72h 내 미확인 시 시니어 본인 fallback 확정 가능.
+- **보호자 승인 모드 (관리형/자율형)** 에 따라 시니어 본인 변경 권한이 달라진다 (§3-3 참조).
+- `MANAGED` 모드에서 보호자가 72h 내 미확인 시 시니어 본인 fallback 변경 권한 활성 (§3-3에 정의된 4개 변경 엔드포인트 전체에 동일 적용).
 
 ## 3) 요구사항
 
@@ -68,7 +68,9 @@ last_reviewed: 2026-04-30
 - [ ] 처방전 흐름의 모든 변경 엔드포인트(`PATCH /medicines/{candidateId}`, `POST /medicines`, `POST /confirm`, `POST /reject`)에 모드 분기 적용:
   - `AUTONOMOUS`: 시니어/보호자 모두 가능.
   - `MANAGED`: 보호자만 가능. 처방전 `created_at + 72h` 경과 시 시니어 본인 fallback 가능.
-- [ ] 권한 검증 실패 시 `CARE_RELATION_NOT_FOUND`(403) 반환 — 정확한 거부 사유는 응답 body로 명시.
+- [ ] 권한 검증 실패 시 원인별 403 에러코드를 분리해 반환:
+  - `CARE_RELATION_NOT_FOUND`: 요청자가 시니어 본인도 아니고 활성 `care_relations` 관계도 없음
+  - `CARE_MODE_RESTRICTED`: MANAGED 모드 0~72h 사이 시니어 본인이 변경 시도 (보호자 검토 대기 중)
 - [ ] 보호자 미연동 시니어는 본 spec 범위 외 (§9 보호자 연동 전제).
 
 ### 비기능 요구사항
@@ -141,8 +143,8 @@ created_at
 ```
 
 **확장 — `User`** (시니어 회원에 적용)
-```
-care_mode    enum NOT NULL DEFAULT 'MANAGED'   // MANAGED / AUTONOMOUS
+```sql
+care_mode    enum NOT NULL DEFAULT 'MANAGED'   -- MANAGED / AUTONOMOUS
 ```
 - `MANAGED`: 보호자 검증 강제. 0~72h 보호자만 변경 가능, 72h 후 시니어 본인 fallback.
 - `AUTONOMOUS`: 시니어/보호자 모두 즉시 변경 가능.
@@ -163,7 +165,7 @@ care_mode    enum NOT NULL DEFAULT 'MANAGED'   // MANAGED / AUTONOMOUS
 
 ### 5-2-1) 권한 분기 의사코드
 
-```
+```text
 function checkPrescriptionMutation(requesterId, prescription):
     seniorId = prescription.owner_id
     seniorMode = users[seniorId].care_mode
@@ -173,10 +175,10 @@ function checkPrescriptionMutation(requesterId, prescription):
         if seniorMode == MANAGED:
             elapsed = now() - prescription.created_at
             if elapsed >= 72h: allow (fallback)
-            else: deny (보호자 검토 대기 중)
+            else: deny → CARE_MODE_RESTRICTED (보호자 검토 대기 중)
     else:
         if exists active care_relations(caregiver=requesterId, senior=seniorId): allow
-        else: deny (CARE_RELATION_NOT_FOUND)
+        else: deny → CARE_RELATION_NOT_FOUND
 ```
 
 ### 5-3) 외부 연동
