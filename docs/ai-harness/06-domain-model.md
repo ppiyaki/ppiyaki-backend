@@ -68,6 +68,7 @@
 | 복약 기록 | Medication Log | 실제 복용 이행 여부 기록 (`status`, `ai_status`) |
 | 복약 이행률 | Adherence Rate | 기간 내 성공 복약 / 예정 복약 |
 | 대리 처리 | Proxy Confirmation | 보호자가 시니어 대신 복용 상태를 확정 (`is_proxy=true`, `confirmed_by_user_id != senior_id`) |
+| 보호자 승인 모드 | Care Mode | 시니어의 처방전 변경 권한 정책. `MANAGED`(보호자 검증 강제, 0~72h 보호자 전용 + 72h 후 시니어 fallback) / `AUTONOMOUS`(시니어 즉시 변경 허용). `users.care_mode`에 저장. 변경은 보호자만 가능 |
 | DUR 점검 | Drug Utilization Review | 약물 상호작용/중복/금기 검증. 결과는 `dur_checks`에 immutable 로그로 저장 |
 | 약 개수 인식 | Pill Count Recognition | 복약 확인용 비전 기반 약 개수 판정. 세부 구현 보류 |
 | 삐약이 | Ppiyaki / Pet Character | 복약 성공 시 성장하는 게이미피케이션 캐릭터 |
@@ -98,6 +99,7 @@
 | gender | varchar | DB는 varchar, Java는 `Gender` enum(`MALE`/`FEMALE`/`OTHER`/`UNKNOWN`) |
 | dob | date | 생년월일 |
 | pet | bigint | `pets.id` PK 참조 (FK 제약 선언 여부는 §7-12) |
+| care_mode | varchar | DB는 varchar, Java는 `CareMode` enum(`MANAGED` default / `AUTONOMOUS`). 시니어 회원에 적용. 보호자 회원도 컬럼은 갖지만 처방전 흐름에서는 `prescription.owner_id`로 참조하는 시니어 측 값만 사용 |
 | created_at / updated_at | timestamp | `BaseTimeEntity` |
 
 > **코드 갭(현재 HEAD 기준)**: 코드의 `User.java`는 `nickname`, `gender`, `dob`가 없고 `pet` 대신 `ppiyaki bigint` 컬럼명을 사용하며 `password`가 non-null. 이 문서는 **타깃 스키마**를 기술하며, 코드 갱신은 별도 PR로 진행한다. 추적: §7-16.
@@ -368,6 +370,7 @@ erDiagram
         varchar gender
         date dob
         bigint pet FK
+        varchar care_mode "MANAGED default / AUTONOMOUS"
         timestamp created_at
         timestamp updated_at
     }
