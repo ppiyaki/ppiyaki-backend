@@ -36,6 +36,9 @@ public enum ErrorCode {
     CARE_MODE_RESTRICTED(HttpStatus.FORBIDDEN, "CARE_004",
             "Senior cannot mutate prescription before caregiver review window"),
 
+    // Pet
+    PET_NOT_FOUND(HttpStatus.NOT_FOUND, "PET_001", "Pet not found"),
+
     // Chat
     CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_001", "Chat session not found"),
     CHAT_SESSION_EXPIRED(HttpStatus.GONE, "CHAT_002", "Chat session expired"),
