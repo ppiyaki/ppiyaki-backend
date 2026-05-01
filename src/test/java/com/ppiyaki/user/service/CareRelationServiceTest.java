@@ -37,11 +37,11 @@ class CareRelationServiceTest {
     private CareRelationService careRelationService;
 
     @Test
-    @DisplayName("시니어가 초대 코드를 발급하면 6자리 코드와 만료 시각을 반환한다")
-    void createInviteCode_senior_returnsCodeAndExpiry() {
+    @DisplayName("보호자가 초대 코드를 발급하면 6자리 코드와 만료 시각을 반환한다")
+    void createInviteCode_caregiver_returnsCodeAndExpiry() {
         // given
-        final User senior = mockUser(1L, UserRole.SENIOR);
-        given(userRepository.findById(1L)).willReturn(Optional.of(senior));
+        final User caregiver = mockUser(1L, UserRole.CAREGIVER);
+        given(userRepository.findById(1L)).willReturn(Optional.of(caregiver));
         given(careRelationRepository.save(any(CareRelation.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         // when
@@ -54,11 +54,11 @@ class CareRelationServiceTest {
     }
 
     @Test
-    @DisplayName("보호자가 초대 코드 발급을 시도하면 CARE_RELATION_ROLE_MISMATCH 에러가 발생한다")
-    void createInviteCode_caregiver_throwsRoleMismatch() {
+    @DisplayName("시니어가 초대 코드 발급을 시도하면 CARE_RELATION_ROLE_MISMATCH 에러가 발생한다")
+    void createInviteCode_senior_throwsRoleMismatch() {
         // given
-        final User caregiver = mockUser(1L, UserRole.CAREGIVER);
-        given(userRepository.findById(1L)).willReturn(Optional.of(caregiver));
+        final User senior = mockUser(1L, UserRole.SENIOR);
+        given(userRepository.findById(1L)).willReturn(Optional.of(senior));
 
         // when & then
         assertThatThrownBy(() -> careRelationService.createInviteCode(1L))
@@ -70,15 +70,15 @@ class CareRelationServiceTest {
     }
 
     @Test
-    @DisplayName("보호자가 유효한 초대 코드로 연동을 수락하면 연동 정보를 반환한다")
+    @DisplayName("시니어가 유효한 초대 코드로 연동을 수락하면 연동 정보를 반환한다")
     void acceptInvite_validCode_returnsRelation() {
         // given
-        final User caregiver = mockUser(2L, UserRole.CAREGIVER);
-        given(userRepository.findById(2L)).willReturn(Optional.of(caregiver));
+        final User senior = mockUser(2L, UserRole.SENIOR);
+        given(userRepository.findById(2L)).willReturn(Optional.of(senior));
 
         final CareRelation pendingRelation = CareRelation.createInvite(1L, LocalDateTime.now());
         final String inviteCode = pendingRelation.getInviteCode();
-        given(careRelationRepository.findByInviteCodeAndCaregiverIdIsNull(inviteCode))
+        given(careRelationRepository.findByInviteCodeAndSeniorIdIsNull(inviteCode))
                 .willReturn(Optional.of(pendingRelation));
         given(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(any(), any()))
                 .willReturn(Optional.empty());
@@ -87,17 +87,17 @@ class CareRelationServiceTest {
         final AcceptInviteResponse acceptInviteResponse = careRelationService.acceptInvite(2L, inviteCode);
 
         // then
-        assertThat(acceptInviteResponse.seniorId()).isEqualTo(1L);
-        assertThat(acceptInviteResponse.caregiverId()).isEqualTo(2L);
+        assertThat(acceptInviteResponse.caregiverId()).isEqualTo(1L);
+        assertThat(acceptInviteResponse.seniorId()).isEqualTo(2L);
     }
 
     @Test
     @DisplayName("존재하지 않는 초대 코드로 연동을 시도하면 CARE_RELATION_INVITE_NOT_FOUND 에러가 발생한다")
     void acceptInvite_invalidCode_throwsNotFound() {
         // given
-        final User caregiver = mockUser(2L, UserRole.CAREGIVER);
-        given(userRepository.findById(2L)).willReturn(Optional.of(caregiver));
-        given(careRelationRepository.findByInviteCodeAndCaregiverIdIsNull("BADCOD"))
+        final User senior = mockUser(2L, UserRole.SENIOR);
+        given(userRepository.findById(2L)).willReturn(Optional.of(senior));
+        given(careRelationRepository.findByInviteCodeAndSeniorIdIsNull("BADCOD"))
                 .willReturn(Optional.empty());
 
         // when & then
@@ -110,11 +110,11 @@ class CareRelationServiceTest {
     }
 
     @Test
-    @DisplayName("시니어가 초대 코드 수락을 시도하면 CARE_RELATION_ROLE_MISMATCH 에러가 발생한다")
-    void acceptInvite_senior_throwsRoleMismatch() {
+    @DisplayName("보호자가 초대 코드 수락을 시도하면 CARE_RELATION_ROLE_MISMATCH 에러가 발생한다")
+    void acceptInvite_caregiver_throwsRoleMismatch() {
         // given
-        final User senior = mockUser(1L, UserRole.SENIOR);
-        given(userRepository.findById(1L)).willReturn(Optional.of(senior));
+        final User caregiver = mockUser(1L, UserRole.CAREGIVER);
+        given(userRepository.findById(1L)).willReturn(Optional.of(caregiver));
 
         // when & then
         assertThatThrownBy(() -> careRelationService.acceptInvite(1L, "ABC123"))
@@ -129,15 +129,15 @@ class CareRelationServiceTest {
     @DisplayName("이미 연동된 보호자-시니어 쌍이면 CARE_RELATION_ALREADY_EXISTS 에러가 발생한다")
     void acceptInvite_duplicateRelation_throwsAlreadyExists() {
         // given
-        final User caregiver = mockUser(2L, UserRole.CAREGIVER);
-        given(userRepository.findById(2L)).willReturn(Optional.of(caregiver));
+        final User senior = mockUser(2L, UserRole.SENIOR);
+        given(userRepository.findById(2L)).willReturn(Optional.of(senior));
 
         final CareRelation pendingRelation = CareRelation.createInvite(1L, LocalDateTime.now());
         final String inviteCode = pendingRelation.getInviteCode();
-        given(careRelationRepository.findByInviteCodeAndCaregiverIdIsNull(inviteCode))
+        given(careRelationRepository.findByInviteCodeAndSeniorIdIsNull(inviteCode))
                 .willReturn(Optional.of(pendingRelation));
 
-        final CareRelation existingRelation = new CareRelation(1L, 2L, "OLD");
+        final CareRelation existingRelation = new CareRelation(2L, 1L, "OLD");
         given(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(any(), any()))
                 .willReturn(Optional.of(existingRelation));
 

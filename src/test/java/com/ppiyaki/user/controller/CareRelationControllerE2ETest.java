@@ -27,18 +27,18 @@ class CareRelationControllerE2ETest {
     }
 
     @Test
-    @DisplayName("시니어가 초대 코드를 발급하고 보호자가 수락하면 연동이 생성된다")
+    @DisplayName("보호자가 초대 코드를 발급하고 시니어가 수락하면 연동이 생성된다")
     void inviteAndAccept_success() {
         // given
-        final String seniorAccessToken = signupAndGetToken("senior_care_e2e", "pass1234!", "시니어E2E");
-        setUserRole("senior_care_e2e", "SENIOR");
-
         final String caregiverAccessToken = signupAndGetToken("caregiver_care_e2e", "pass1234!", "보호자E2E");
         setUserRole("caregiver_care_e2e", "CAREGIVER");
 
-        // when — 시니어가 초대 코드 발급
+        final String seniorAccessToken = signupAndGetToken("senior_care_e2e", "pass1234!", "시니어E2E");
+        setUserRole("senior_care_e2e", "SENIOR");
+
+        // when — 보호자가 초대 코드 발급
         final String inviteCode = RestAssured.given()
-                .header("Authorization", "Bearer " + seniorAccessToken)
+                .header("Authorization", "Bearer " + caregiverAccessToken)
                 .when()
                 .post("/api/v1/care-relations/invite")
                 .then()
@@ -48,9 +48,9 @@ class CareRelationControllerE2ETest {
                 .extract()
                 .path("inviteCode");
 
-        // then — 보호자가 초대 코드로 연동 수락
+        // then — 시니어가 초대 코드로 연동 수락
         RestAssured.given()
-                .header("Authorization", "Bearer " + caregiverAccessToken)
+                .header("Authorization", "Bearer " + seniorAccessToken)
                 .contentType(ContentType.JSON)
                 .body("""
                         {
