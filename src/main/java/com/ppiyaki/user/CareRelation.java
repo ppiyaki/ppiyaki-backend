@@ -53,19 +53,19 @@ public class CareRelation extends BaseTimeEntity {
         this.inviteCode = inviteCode;
     }
 
-    public static CareRelation createInvite(final Long seniorId, final LocalDateTime now) {
-        Objects.requireNonNull(seniorId, "seniorId must not be null");
+    public static CareRelation createInvite(final Long caregiverId, final LocalDateTime now) {
+        Objects.requireNonNull(caregiverId, "caregiverId must not be null");
         Objects.requireNonNull(now, "now must not be null");
         final CareRelation careRelation = new CareRelation();
-        careRelation.seniorId = seniorId;
+        careRelation.caregiverId = caregiverId;
         careRelation.inviteCode = generateInviteCode();
         careRelation.expiresAt = now.plusMinutes(INVITE_CODE_EXPIRY_MINUTES);
         return careRelation;
     }
 
-    public void acceptInvite(final Long caregiverId) {
-        Objects.requireNonNull(caregiverId, "caregiverId must not be null");
-        this.caregiverId = caregiverId;
+    public void acceptInvite(final Long seniorId) {
+        Objects.requireNonNull(seniorId, "seniorId must not be null");
+        this.seniorId = seniorId;
         this.inviteCode = null;
         this.expiresAt = null;
     }

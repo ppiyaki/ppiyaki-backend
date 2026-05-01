@@ -30,7 +30,7 @@ public class CareRelationService {
     @Transactional
     public InviteCodeResponse createInviteCode(final Long userId) {
         final User user = findUserById(userId);
-        validateRole(user, UserRole.SENIOR);
+        validateRole(user, UserRole.CAREGIVER);
 
         final CareRelation careRelation = CareRelation.createInvite(user.getId(), LocalDateTime.now());
         careRelationRepository.save(careRelation);
@@ -40,11 +40,11 @@ public class CareRelationService {
 
     @Transactional
     public AcceptInviteResponse acceptInvite(final Long userId, final String inviteCode) {
-        final User caregiver = findUserById(userId);
-        validateRole(caregiver, UserRole.CAREGIVER);
+        final User senior = findUserById(userId);
+        validateRole(senior, UserRole.SENIOR);
 
         final CareRelation careRelation = careRelationRepository
-                .findByInviteCodeAndCaregiverIdIsNull(inviteCode)
+                .findByInviteCodeAndSeniorIdIsNull(inviteCode)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_INVITE_NOT_FOUND));
 
         if (careRelation.isExpired(LocalDateTime.now())) {
@@ -52,12 +52,12 @@ public class CareRelationService {
         }
 
         careRelationRepository
-                .findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(caregiver.getId(), careRelation.getSeniorId())
+                .findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(careRelation.getCaregiverId(), senior.getId())
                 .ifPresent(existing -> {
                     throw new BusinessException(ErrorCode.CARE_RELATION_ALREADY_EXISTS);
                 });
 
-        careRelation.acceptInvite(caregiver.getId());
+        careRelation.acceptInvite(senior.getId());
 
         return new AcceptInviteResponse(
                 careRelation.getId(),
