@@ -24,6 +24,15 @@
 - `scripts/setup-labels.sh`: GitHub 라벨 일괄 생성 스크립트 (`gh` 필요)
 - `.github/PULL_REQUEST_TEMPLATE.md`, `.github/ISSUE_TEMPLATE/task.md`: PR/이슈 템플릿
 - `docs/features/`: 기능 단위 living 명세서 (Feature Spec). 프로세스는 `02-agent-workflow.md §9`
+  - `docs/features/llm-chat.md`: LLM 텍스트 채팅 (superseded by chat-session)
+  - `docs/features/chat-session.md`: 멀티턴 채팅 세션 관리
+  - `docs/features/chat-streaming.md`: SSE 스트리밍 응답
+  - `docs/features/chat-auth.md`: Chat API JWT 인증
+  - `docs/features/voice-chat.md`: 음성 채팅 통합
+  - `docs/features/stt.md`: OpenAI Whisper STT
+  - `docs/features/tts.md`: OpenAI TTS 음성 합성
+  - `docs/features/medication-log.md`: 복약 기록 API (인증 사진 첨부 포함, Phase 1)
+  - `docs/features/medication-log-phase2.md`: 복약 사진 약 개수 AI 검증 (Phase 2, Vision LLM 동기 검증)
 - `docs/decisions/`: Architecture Decision Records (ADR). 횡단 결정의 영속 이력
 - `docs/error-codes.md`: API 에러 코드 목록 (프론트엔드 참고용, ErrorCode enum과 동기화)
 - `CLAUDE.md`: Claude Code 세션 자동 로드 룰 요약

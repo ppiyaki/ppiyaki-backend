@@ -5,6 +5,7 @@ import com.ppiyaki.prescription.controller.dto.CandidateDecisionRequest;
 import com.ppiyaki.prescription.controller.dto.PrescriptionCreateRequest;
 import com.ppiyaki.prescription.controller.dto.PrescriptionDetailResponse;
 import com.ppiyaki.prescription.controller.dto.PrescriptionListResponse;
+import com.ppiyaki.prescription.controller.dto.PrescriptionMedicineAddRequest;
 import com.ppiyaki.prescription.service.PrescriptionService;
 import jakarta.validation.Valid;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -65,6 +66,16 @@ public class PrescriptionController {
     ) {
         prescriptionService.updateCandidateDecision(userId, prescriptionId, candidateId, request);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{prescriptionId}/medicines")
+    public ResponseEntity<PrescriptionDetailResponse> addManualMedicine(
+            @AuthenticationPrincipal final Long userId,
+            @PathVariable final Long prescriptionId,
+            @Valid @RequestBody final PrescriptionMedicineAddRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(prescriptionService.addManualMedicine(userId, prescriptionId, request));
     }
 
     @PostMapping("/{prescriptionId}/confirm")
