@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 
 import com.ppiyaki.common.exception.BusinessException;
@@ -42,7 +43,8 @@ class CareRelationServiceTest {
         // given
         final User caregiver = mockUser(1L, UserRole.CAREGIVER);
         given(userRepository.findById(1L)).willReturn(Optional.of(caregiver));
-        given(careRelationRepository.save(any(CareRelation.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(careRelationRepository.saveAndFlush(any(CareRelation.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
 
         // when
         final InviteCodeResponse inviteCodeResponse = careRelationService.createInviteCode(1L);
@@ -78,7 +80,7 @@ class CareRelationServiceTest {
 
         final CareRelation pendingRelation = CareRelation.createInvite(1L, LocalDateTime.now());
         final String inviteCode = pendingRelation.getInviteCode();
-        given(careRelationRepository.findByInviteCodeAndSeniorIdIsNull(inviteCode))
+        given(careRelationRepository.findByInviteCodeAndSeniorIdIsNullAndDeletedAtIsNull(inviteCode))
                 .willReturn(Optional.of(pendingRelation));
         given(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(any(), any()))
                 .willReturn(Optional.empty());
@@ -97,7 +99,7 @@ class CareRelationServiceTest {
         // given
         final User senior = mockUser(2L, UserRole.SENIOR);
         given(userRepository.findById(2L)).willReturn(Optional.of(senior));
-        given(careRelationRepository.findByInviteCodeAndSeniorIdIsNull("BADCOD"))
+        given(careRelationRepository.findByInviteCodeAndSeniorIdIsNullAndDeletedAtIsNull("BADCOD"))
                 .willReturn(Optional.empty());
 
         // when & then
@@ -134,10 +136,11 @@ class CareRelationServiceTest {
 
         final CareRelation pendingRelation = CareRelation.createInvite(1L, LocalDateTime.now());
         final String inviteCode = pendingRelation.getInviteCode();
-        given(careRelationRepository.findByInviteCodeAndSeniorIdIsNull(inviteCode))
+        given(careRelationRepository.findByInviteCodeAndSeniorIdIsNullAndDeletedAtIsNull(inviteCode))
                 .willReturn(Optional.of(pendingRelation));
 
-        final CareRelation existingRelation = new CareRelation(2L, 1L, "OLD");
+        final CareRelation existingRelation = CareRelation.createInvite(1L, LocalDateTime.now());
+        existingRelation.acceptInvite(2L);
         given(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(any(), any()))
                 .willReturn(Optional.of(existingRelation));
 
@@ -152,8 +155,8 @@ class CareRelationServiceTest {
 
     private User mockUser(final Long id, final UserRole role) {
         final User user = mock(User.class);
-        org.mockito.Mockito.lenient().when(user.getId()).thenReturn(id);
-        org.mockito.Mockito.lenient().when(user.getRole()).thenReturn(role);
+        lenient().when(user.getId()).thenReturn(id);
+        lenient().when(user.getRole()).thenReturn(role);
         return user;
     }
 }

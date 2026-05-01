@@ -168,5 +168,8 @@
     alter table reports 
        add constraint uk_reports_senior_period unique (senior_id, period_type, period_start);
 
-    alter table users 
+    alter table care_relations
+       add constraint uk_care_relations_invite_code unique (invite_code);
+
+    alter table users
        add constraint UKi3xs7wmfu2i3jt079uuetycit unique (login_id);
