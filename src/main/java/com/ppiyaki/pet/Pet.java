@@ -7,12 +7,13 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Entity
 @Getter
+@Entity
 @Table(name = "pets")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Pet extends BaseTimeEntity {
@@ -25,6 +26,22 @@ public class Pet extends BaseTimeEntity {
     private Long point;
 
     public Pet(final Long point) {
+        Objects.requireNonNull(point, "point must not be null");
         this.point = point;
+    }
+
+    public static Pet create() {
+        return new Pet(0L);
+    }
+
+    public void addPoint(final long amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("amount must be positive");
+        }
+        this.point += amount;
+    }
+
+    public int getLevel() {
+        return (int) Math.floor(Math.sqrt(this.point / 10.0));
     }
 }
