@@ -67,6 +67,9 @@ public class PrescriptionMedicineCandidate extends CreatedTimeEntity {
     @Column(name = "created_medicine_id")
     private Long createdMedicineId;
 
+    private static final String MANUAL_ADD_REASON = "보호자 수동 추가";
+    private static final String MANUAL_ADD_RAW_TEXT = "보호자 수동 추가";
+
     public PrescriptionMedicineCandidate(
             final Long prescriptionId,
             final String ocrRawText,
@@ -88,6 +91,32 @@ public class PrescriptionMedicineCandidate extends CreatedTimeEntity {
         this.matchType = matchType;
         this.matchReason = matchReason;
         this.caregiverDecision = CaregiverDecision.PENDING;
+    }
+
+    public static PrescriptionMedicineCandidate manualAdd(
+            final Long prescriptionId,
+            final String itemSeq,
+            final String itemName,
+            final String dosage,
+            final String schedule
+    ) {
+        Objects.requireNonNull(itemSeq, "itemSeq must not be null");
+        Objects.requireNonNull(itemName, "itemName must not be null");
+        final PrescriptionMedicineCandidate candidate = new PrescriptionMedicineCandidate(
+                prescriptionId,
+                MANUAL_ADD_RAW_TEXT,
+                itemName,
+                dosage,
+                schedule,
+                itemSeq,
+                itemName,
+                MatchType.EXACT,
+                MANUAL_ADD_REASON
+        );
+        candidate.caregiverDecision = CaregiverDecision.ACCEPTED;
+        candidate.caregiverChosenItemSeq = itemSeq;
+        candidate.reviewedAt = LocalDateTime.now();
+        return candidate;
     }
 
     public void accept() {

@@ -33,10 +33,18 @@ public enum ErrorCode {
     CARE_RELATION_NOT_FOUND(HttpStatus.FORBIDDEN, "CARE_001", "No active care relation"),
     CARE_RELATION_REQUIRED(HttpStatus.FORBIDDEN, "CARE_002", "Caregiver must specify seniorId"),
     CARE_RELATION_NOT_CAREGIVER(HttpStatus.FORBIDDEN, "CARE_003", "Only caregivers can specify seniorId"),
-    CARE_RELATION_INVITE_EXPIRED(HttpStatus.BAD_REQUEST, "CARE_004", "Invite code has expired"),
-    CARE_RELATION_INVITE_NOT_FOUND(HttpStatus.NOT_FOUND, "CARE_005", "Invite code not found"),
-    CARE_RELATION_ALREADY_EXISTS(HttpStatus.CONFLICT, "CARE_006", "Care relation already exists"),
-    CARE_RELATION_ROLE_MISMATCH(HttpStatus.FORBIDDEN, "CARE_007", "Role does not match the required action");
+    CARE_MODE_RESTRICTED(HttpStatus.FORBIDDEN, "CARE_004",
+            "Senior cannot mutate prescription before caregiver review window"),
+    CARE_RELATION_INVITE_EXPIRED(HttpStatus.BAD_REQUEST, "CARE_005", "Invite code has expired"),
+    CARE_RELATION_INVITE_NOT_FOUND(HttpStatus.NOT_FOUND, "CARE_006", "Invite code not found"),
+    CARE_RELATION_ALREADY_EXISTS(HttpStatus.CONFLICT, "CARE_007", "Care relation already exists"),
+    CARE_RELATION_ROLE_MISMATCH(HttpStatus.FORBIDDEN, "CARE_008", "Role does not match the required action"),
+
+    // Chat
+    CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_001", "Chat session not found"),
+    CHAT_SESSION_EXPIRED(HttpStatus.GONE, "CHAT_002", "Chat session expired"),
+    CHAT_SESSION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "CHAT_003", "Chat session access denied"),
+    CHAT_VOICE_FILE_EMPTY(HttpStatus.BAD_REQUEST, "CHAT_004", "Voice file is empty");
 
     private final HttpStatus status;
     private final String code;

@@ -3,10 +3,10 @@ feature: 처방전 OCR + 보호자 확인 통합 파이프라인
 slug: prescription-ocr
 owner: @goohong
 scope: prescription
-related_issues: []
-related_prs: []
+related_issues: [187, 189]
+related_prs: [188]
 status: draft
-last_reviewed: 2026-04-16
+last_reviewed: 2026-04-30
 ---
 
 # 처방전 OCR + 보호자 확인 통합 파이프라인
@@ -30,7 +30,8 @@ last_reviewed: 2026-04-16
   - 잘못된 항목 삭제 가능
   - 처방전에 누락된 약물 수동 추가 가능
 - "전체 확인 완료" 버튼을 누르면 약물·복약 일정 등록 화면으로 자동 이동.
-- 보호자가 72h 내 미확인 시 시니어 본인 확인 가능 (보호자 부재 fallback).
+- **보호자 승인 모드 (관리형/자율형)** 에 따라 시니어 본인 변경 권한이 달라진다 (§3-3 참조).
+- `MANAGED` 모드에서 보호자가 72h 내 미확인 시 시니어 본인 fallback 변경 권한 활성 (§3-3에 정의된 4개 변경 엔드포인트 전체에 동일 적용).
 
 ## 3) 요구사항
 
@@ -38,7 +39,7 @@ last_reviewed: 2026-04-16
 - [ ] `POST /api/v1/prescriptions` — 처방전 등록 트리거. 입력: 사전 업로드된 원본 이미지의 `objectKey`. 응답: `prescriptionId` + 초기 상태 `PROCESSING`.
 - [ ] 백엔드는 NCP Object Storage에서 원본 이미지를 fetch해 메모리에 로드한다.
 - [ ] **Clova General OCR** 호출로 텍스트 + 토큰별 좌표(boundingBox) 추출.
-- [ ] **PII 영역 식별** — 정규식(주민번호·전화번호) + 키워드("환자명:", "처방의:" 다음 토큰) + 위치 휴리스틱(상단 환자정보 영역).
+- [ ] **PII 영역 식별** — 정규식 패턴(주민번호·휴대전화번호)만 사용. 키워드 기반 마스킹 및 위치 휴리스틱은 제거됨 (Q-OCR-6 해소).
 - [ ] **이미지 마스킹** — 식별된 좌표에 검은 박스 합성 (java.awt.Graphics2D). 마스킹본을 NCP에 별도 저장. **마스킹본은 영구 보존**.
 - [ ] **텍스트 마스킹** — OCR 텍스트에서 PII 토큰 제거/대체. AI에 보내는 입력은 마스킹된 텍스트만.
 - [ ] **AI 구조화** — gpt-5.4-nano(text-only)에 마스킹된 텍스트 입력. 응답: 약물 후보 리스트 (이름·용량·복약주기 raw).
@@ -59,8 +60,18 @@ last_reviewed: 2026-04-16
 - [ ] `POST /api/v1/prescriptions/{id}/medicines` — 처방전에 누락된 약물 수동 추가.
 - [ ] `POST /api/v1/prescriptions/{id}/confirm` — 전체 확인. 모든 후보의 `caregiver_decision != PENDING` 검증 후 `Prescription.status = CONFIRMED`로 전이. 활성화된 후보들로 `Medicine` row 생성·연결.
 - [ ] `POST /api/v1/prescriptions/{id}/reject` — 처방전 폐기 (재촬영 요청). 마스킹본 + 후보들 모두 삭제. `Prescription.status = REJECTED`.
-- [ ] **72h 미확인 처방전**: 시니어 본인이 확인 가능 (별도 권한 부여 로직).
 - [ ] 모든 변경 audit log: 누가 언제 어떤 결정을 내렸는지 기록.
+
+### 기능 요구사항 — 보호자 승인 모드 (§3-3)
+- [ ] `User.careMode` enum 컬럼 신설 — `MANAGED` (관리형, default) / `AUTONOMOUS` (자율형).
+- [ ] `PUT /api/v1/users/{seniorId}/care-mode` — **보호자만 호출 가능**. 활성 `care_relations` 관계 검증. 시니어 본인 셀프 변경 엔드포인트는 두지 않는다.
+- [ ] 처방전 흐름의 모든 변경 엔드포인트(`PATCH /medicines/{candidateId}`, `POST /medicines`, `POST /confirm`, `POST /reject`)에 모드 분기 적용:
+  - `AUTONOMOUS`: 시니어/보호자 모두 가능.
+  - `MANAGED`: 보호자만 가능. 처방전 `created_at + 72h` 경과 시 시니어 본인 fallback 가능.
+- [ ] 권한 검증 실패 시 원인별 403 에러코드를 분리해 반환:
+  - `CARE_RELATION_NOT_FOUND`: 요청자가 시니어 본인도 아니고 활성 `care_relations` 관계도 없음
+  - `CARE_MODE_RESTRICTED`: MANAGED 모드 0~72h 사이 시니어 본인이 변경 시도 (보호자 검토 대기 중)
+- [ ] 보호자 미연동 시니어는 본 spec 범위 외 (§9 보호자 연동 전제).
 
 ### 비기능 요구사항
 - **응답 시간**: 등록 API는 동기. 전체 처리(OCR+AI+매칭) 5초 이내 p95 목표.
@@ -122,7 +133,7 @@ extracted_dosage            varchar nullable
 extracted_schedule          varchar nullable
 matched_item_seq            varchar nullable  // MedicineMatchService 결과
 matched_item_name           varchar nullable
-match_type                  enum       // EXACT / CANDIDATES / NO_MATCH
+match_type                  enum       // EXACT / CANDIDATES / NO_MATCH (Levenshtein 제거됨)
 match_reason                text nullable
 caregiver_decision          enum       // PENDING / ACCEPTED / REJECTED / MANUALLY_CORRECTED
 caregiver_chosen_item_seq   varchar nullable  // 보호자가 다른 약물 선택 시
@@ -131,17 +142,44 @@ created_medicine_id         bigint nullable FK to medicines
 created_at
 ```
 
+**확장 — `User`** (시니어 회원에 적용)
+```sql
+care_mode    enum NOT NULL DEFAULT 'MANAGED'   -- MANAGED / AUTONOMOUS
+```
+- `MANAGED`: 보호자 검증 강제. 0~72h 보호자만 변경 가능, 72h 후 시니어 본인 fallback.
+- `AUTONOMOUS`: 시니어/보호자 모두 즉시 변경 가능.
+- 보호자 회원도 같은 컬럼을 가지지만 처방전 흐름에서는 사용하지 않는다 (사용하는 모든 곳은 `prescription.owner_id`로 참조하는 시니어 측 값).
+
 ### 5-2) API 엔드포인트
 
-| Method | Path | 설명 | 인증 |
+| Method | Path | 설명 | 인증 / 권한 |
 |---|---|---|---|
 | POST | `/api/v1/prescriptions` | 처방전 등록 (objectKey 입력, 동기 처리) | 필수 |
-| GET | `/api/v1/prescriptions/{id}` | 추출 결과 + 후보 + matchType별 메모 + 마스킹본 presigned URL | 필수 (소유자/보호자) |
+| GET | `/api/v1/prescriptions/{id}` | 추출 결과 + 후보 + matchType별 메모 + 마스킹본 presigned URL | 필수 (소유자/보호자, 모드 무관) |
 | GET | `/api/v1/prescriptions?status=...` | 내가 확인할/확인한 처방전 리스트 | 필수 |
-| PATCH | `/api/v1/prescriptions/{id}/medicines/{candidateId}` | 후보별 보호자 결정 | 필수 |
-| POST | `/api/v1/prescriptions/{id}/medicines` | 누락 약물 수동 추가 | 필수 |
-| POST | `/api/v1/prescriptions/{id}/confirm` | 전체 확인 → CONFIRMED, Medicine 생성 | 필수 |
-| POST | `/api/v1/prescriptions/{id}/reject` | 폐기 | 필수 |
+| PATCH | `/api/v1/prescriptions/{id}/medicines/{candidateId}` | 후보별 결정 | 모드별 분기 (§3-3) |
+| POST | `/api/v1/prescriptions/{id}/medicines` | 누락 약물 수동 추가 | 모드별 분기 (§3-3) |
+| POST | `/api/v1/prescriptions/{id}/confirm` | 전체 확인 → CONFIRMED, Medicine 생성 | 모드별 분기 (§3-3) |
+| POST | `/api/v1/prescriptions/{id}/reject` | 폐기 | 모드별 분기 (§3-3) |
+| PUT | `/api/v1/users/{seniorId}/care-mode` | 시니어의 careMode 변경 | 보호자만 (활성 `care_relations` 검증). 시니어 본인 셀프 엔드포인트 없음 |
+
+### 5-2-1) 권한 분기 의사코드
+
+```text
+function checkPrescriptionMutation(requesterId, prescription):
+    seniorId = prescription.owner_id
+    seniorMode = users[seniorId].care_mode
+
+    if requesterId == seniorId:
+        if seniorMode == AUTONOMOUS: allow
+        if seniorMode == MANAGED:
+            elapsed = now() - prescription.created_at
+            if elapsed >= 72h: allow (fallback)
+            else: deny → CARE_MODE_RESTRICTED (보호자 검토 대기 중)
+    else:
+        if exists active care_relations(caregiver=requesterId, senior=seniorId): allow
+        else: deny → CARE_RELATION_NOT_FOUND
+```
 
 ### 5-3) 외부 연동
 
@@ -191,7 +229,7 @@ created_at
    │ 11. OpenAiClient.extractMedicines(maskedText) → [extractedItem]
    │
    │ FOR each extractedItem:
-   │   12. medicineMatchService.match(item.name, item.dosage, item.form)
+   │   12. medicineMatchService.match(item.name, item.ingredientName)
    │       → MatchResult (matchType, recommended, candidates, reason)
    │   13. PrescriptionMedicineCandidate row 생성
    │
@@ -255,6 +293,7 @@ created_at
   action enum (ACCEPT/REJECT/CORRECT/ADD/CONFIRM/REJECT_PRESCRIPTION),
   before_value text nullable, after_value text nullable, created_at
   ```
+- `users` 테이블에 `care_mode` 컬럼 추가 (varchar, NOT NULL DEFAULT 'MANAGED'). 기존 시니어 row는 default로 backfill.
 
 ## 6) 작업 분할 (예상 PR 리스트)
 
@@ -272,24 +311,27 @@ created_at
 - [ ] PR 3 `feat(prescription)`: `Prescription`/`PrescriptionMedicineCandidate` 엔티티 + Repository
 - [ ] PR 4 `feat(infra)`: `ClovaOcrClient` 어댑터 + 단위 테스트 (mock)
 - [ ] PR 5 `feat(infra)`: `OpenAiClient`(text completions, gpt-5.4-nano) 어댑터 + 단위 테스트 (mock)
-- [ ] PR 6 `feat(prescription)`: `PiiMaskingService` (텍스트·이미지 마스킹). 정규식 + 키워드 기반. 단위 테스트.
+- [ ] PR 6 `feat(prescription)`: `PiiMaskingService` (텍스트·이미지 마스킹). 정규식 패턴 기반(주민번호·휴대전화). 단위 테스트.
 - [ ] PR 7 `feat(prescription)`: `PrescriptionProcessingService` 통합 + `PrescriptionController`. 동기 처리. E2E 테스트.
 - [ ] PR 8 `feat(prescription)`: 후보별 PATCH·삭제·추가 API + Service. `caregiver_decision` 전이 검증.
 - [ ] PR 9 `feat(prescription)`: confirm/reject API + Medicine 생성 연동. 권한(소유자/보호자) 검증.
-- [ ] PR 10 `feat(prescription)`: 72h fallback — 시니어 본인 확인 권한 활성화 로직 (`@Scheduled` 배치 또는 요청 시점 계산).
-- [ ] PR 11 `feat(prescription)`: audit log (선택, MVP에서는 candidate row의 변경 시각만 활용 후 후속 PR로 분리 가능).
-- [ ] PR 12 `test(prescription)`: E2E — 보호자 확인 / 시니어 자동 fallback / 권한 실패 / 잘못된 상태 전이.
-- [ ] PR 13 `chore(infra)`: NCP Object Storage Lifecycle Policy `upload/prescription/` prefix에 24h 만료 규칙 설정 (NCP 콘솔 작업)
+- [ ] PR 10 `feat(user)`: `User.careMode` enum 컬럼 추가 (default `MANAGED`) + 마이그레이션. 보호 영역 — `needs-human-review`.
+- [ ] PR 11 `feat(user)`: `PUT /api/v1/users/{seniorId}/care-mode` API. 보호자만 호출 가능, 활성 `care_relations` 검증.
+- [ ] PR 12 `feat(prescription)`: 처방전 변경 엔드포인트(`PATCH/POST/POST/POST`) 4건의 권한 분기 로직 — `validateAccess`에 모드별 분기 + 72h fallback (요청 시점 계산, `@Scheduled` 배치 미사용).
+- [ ] PR 13 `feat(prescription)`: audit log (선택, MVP에서는 candidate row의 변경 시각만 활용 후 후속 PR로 분리 가능).
+- [ ] PR 14 `test(prescription)`: E2E — 모드별 보호자 확인 / 시니어 자동 fallback / 권한 실패 / 잘못된 상태 전이.
+- [ ] PR 15 `chore(infra)`: NCP Object Storage Lifecycle Policy `upload/prescription/` prefix에 24h 만료 규칙 설정 (NCP 콘솔 작업)
 
 ## 7) 테스트 전략
 
 ### 단위
 - `ClovaOcrClient` — 요청 형식, 응답 파싱, 실패 분기
 - `OpenAiClient` — JSON Mode 검증, 응답 파싱, 토큰 한도
-- `PiiMaskingService` — 정규식 정확도(주민번호/전화/면허번호), 키워드 매칭, bbox 계산
+- `PiiMaskingService` — 정규식 정확도(주민번호/휴대전화), bbox 계산
 - `ImageMaskingService` — 박스 좌표 합성 정확도
 - 상태 머신 전이 검증 (잘못된 전이 reject)
-- 권한 검증 (소유자/보호자/72h fallback)
+- 권한 검증 — 모드별 분기 5케이스: AUTONOMOUS+시니어, AUTONOMOUS+보호자, MANAGED+보호자, MANAGED+시니어 0~72h(차단), MANAGED+시니어 72h+(통과)
+- `User.careMode` 변경 권한 — 보호자만, 활성 care_relations 검증
 - candidate.caregiver_decision 변경 감사
 
 ### 통합 (E2E)
@@ -301,8 +343,12 @@ created_at
 - 정상 흐름: OCR → PENDING_REVIEW → 보호자 confirm → CONFIRMED → Medicine 생성 확인
 - MANUALLY_CORRECTED: 보호자가 다른 itemSeq 선택 → Medicine.itemSeq에 chosen 값 반영
 - 누락 약물 추가: 보호자가 수동으로 약물 1개 추가 → Medicine 생성 확인
-- 72h 후 시니어 확인: 보호자 미확인 상태에서 시니어 confirm 시도 → 성공
+- AUTONOMOUS 모드: 시니어가 즉시 confirm → 성공
+- MANAGED 모드 + 0~72h: 시니어 confirm 시도 → 403 (보호자 검토 대기)
+- MANAGED 모드 + 72h 경과: 시니어 fallback confirm → 성공
 - 권한 실패: 다른 사용자가 confirm 시도 → 403
+- careMode 변경: 시니어 본인이 자기 모드 변경 시도 → 403 (보호자만 가능)
+- careMode 변경: 보호자가 시니어 모드 MANAGED→AUTONOMOUS 변경 → 성공 후 시니어 즉시 confirm 가능
 
 ## 8) 오픈 질문
 
@@ -310,10 +356,11 @@ created_at
 |---|---|---|---|
 | Q-OCR-2 | OpenAI 모델 확정 | gpt-5.4-nano 잠정 확정. OpenAI 라인업 변경 시 재검토 | @goohong / PR 5 전 |
 | Q-OCR-3 | 마스킹본 보존 기간 | **영구 보존** (결정됨 — §9 참조) | ✅ 결정 |
-| Q-CONF-3 | 보호자가 약물을 수동 추가하는 권한 범위 | (a) 후보에 추가만 / (b) Medicine 직접 생성 | @goohong / PR 9 전 |
+| Q-CONF-3 | 보호자가 약물을 수동 추가하는 권한 범위 | ✅ 해소됨 — (a) 후보에 추가만 (PR #188 머지). | ✅ 결정 |
 | Q-CONF-4 | confirm 후 DUR 자동 점검 | (a) 자동 트리거 / (b) 별도 사용자 액션 | @goohong / DUR 후속 |
-| Q-OCR-5 | 회전된 처방전 이미지 대응 | EXIF orientation 보정 또는 이미지 분석 자동 회전. 현재 90도 회전 이미지는 OCR 텍스트는 추출되나 바운딩박스 좌표가 이미지 픽셀과 불일치하여 PII 마스킹 위치가 틀어짐 | TODO |
-| Q-OCR-6 | PII 키워드 마스킹 범위 | 현재 키워드 다음 토큰 1개만 마스킹. 같은 줄 전체 마스킹으로 개선 필요 (주소 등 여러 토큰에 걸친 PII 누락) | TODO |
+| Q-CONF-5 | 보호자 승인 모드 | ✅ 해소됨 — `MANAGED` (default) / `AUTONOMOUS` 두 모드. `User.careMode`. 보호자만 변경 가능. MANAGED 모드 0~72h는 보호자만, 72h 후 시니어 fallback. | ✅ 결정 |
+| Q-OCR-5 | 회전된 처방전 이미지 대응 | ✅ 해소됨 — `ImageOrientationCorrector` 구현. metadata-extractor 라이브러리로 EXIF orientation 태그를 읽어 이미지 로드 시 자동 회전 보정. 바운딩박스 좌표와 픽셀 정렬 문제 해결. | ✅ 결정 |
+| Q-OCR-6 | PII 키워드 마스킹 범위 | ✅ 해소됨 — 패턴 기반 마스킹만 유지(주민번호, 휴대전화). 키워드 기반 마스킹(환자명/처방의 다음 토큰 등) 전면 제거. 오탐 리스크 없는 최소 범위로 단순화. | ✅ 결정 |
 
 ## 9) 결정 로그
 - 2026-04-16: 초안 작성 (`prescription-ocr.md` + `prescription-confirmation.md` 분리 초안)
@@ -337,4 +384,11 @@ created_at
 - 2026-04-16: **Prescription 엔티티에서 ai_model, processed_at, ocr_raw_text 제거** — ai_model은 config/git history로 추적, processed_at은 동기 처리라 created_at과 동일, ocr_raw_text는 candidate별 원문으로 충분하고 전체 원문 보관은 추가 PII 리스크.
 - 2026-04-16: **PrescriptionMedicineCandidate에서 match_similarity, caregiver_note 제거** — similarity는 match_reason에 사람 가독형 포함, note는 MVP 불필요(행위 자체가 의사 표현).
 - 2026-04-16: **NCP Object Storage prefix 네이밍 확정** — 원본(24h 만료): `upload/prescription/{userId}/{uuid}.{ext}`, 마스킹본(영구): `masked/prescription/{userId}/{uuid}.{ext}`. Lifecycle Policy는 `upload/prescription/` prefix에 1일 만료 규칙. `UploadPurpose` enum에 `PRESCRIPTION_TEMP` / `PRESCRIPTION_MASKED` 추가.
-- 2026-04-16: **PII 마스킹 패턴 선제 확장** — 주민번호/전화번호/이름키워드("환자명","성명","수진자","처방의","의사","약사") 외 면허번호/주소키워드/보험번호/이메일/생년월일까지 포함. Phase 1에서 넓게 적용, 오탐 시 축소.
+- 2026-04-16: ~~**PII 마스킹 패턴 선제 확장**~~ — ~~주민번호/전화번호/이름키워드("환자명","성명","수진자","처방의","의사","약사") 외 면허번호/주소키워드/보험번호/이메일/생년월일까지 포함~~ → **철회**: 키워드 기반 마스킹 전면 제거. 패턴 기반(주민번호·휴대전화)만 유지. 오탐 리스크와 구현 복잡도 제거 우선.
+- 2026-04-16: **PII 마스킹 최소화 확정** (Q-OCR-6 해소) — 정규식 패턴(주민번호 `\d{6}-[1-4]\d{6}`, 휴대전화 `01[0-9]-\d{3,4}-\d{4}`)만 마스킹. 키워드/위치 휴리스틱 접근 불채택.
+- 2026-04-16: **이미지 자동 회전 보정 구현** (Q-OCR-5 해소) — `ImageOrientationCorrector`가 metadata-extractor 라이브러리로 EXIF orientation 태그 판독 후 이미지 로드 전 자동 보정. 바운딩박스 좌표와 마스킹 픽셀 정렬 보장.
+- 2026-04-16: **GPT 프롬프트 필드 확장** — `manufacturer`(제조사), `ingredientName`(주성분명) 추가. `ExtractedMedicine` record 반영. 성분명은 약물명 검색 실패 시 fallback 검색에 활용.
+- 2026-04-16: **MatchType 단순화** — `EXACT`/`FUZZY_AUTO`/`MANUAL_REQUIRED`/`NO_MATCH` → `EXACT`/`CANDIDATES`/`NO_MATCH`. Levenshtein 유사도 기반 자동 보정 제거. `MatchResult`에서 `similarity` 필드 제거, `matched`→`recommended`, `alternatives`→`candidates` 리네임.
+- 2026-04-16: **검색 전략 변경** — 약물명 검색 실패 시 prefix 축소 fallback 제거, `ingredientName` fallback 검색으로 대체. 성분명 동일 약물 후보군 반환 → `CANDIDATES` 결과로 처리.
+- 2026-04-30: **보호자 수동 약물 추가 정책 확정** (Q-CONF-3 해소) — (a) 후보에 추가만, confirm 시점에 Medicine 일괄 생성. itemSeq + itemName 둘 다 클라이언트 전송 (서버측 itemSeq → itemName 조회 인프라 부재). PR #188로 머지.
+- 2026-04-30: **보호자 승인 모드 도입** (Q-CONF-5 해소) — `User.careMode` enum 컬럼 (`MANAGED` default / `AUTONOMOUS`). 모드 변경은 `PUT /api/v1/users/{seniorId}/care-mode` — **보호자만 호출 가능**, 시니어 본인 셀프 변경 엔드포인트 두지 않음. 처방전 변경 엔드포인트 4건(`PATCH /medicines/{candidateId}`, `POST /medicines`, `POST /confirm`, `POST /reject`)에 모드 분기 적용. AUTONOMOUS는 시니어/보호자 모두 즉시 가능, MANAGED는 0~72h 보호자만 + 72h 후 시니어 fallback. 보호자 미연동 시니어는 spec 범위 외 (보호자 연동 전제 유지). 의도: spec의 "보호자 검증 강제"가 코드에서 사실상 동작하지 않던 상태를 명시적 권한 모델로 끌어올림.

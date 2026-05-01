@@ -11,7 +11,7 @@
 2. PR 생성 (base: `develop`)
 3. **PR 생성 직후 즉시(같은 작업 단계에서) 아래를 모두 수행한다. 이 단계를 건너뛴 PR은 리뷰 대상이 아니다.**
    - [ ] `type:*` 라벨 1개 부여 (`type:feat` `type:fix` `type:refactor` `type:chore` `type:docs` `type:test` `type:style`)
-   - [ ] `scope:*` 라벨 1개 부여 (화이트리스트: `user` `pet` `prescription` `medicine` `medication` `health` `infra`)
+   - [ ] `scope:*` 라벨 1개 부여 (화이트리스트: `user` `pet` `prescription` `medicine` `medication` `health` `infra` `chat`)
    - [ ] AI가 작성/보조한 PR이면 `ai-generated` 라벨 부여
    - [ ] 보호 영역(`docs/ai-harness/01-harness-spec.md` §6) 변경 시 `needs-human-review` 라벨 부여
    - [ ] PR 본문이 `.github/PULL_REQUEST_TEMPLATE.md`를 덮어쓴 경우 AI 체크리스트 블록을 수동으로 다시 채워 넣는다 (`gh pr create --body`는 템플릿을 무시함).
@@ -23,7 +23,7 @@
 ## 3) PR 작성 규칙
 - 제목 형식(고정): `type(scope): 제목`
   - 예시: `feat(prescription): OCR 추출 결과 저장 개선`
-  - `scope`는 아래 화이트리스트에서 선택 (final): `user`, `pet`, `prescription`, `medicine`, `medication`, `health`, `infra`
+  - `scope`는 아래 화이트리스트에서 선택 (final): `user`, `pet`, `prescription`, `medicine`, `medication`, `health`, `infra`, `chat`
   - 신규 scope가 필요하면 이 문서를 먼저 PR로 갱신한 뒤 사용한다.
 - PR 본문은 `.github/PULL_REQUEST_TEMPLATE.md` 템플릿을 사용한다.
 - PR 본문은 `AS-IS`, `TO-BE` 중심으로 간결하게 작성한다.

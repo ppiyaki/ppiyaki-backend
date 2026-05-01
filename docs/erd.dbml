@@ -169,7 +169,7 @@ Table prescription_medicine_candidates {
   extracted_schedule varchar
   matched_item_seq varchar
   matched_item_name varchar
-  match_type varchar [note: 'enum: MatchType']
+  match_type varchar [note: 'enum: EXACT/CANDIDATES/NO_MATCH']
   match_reason text
   caregiver_decision varchar [not null, note: 'enum: CaregiverDecision']
   caregiver_chosen_item_seq varchar

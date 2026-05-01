@@ -46,19 +46,22 @@
     ) engine=InnoDB;
 
     create table medication_logs (
-        is_proxy bit,
-        target_date date,
-        confirmed_by_user_id bigint,
+        is_proxy bit not null,
+        target_date date not null,
+        confirmed_by_user_id bigint not null,
         created_at datetime(6),
         id bigint not null auto_increment,
-        schedule_id bigint,
-        senior_id bigint,
+        schedule_id bigint not null,
+        senior_id bigint not null,
         taken_at datetime(6),
         ai_status varchar(255),
         photo_url varchar(255),
-        status varchar(255),
+        status enum ('MISSED','PENDING','TAKEN') not null,
         primary key (id)
     ) engine=InnoDB;
+
+    alter table medication_logs
+       add constraint uk_medication_logs_schedule_target_date unique (schedule_id, target_date);
 
     create table medication_reminders (
         target_date date not null,
@@ -150,6 +153,7 @@
         login_id varchar(255),
         nickname varchar(255),
         password varchar(255),
+        care_mode enum ('AUTONOMOUS','MANAGED') not null,
         gender enum ('FEMALE','MALE','OTHER','UNKNOWN'),
         role enum ('CAREGIVER','SENIOR'),
         primary key (id)

@@ -211,8 +211,9 @@ generateReason(ocrText, matchedCandidate):
 ## 9) 결정 로그
 - 2026-04-16: 초안 작성
 - 2026-04-16: **`MedicineSearchService`와 `MedicineMatchService` 분리** — search는 다양한 use case에서 재사용, match는 정책 결정 책임 분리
-- 2026-04-16: **fuzzy 매칭 임계치 0.90 + 용량/제형 일치 조건** — 한국 약물명 1글자 차이가 완전히 다른 성분일 위험을 감안한 보수적 설정
-- 2026-04-16: **EXACT 후보 자동 매칭, FUZZY_AUTO는 사유 메모 동반** — 보호자가 신경 쓸 항목을 자연스럽게 분리
+- ~~2026-04-16: **fuzzy 매칭 임계치 0.90 + 용량/제형 일치 조건**~~ → 2026-04-17 철회. Levenshtein 유사도 전체 삭제. 식약처 API가 이미 contains 검색으로 필터링하므로 무의미.
+- ~~2026-04-16: **EXACT 후보 자동 매칭, FUZZY_AUTO는 사유 메모 동반**~~ → 2026-04-17 철회. MatchType을 EXACT/CANDIDATES/NO_MATCH 3종으로 단순화. 보호자가 모든 후보를 확인하는 설계.
+- 2026-04-17: **매칭 시스템 전면 재설계** — Levenshtein/ScoredCandidate/임계값 삭제. 결과 개수 기반 분류 + GPT manufacturer/ingredientName 기반 검색. name 검색 0건 시 ingredientName(처방전 원문 괄호 성분명)으로 재검색.
 - 2026-04-16: 검색 결과 캐시는 `medicine-dur`의 `MfdsResponseCache` 재사용 (인메모리 24h, Redis 마이그레이션 TODO)
 - 2026-04-16: **Q-SEARCH-1 결정** — 검색 limit 기본 10, 최대 50. 페이로드 보수적, `medicine-dur` 이력 조회와 동일 기준. `SearchOptions.limit` 기본값 10, 상한 50으로 구현.
 - 2026-04-16: **구현 순서 확정** — ① item_seq 컬럼 추가 → ② medicine-search (+ medicine-dur 병렬 가능) → ③ medicine-dur → ④ prescription-ocr 통합본 → ⑤ mcp-server-foundation.
