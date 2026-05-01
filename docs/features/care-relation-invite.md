@@ -52,6 +52,7 @@ last_reviewed: 2026-05-02
 - 연동 수락 시 `seniorId`를 채우고 `inviteCode`/`expiresAt`를 null 처리(폐기)
 
 ### 5-2) API 엔드포인트
+
 | Method | Path | 설명 | 인증 | Req | Res |
 |---|---|---|---|---|---|
 | POST | /api/v1/care-relations/invite | 보호자가 초대 코드 발급 | 필수 (CAREGIVER) | - | `InviteCodeResponse` |

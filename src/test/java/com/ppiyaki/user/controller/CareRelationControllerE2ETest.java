@@ -24,6 +24,13 @@ class CareRelationControllerE2ETest {
     @BeforeEach
     void setUp() {
         RestAssured.port = port;
+        jdbcTemplate.update("DELETE FROM care_relations WHERE senior_id IN "
+                + "(SELECT id FROM users WHERE login_id IN ('caregiver_care_e2e', 'senior_care_e2e')) "
+                + "OR caregiver_id IN "
+                + "(SELECT id FROM users WHERE login_id IN ('caregiver_care_e2e', 'senior_care_e2e'))");
+        jdbcTemplate.update("DELETE FROM refresh_tokens WHERE user_id IN "
+                + "(SELECT id FROM users WHERE login_id IN ('caregiver_care_e2e', 'senior_care_e2e'))");
+        jdbcTemplate.update("DELETE FROM users WHERE login_id IN ('caregiver_care_e2e', 'senior_care_e2e')");
     }
 
     @Test

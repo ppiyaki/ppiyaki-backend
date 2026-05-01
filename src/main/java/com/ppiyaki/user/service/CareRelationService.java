@@ -10,6 +10,7 @@ import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,15 +28,23 @@ public class CareRelationService {
         this.userRepository = userRepository;
     }
 
+    private static final int MAX_INVITE_CODE_RETRIES = 3;
+
     @Transactional
     public InviteCodeResponse createInviteCode(final Long userId) {
         final User user = findUserById(userId);
         validateRole(user, UserRole.CAREGIVER);
 
-        final CareRelation careRelation = CareRelation.createInvite(user.getId(), LocalDateTime.now());
-        careRelationRepository.save(careRelation);
-
-        return new InviteCodeResponse(careRelation.getInviteCode(), careRelation.getExpiresAt());
+        for (int attempt = 0; attempt < MAX_INVITE_CODE_RETRIES; attempt++) {
+            final CareRelation careRelation = CareRelation.createInvite(user.getId(), LocalDateTime.now());
+            try {
+                careRelationRepository.saveAndFlush(careRelation);
+                return new InviteCodeResponse(careRelation.getInviteCode(), careRelation.getExpiresAt());
+            } catch (final DataIntegrityViolationException ignored) {
+                // invite_code 중복 — 재생성 시도
+            }
+        }
+        throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to generate unique invite code");
     }
 
     @Transactional
@@ -44,7 +53,7 @@ public class CareRelationService {
         validateRole(senior, UserRole.SENIOR);
 
         final CareRelation careRelation = careRelationRepository
-                .findByInviteCodeAndSeniorIdIsNull(inviteCode)
+                .findByInviteCodeAndSeniorIdIsNullAndDeletedAtIsNull(inviteCode)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_INVITE_NOT_FOUND));
 
         if (careRelation.isExpired(LocalDateTime.now())) {

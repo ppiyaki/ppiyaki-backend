@@ -14,8 +14,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Entity
 @Getter
+@Entity
 @Table(name = "care_relations")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CareRelation extends BaseTimeEntity {
@@ -75,7 +75,7 @@ public class CareRelation extends BaseTimeEntity {
     }
 
     public boolean isPending() {
-        return this.caregiverId == null && this.inviteCode != null;
+        return this.caregiverId != null && this.seniorId == null && this.inviteCode != null;
     }
 
     public void softDelete(final LocalDateTime now) {
