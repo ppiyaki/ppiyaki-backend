@@ -53,9 +53,9 @@ class PetControllerE2ETest {
                 .path("accessToken");
 
         // given — 펫 생성 및 유저에 연결 (DB 직접)
+        jdbcTemplate.update("INSERT INTO pets (point, created_at, updated_at) VALUES (40, NOW(6), NOW(6))");
         final Long petId = jdbcTemplate.queryForObject(
-                "SELECT id FROM FINAL TABLE (INSERT INTO pets (point, created_at, updated_at) VALUES (40, NOW(), NOW()))",
-                Long.class);
+                "SELECT id FROM pets WHERE point = 40 ORDER BY id DESC LIMIT 1", Long.class);
         jdbcTemplate.update("UPDATE users SET pet = ? WHERE login_id = 'pet_e2e_user'", petId);
 
         // when & then
