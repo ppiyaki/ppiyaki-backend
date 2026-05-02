@@ -24,11 +24,11 @@ class PetControllerE2ETest {
     @BeforeEach
     void setUp() {
         RestAssured.port = port;
-        jdbcTemplate.update("UPDATE users SET pet = NULL WHERE login_id = 'pet_e2e_user'");
-        jdbcTemplate.update("DELETE FROM pets WHERE id IN "
-                + "(SELECT pet FROM users WHERE login_id = 'pet_e2e_user')");
+        // pets 삭제 전에 user.pet FK를 먼저 확보하고 삭제
         jdbcTemplate.update("DELETE FROM refresh_tokens WHERE user_id IN "
                 + "(SELECT id FROM users WHERE login_id = 'pet_e2e_user')");
+        jdbcTemplate.update("DELETE FROM pets WHERE id IN "
+                + "(SELECT pet FROM users WHERE login_id = 'pet_e2e_user' AND pet IS NOT NULL)");
         jdbcTemplate.update("DELETE FROM users WHERE login_id = 'pet_e2e_user'");
     }
 
@@ -53,8 +53,9 @@ class PetControllerE2ETest {
                 .path("accessToken");
 
         // given — 펫 생성 및 유저에 연결 (DB 직접)
-        jdbcTemplate.update("INSERT INTO pets (point, created_at, updated_at) VALUES (40, NOW(), NOW())");
-        final Long petId = jdbcTemplate.queryForObject("SELECT MAX(id) FROM pets", Long.class);
+        final Long petId = jdbcTemplate.queryForObject(
+                "SELECT id FROM FINAL TABLE (INSERT INTO pets (point, created_at, updated_at) VALUES (40, NOW(), NOW()))",
+                Long.class);
         jdbcTemplate.update("UPDATE users SET pet = ? WHERE login_id = 'pet_e2e_user'", petId);
 
         // when & then

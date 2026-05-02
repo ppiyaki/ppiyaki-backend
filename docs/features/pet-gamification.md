@@ -71,7 +71,7 @@ last_reviewed: 2026-05-02
 시니어 회원가입 → Pet(point=0) 생성 → User.pet에 Pet.id 저장
 
 **포인트 증가:**
-복약 기록 TAKEN 확정 → Spring ApplicationEvent 발행 → PetEventListener가 수신 → Pet.addPoint() → 저장
+복약 기록 TAKEN 확정 → Spring ApplicationEvent 발행 → PetPointListener가 수신 → Pet.addPoint() → 저장
 
 ### 5-5) DB 마이그레이션
 - 기존 `pets` 테이블 그대로 사용 (변경 없음)

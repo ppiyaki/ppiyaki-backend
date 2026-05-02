@@ -82,14 +82,14 @@ public enum LogAiStatus {
 ### 5-2) API 엔드포인트 변경
 **없음**. 기존 `PUT /api/v1/medication-logs` / `GET /api/v1/medication-logs` 응답에 `aiStatus`가 enum 값으로 채워질 뿐.
 
-### 5-3) 외부 연동 — OpenAI GPT-4o Vision
+### 5-3) 외부 연동 — OpenAI gpt-5.4-nano Vision
 
 - 엔드포인트: `https://api.openai.com/v1/chat/completions` (이미 사용 중)
 - 모델: **`gpt-5.4-nano`** — 프로젝트 표준 (prescription-ocr와 동일, `OpenAiProperties.model`로 주입). vision 입력 지원.
 - 입력: `messages` 배열에 image_url(base64 data URL) + system prompt
 - 출력: JSON Mode로 `{"count": <integer>}` 강제. 파싱 실패 시 retry 1회.
 - System prompt 초안:
-  ```
+  ```text
   Count the visible pills in the photo. Return JSON {"count": N} where N is a non-negative integer.
   If unsure or no pills visible, return {"count": 0}.
   ```
@@ -158,6 +158,7 @@ public enum LogAiStatus {
 - Vision 실패: mock throws → ai_status=COUNT_FAILED
 
 ## 8) 오픈 질문
+
 | # | 질문 | 선택지 | 담당/기한 |
 |---|---|---|---|
 | Q1 | 동일 시각 정렬 허용 오차 | 동일 `scheduledTime` 정확 일치만 합산. 인접 시각 합산은 후속 | ✅ 결정 |

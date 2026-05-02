@@ -4,7 +4,7 @@ import com.ppiyaki.pet.Pet;
 
 public record PetResponse(
         Long id,
-        Long point,
+        long point,
         int level
 ) {
 

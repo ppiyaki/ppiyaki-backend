@@ -7,29 +7,34 @@ import com.ppiyaki.user.User;
 import com.ppiyaki.user.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.event.EventListener;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
 public class PetPointListener {
 
-    private static final long POINT_PER_TAKEN = 10L;
     private static final Logger log = LoggerFactory.getLogger(PetPointListener.class);
 
     private final UserRepository userRepository;
     private final PetRepository petRepository;
+    private final long pointPerTaken;
 
     public PetPointListener(
             final UserRepository userRepository,
-            final PetRepository petRepository
+            final PetRepository petRepository,
+            @Value("${pet.points.per-taken:10}") final long pointPerTaken
     ) {
         this.userRepository = userRepository;
         this.petRepository = petRepository;
+        this.pointPerTaken = pointPerTaken;
     }
 
-    @EventListener
-    @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMedicationTaken(final MedicationTakenEvent event) {
         final User user = userRepository.findById(event.seniorId()).orElse(null);
         if (user == null || user.getPet() == null) {
@@ -43,6 +48,6 @@ public class PetPointListener {
             return;
         }
 
-        pet.addPoint(POINT_PER_TAKEN);
+        pet.addPoint(pointPerTaken);
     }
 }
