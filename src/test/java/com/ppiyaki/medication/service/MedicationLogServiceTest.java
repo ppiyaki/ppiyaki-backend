@@ -47,6 +47,8 @@ class MedicationLogServiceTest {
     private CareRelationRepository careRelationRepository;
     @Mock
     private PhotoUrlAssembler photoUrlAssembler;
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private MedicationLogService medicationLogService;
