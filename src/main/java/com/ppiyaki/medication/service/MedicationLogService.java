@@ -3,11 +3,13 @@ package com.ppiyaki.medication.service;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.common.storage.PhotoUrlAssembler;
+import com.ppiyaki.medication.LogStatus;
 import com.ppiyaki.medication.MedicationLog;
 import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.controller.dto.MedicationLogListResponse;
 import com.ppiyaki.medication.controller.dto.MedicationLogResponse;
 import com.ppiyaki.medication.controller.dto.MedicationLogUpsertRequest;
+import com.ppiyaki.medication.event.MedicationTakenEvent;
 import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
@@ -20,6 +22,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,19 +46,22 @@ public class MedicationLogService {
     private final MedicineRepository medicineRepository;
     private final CareRelationRepository careRelationRepository;
     private final PhotoUrlAssembler photoUrlAssembler;
+    private final ApplicationEventPublisher eventPublisher;
 
     public MedicationLogService(
             final MedicationLogRepository medicationLogRepository,
             final MedicationScheduleRepository medicationScheduleRepository,
             final MedicineRepository medicineRepository,
             final CareRelationRepository careRelationRepository,
-            final PhotoUrlAssembler photoUrlAssembler
+            final PhotoUrlAssembler photoUrlAssembler,
+            final ApplicationEventPublisher eventPublisher
     ) {
         this.medicationLogRepository = medicationLogRepository;
         this.medicationScheduleRepository = medicationScheduleRepository;
         this.medicineRepository = medicineRepository;
         this.careRelationRepository = careRelationRepository;
         this.photoUrlAssembler = photoUrlAssembler;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -91,6 +97,10 @@ public class MedicationLogService {
             // 클라이언트가 재시도하면 다음 트랜잭션에서 정상 update 경로로 진입한다 (spec §5-2 멱등 보장).
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
                     "Concurrent upsert conflict on (scheduleId, targetDate); please retry");
+        }
+
+        if (log.getStatus() == LogStatus.TAKEN) {
+            eventPublisher.publishEvent(new MedicationTakenEvent(seniorId));
         }
 
         return MedicationLogResponse.from(log, photoUrlAssembler.toFullUrl(log.getPhotoObjectKey()));
