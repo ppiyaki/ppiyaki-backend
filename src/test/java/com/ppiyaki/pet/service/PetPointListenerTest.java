@@ -11,10 +11,10 @@ import com.ppiyaki.pet.repository.PetRepository;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.repository.UserRepository;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -27,8 +27,12 @@ class PetPointListenerTest {
     @Mock
     private PetRepository petRepository;
 
-    @InjectMocks
     private PetPointListener petPointListener;
+
+    @BeforeEach
+    void setUp() {
+        petPointListener = new PetPointListener(userRepository, petRepository, 10L);
+    }
 
     @Test
     @DisplayName("복약 성공 이벤트 수신 시 펫 포인트가 10 증가한다")

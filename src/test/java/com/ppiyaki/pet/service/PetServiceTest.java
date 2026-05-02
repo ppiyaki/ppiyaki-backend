@@ -41,7 +41,8 @@ class PetServiceTest {
         lenient().when(user.getPet()).thenReturn(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
 
-        final Pet pet = new Pet(40L);
+        final Pet pet = Pet.create();
+        pet.addPoint(40L);
         given(petRepository.findById(1L)).willReturn(Optional.of(pet));
 
         // when

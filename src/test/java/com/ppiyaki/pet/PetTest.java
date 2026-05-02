@@ -22,7 +22,7 @@ class PetTest {
     @Test
     @DisplayName("생성자 point값을 보존한다")
     void constructor_preservesPoint() {
-        // given & when
+        // given & when — 같은 패키지이므로 package-private 생성자 접근 가능
         final Pet pet = new Pet(100L);
 
         // then

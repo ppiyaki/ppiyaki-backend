@@ -81,9 +81,12 @@ public class MedicationLogService {
         final LocalDateTime takenAt = request.takenAt() != null ? request.takenAt() : LocalDateTime.now();
 
         final MedicationLog log;
+        final boolean wasAlreadyTaken;
         try {
-            log = medicationLogRepository
-                    .findByScheduleIdAndTargetDate(request.scheduleId(), request.targetDate())
+            final var existingOpt = medicationLogRepository
+                    .findByScheduleIdAndTargetDate(request.scheduleId(), request.targetDate());
+            wasAlreadyTaken = existingOpt.map(e -> e.getStatus() == LogStatus.TAKEN).orElse(false);
+            log = existingOpt
                     .map(existing -> {
                         existing.updateRecord(takenAt, request.status(), request.photoObjectKey(), isProxy, userId);
                         return existing;
@@ -99,7 +102,7 @@ public class MedicationLogService {
                     "Concurrent upsert conflict on (scheduleId, targetDate); please retry");
         }
 
-        if (log.getStatus() == LogStatus.TAKEN) {
+        if (!wasAlreadyTaken && log.getStatus() == LogStatus.TAKEN) {
             eventPublisher.publishEvent(new MedicationTakenEvent(seniorId));
         }
 
