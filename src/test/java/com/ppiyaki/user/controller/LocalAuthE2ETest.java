@@ -48,7 +48,7 @@ class LocalAuthE2ETest {
                 .statusCode(201)
                 .body("accessToken", notNullValue())
                 .body("refreshToken", notNullValue())
-                .body("isOnboarded", is(false));
+                .body("isOnboarded", is(true));
     }
 
     @Test
@@ -123,7 +123,7 @@ class LocalAuthE2ETest {
                 .statusCode(200)
                 .body("accessToken", notNullValue())
                 .body("refreshToken", notNullValue())
-                .body("isOnboarded", is(false));
+                .body("isOnboarded", is(true));
     }
 
     @Test
