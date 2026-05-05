@@ -29,6 +29,8 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
         "ncp.storage.access-key=test-access-key",
         "ncp.storage.secret-key=test-secret-key",
         "ncp.storage.bucket-name=ppiyaki-test",
+        "openai.api-key=sk-test-placeholder",
+        "openai.model=gpt-test",
         "spring.main.allow-bean-definition-overriding=true"
 })
 @Import(UploadControllerE2ETest.MockS3PresignerConfig.class)
