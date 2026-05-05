@@ -4,6 +4,7 @@ import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.pet.Pet;
 import com.ppiyaki.pet.repository.PetRepository;
+import com.ppiyaki.user.AuthProvider;
 import com.ppiyaki.user.CareRelation;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.UserRole;
@@ -41,7 +42,8 @@ public class SeniorService {
         }
 
         final User senior = userRepository.save(
-                new User(null, null, UserRole.SENIOR, request.nickname(), null, request.dob(), null));
+                new User(null, null, UserRole.SENIOR, AuthProvider.INVITE_ONLY,
+                        request.nickname(), null, request.dob(), null));
 
         final Pet pet = petRepository.save(Pet.create());
         senior.assignPet(pet.getId());
