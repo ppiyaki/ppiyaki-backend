@@ -6,8 +6,10 @@ import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -163,6 +165,92 @@ public class OpenAiClient {
         } catch (final Exception e) {
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
                     "AI response parse failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 사진 속 알약 개수를 Vision LLM으로 추출.
+     * spec medication-log-phase2 §5-3.
+     *
+     * @param imageBytes 원본 이미지 바이트
+     * @param mediaType  예: "image/jpeg" / "image/png"
+     * @return 추출 개수. JSON 파싱 실패·API 실패 시 Optional.empty (1회 retry 후에도 실패).
+     */
+    public Optional<Integer> countPills(final byte[] imageBytes, final String mediaType) {
+        log.info("OpenAI countPills: imageSize={}bytes mediaType={}", imageBytes.length, mediaType);
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            final long startTime = System.currentTimeMillis();
+            try {
+                final String model = properties.model() != null ? properties.model() : "gpt-5.4-nano";
+                final String requestBody = buildCountRequest(model, imageBytes, mediaType);
+
+                final String responseBody = restClient.post()
+                        .uri(API_URL)
+                        .header("Authorization", "Bearer " + properties.apiKey())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(requestBody)
+                        .retrieve()
+                        .body(String.class);
+
+                final long elapsed = System.currentTimeMillis() - startTime;
+                log.info("OpenAI countPills attempt={} elapsed={}ms", attempt, elapsed);
+
+                return parseCountResponse(responseBody);
+            } catch (final Exception e) {
+                final long elapsed = System.currentTimeMillis() - startTime;
+                log.warn("OpenAI countPills attempt={} failed elapsed={}ms error={}",
+                        attempt, elapsed, e.getMessage());
+            }
+        }
+        return Optional.empty();
+    }
+
+    private String buildCountRequest(final String model, final byte[] imageBytes, final String mediaType) {
+        try {
+            final String dataUrl = "data:" + mediaType + ";base64,"
+                    + Base64.getEncoder().encodeToString(imageBytes);
+            final String systemPrompt = """
+                    Count the visible pills/capsules/tablets in the photo.
+                    Return JSON {"count": N} where N is a non-negative integer.
+                    If unsure or no pills visible, return {"count": 0}.
+                    Do not include any other text.
+                    """;
+
+            final Map<String, Object> textPart = Map.of("type", "text", "text", "How many pills are in this image?");
+            final Map<String, Object> imagePart = Map.of("type", "image_url", "image_url", Map.of("url", dataUrl));
+            final Map<String, Object> systemMessage = Map.of("role", "system", "content", systemPrompt);
+            final Map<String, Object> userMessage = Map.of("role", "user", "content", List.of(textPart, imagePart));
+
+            final Map<String, Object> request = Map.of(
+                    "model", model,
+                    "messages", List.of(systemMessage, userMessage),
+                    "temperature", 0.0,
+                    "response_format", Map.of("type", "json_object")
+            );
+            return objectMapper.writeValueAsString(request);
+        } catch (final Exception e) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
+                    "AI countPills request build failed: " + e.getMessage());
+        }
+    }
+
+    private Optional<Integer> parseCountResponse(final String responseBody) {
+        try {
+            final JsonNode root = objectMapper.readTree(responseBody);
+            final String content = root.path("choices").get(0)
+                    .path("message").path("content").asText();
+            final JsonNode parsed = objectMapper.readTree(content);
+            if (!parsed.has("count") || !parsed.path("count").isNumber()) {
+                return Optional.empty();
+            }
+            final int count = parsed.path("count").asInt();
+            if (count < 0) {
+                return Optional.empty();
+            }
+            return Optional.of(count);
+        } catch (final Exception e) {
+            log.warn("OpenAI countPills parse failed: {}", e.getMessage());
+            return Optional.empty();
         }
     }
 

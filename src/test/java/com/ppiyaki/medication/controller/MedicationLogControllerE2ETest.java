@@ -30,7 +30,9 @@ import org.springframework.boot.test.web.server.LocalServerPort;
         "ncp.storage.region=kr-standard",
         "ncp.storage.access-key=test-access-key",
         "ncp.storage.secret-key=test-secret-key",
-        "ncp.storage.bucket-name=ppiyaki-test"
+        "ncp.storage.bucket-name=ppiyaki-test",
+        "openai.api-key=sk-test-placeholder",
+        "openai.model=gpt-test"
 })
 @DisplayName("PUT/GET /api/v1/medication-logs E2E")
 class MedicationLogControllerE2ETest {

@@ -1,8 +1,13 @@
 package com.ppiyaki.medication.service;
 
+import com.ppiyaki.common.ai.OpenAiClient;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.common.storage.NcpStorageProperties;
 import com.ppiyaki.common.storage.PhotoUrlAssembler;
+import com.ppiyaki.medication.DosageParser;
+import com.ppiyaki.medication.LogAiStatus;
+import com.ppiyaki.medication.LogStatus;
 import com.ppiyaki.medication.MedicationLog;
 import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.controller.dto.MedicationLogListResponse;
@@ -17,12 +22,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 
 @Service
 @ConditionalOnProperty(prefix = "ncp.storage", name = "bucket-name")
@@ -43,19 +51,28 @@ public class MedicationLogService {
     private final MedicineRepository medicineRepository;
     private final CareRelationRepository careRelationRepository;
     private final PhotoUrlAssembler photoUrlAssembler;
+    private final OpenAiClient openAiClient;
+    private final NcpStorageProperties storageProperties;
+    private final S3Client s3Client;
 
     public MedicationLogService(
             final MedicationLogRepository medicationLogRepository,
             final MedicationScheduleRepository medicationScheduleRepository,
             final MedicineRepository medicineRepository,
             final CareRelationRepository careRelationRepository,
-            final PhotoUrlAssembler photoUrlAssembler
+            final PhotoUrlAssembler photoUrlAssembler,
+            final OpenAiClient openAiClient,
+            final NcpStorageProperties storageProperties,
+            final S3Client s3Client
     ) {
         this.medicationLogRepository = medicationLogRepository;
         this.medicationScheduleRepository = medicationScheduleRepository;
         this.medicineRepository = medicineRepository;
         this.careRelationRepository = careRelationRepository;
         this.photoUrlAssembler = photoUrlAssembler;
+        this.openAiClient = openAiClient;
+        this.storageProperties = storageProperties;
+        this.s3Client = s3Client;
     }
 
     @Transactional
@@ -93,7 +110,67 @@ public class MedicationLogService {
                     "Concurrent upsert conflict on (scheduleId, targetDate); please retry");
         }
 
+        // Phase 2: 사진 + status=TAKEN일 때 약 개수 AI 검증 (spec medication-log-phase2 §5-4)
+        if (request.status() == LogStatus.TAKEN
+                && request.photoObjectKey() != null && !request.photoObjectKey().isBlank()) {
+            final LogAiStatus aiStatus = verifyPillCount(seniorId, schedule, request);
+            log.updateAiStatus(aiStatus);
+        }
+
         return MedicationLogResponse.from(log, photoUrlAssembler.toFullUrl(log.getPhotoObjectKey()));
+    }
+
+    /**
+     * 동일 시각 schedule들의 dosage 합 vs Vision 추출 개수 비교.
+     * spec medication-log-phase2 §5-4.
+     */
+    private LogAiStatus verifyPillCount(
+            final Long seniorId,
+            final MedicationSchedule triggerSchedule,
+            final MedicationLogUpsertRequest request
+    ) {
+        final List<MedicationSchedule> schedules = medicationScheduleRepository
+                .findActiveByOwnerAndScheduledTime(
+                        seniorId, request.targetDate(), triggerSchedule.getScheduledTime());
+
+        int expected = 0;
+        for (final MedicationSchedule s : schedules) {
+            final Optional<Integer> parsed = DosageParser.parsePillCount(s.getDosage());
+            if (parsed.isEmpty()) {
+                return LogAiStatus.COUNT_UNKNOWN;
+            }
+            expected += parsed.get();
+        }
+        if (schedules.isEmpty()) {
+            return LogAiStatus.COUNT_UNKNOWN;
+        }
+
+        final byte[] imageBytes;
+        try {
+            imageBytes = s3Client.getObjectAsBytes(GetObjectRequest.builder()
+                    .bucket(storageProperties.bucketName())
+                    .key(request.photoObjectKey())
+                    .build()).asByteArray();
+        } catch (final Exception e) {
+            return LogAiStatus.COUNT_FAILED;
+        }
+        final String mediaType = guessMediaType(request.photoObjectKey());
+        final Optional<Integer> actual = openAiClient.countPills(imageBytes, mediaType);
+        if (actual.isEmpty()) {
+            return LogAiStatus.COUNT_FAILED;
+        }
+        return actual.get() == expected ? LogAiStatus.COUNT_MATCH : LogAiStatus.COUNT_MISMATCH;
+    }
+
+    private String guessMediaType(final String objectKey) {
+        final String lower = objectKey.toLowerCase();
+        if (lower.endsWith(".png")) {
+            return "image/png";
+        }
+        if (lower.endsWith(".webp")) {
+            return "image/webp";
+        }
+        return "image/jpeg";
     }
 
     @Transactional(readOnly = true)
