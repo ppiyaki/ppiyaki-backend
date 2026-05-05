@@ -10,6 +10,7 @@ import com.ppiyaki.user.OAuthIdentity;
 import com.ppiyaki.user.OAuthProvider;
 import com.ppiyaki.user.RefreshToken;
 import com.ppiyaki.user.User;
+import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.controller.dto.KakaoLoginRequest;
 import com.ppiyaki.user.controller.dto.LoginRequest;
 import com.ppiyaki.user.controller.dto.LoginResponse;
@@ -83,7 +84,7 @@ public class AuthService {
         final User user;
         try {
             user = userRepository.save(
-                    new User(signupRequest.loginId(), encodedPassword, null,
+                    new User(signupRequest.loginId(), encodedPassword, UserRole.CAREGIVER,
                             signupRequest.nickname(), null, null, null));
         } catch (final DataIntegrityViolationException e) {
             throw new BusinessException(ErrorCode.AUTH_DUPLICATE_LOGIN_ID);
@@ -93,7 +94,7 @@ public class AuthService {
         final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
         saveRefreshToken(user.getId(), refreshTokenValue);
 
-        return new LoginResponse(accessToken, refreshTokenValue, false);
+        return new LoginResponse(accessToken, refreshTokenValue, true);
     }
 
     @Transactional
@@ -117,7 +118,7 @@ public class AuthService {
 
     private User createNewUser(final KakaoIdTokenPayload payload, final String providerUserId) {
         final User user = userRepository.save(
-                new User(null, null, null, payload.nickname(), null, null, null));
+                new User(null, null, UserRole.CAREGIVER, payload.nickname(), null, null, null));
 
         oAuthIdentityRepository.save(new OAuthIdentity(user.getId(), OAuthProvider.KAKAO, providerUserId));
 

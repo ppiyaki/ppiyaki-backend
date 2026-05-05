@@ -71,6 +71,10 @@ public class User extends BaseTimeEntity {
         this.careMode = CareMode.MANAGED;
     }
 
+    public void assignPet(final Long petId) {
+        this.pet = Objects.requireNonNull(petId, "petId must not be null");
+    }
+
     public void changeCareMode(final CareMode careMode) {
         this.careMode = Objects.requireNonNull(careMode, "careMode must not be null");
     }
