@@ -69,7 +69,7 @@ class AuthControllerE2ETest {
     }
 
     @Test
-    @DisplayName("신규 유저 카카오 OIDC 로그인 시 JWT 발급 및 isOnboarded=false")
+    @DisplayName("신규 유저 카카오 OIDC 로그인 시 JWT 발급 및 isOnboarded=true")
     void kakaoLogin_newUser() {
         // given
         final String idToken = buildIdToken("12345", "테스트닉네임");
@@ -88,7 +88,7 @@ class AuthControllerE2ETest {
                 .statusCode(200)
                 .body("accessToken", notNullValue())
                 .body("refreshToken", notNullValue())
-                .body("isOnboarded", is(false));
+                .body("isOnboarded", is(true));
     }
 
     @Test
@@ -185,7 +185,7 @@ class AuthControllerE2ETest {
                 .then()
                 .statusCode(200)
                 .body("nickname", is("내정보유저"))
-                .body("isOnboarded", is(false));
+                .body("isOnboarded", is(true));
     }
 
     @Test

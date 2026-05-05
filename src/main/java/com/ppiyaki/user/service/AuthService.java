@@ -6,10 +6,12 @@ import com.ppiyaki.common.auth.KakaoIdTokenVerifier;
 import com.ppiyaki.common.auth.KakaoIdTokenVerifier.KakaoIdTokenPayload;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.user.AuthProvider;
 import com.ppiyaki.user.OAuthIdentity;
 import com.ppiyaki.user.OAuthProvider;
 import com.ppiyaki.user.RefreshToken;
 import com.ppiyaki.user.User;
+import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.controller.dto.KakaoLoginRequest;
 import com.ppiyaki.user.controller.dto.LoginRequest;
 import com.ppiyaki.user.controller.dto.LoginResponse;
@@ -83,8 +85,8 @@ public class AuthService {
         final User user;
         try {
             user = userRepository.save(
-                    new User(signupRequest.loginId(), encodedPassword, null,
-                            signupRequest.nickname(), null, null, null));
+                    new User(signupRequest.loginId(), encodedPassword, UserRole.CAREGIVER,
+                            AuthProvider.LOCAL, signupRequest.nickname(), null, null, null));
         } catch (final DataIntegrityViolationException e) {
             throw new BusinessException(ErrorCode.AUTH_DUPLICATE_LOGIN_ID);
         }
@@ -93,13 +95,17 @@ public class AuthService {
         final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
         saveRefreshToken(user.getId(), refreshTokenValue);
 
-        return new LoginResponse(accessToken, refreshTokenValue, false);
+        return new LoginResponse(accessToken, refreshTokenValue, true);
     }
 
     @Transactional
     public LoginResponse login(final LoginRequest loginRequest) {
         final User user = userRepository.findByLoginId(loginRequest.loginId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS));
+
+        if (user.getAuthProvider() != AuthProvider.LOCAL) {
+            throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+        }
 
         if (user.getPassword() == null
                 || !passwordEncoder.matches(loginRequest.password(), user.getPassword())) {
@@ -117,7 +123,8 @@ public class AuthService {
 
     private User createNewUser(final KakaoIdTokenPayload payload, final String providerUserId) {
         final User user = userRepository.save(
-                new User(null, null, null, payload.nickname(), null, null, null));
+                new User(null, null, UserRole.CAREGIVER, AuthProvider.KAKAO,
+                        payload.nickname(), null, null, null));
 
         oAuthIdentityRepository.save(new OAuthIdentity(user.getId(), OAuthProvider.KAKAO, providerUserId));
 

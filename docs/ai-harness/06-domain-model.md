@@ -125,13 +125,12 @@
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| senior_id | bigint | `users.id` 참조 |
-| caregiver_id | bigint | `users.id` 참조 |
-| invite_code | varchar | 시니어가 보호자에게 발급/공유 |
+| senior_id | bigint nullable | `users.id` 참조. 초대 코드 발급 시점에는 NULL (시니어 미정). 시니어가 수락 시 세팅 |
+| caregiver_id | bigint | `users.id` 참조. 보호자가 초대 코드 발급 시 세팅 |
+| invite_code | varchar nullable | 6자리 영숫자 초대 코드. 보호자(CAREGIVER)가 발급, 시니어(SENIOR)가 수락. 연동 수락 시 NULL 처리(폐기) |
+| expires_at | datetime nullable | 초대 코드 만료 시각 (발급 후 5분). 연동 수락 시 NULL 처리 |
 | deleted_at | timestamp nullable | soft delete. NULL이면 활성 관계 |
 | created_at / updated_at | timestamp | `BaseTimeEntity` |
-
-> **코드 갭**: 현재 코드는 `caregiver_senior_mappings` 이름으로 존재하며 `deleted_at`이 없다. 타깃 이름과 soft delete 도입은 별도 PR. 추적: §7-17.
 
 ### health_profiles (`@Table(name = "health_profiles")`, extends `CreatedTimeEntity`)
 시니어별 건강 배경 정보 (1:1).
@@ -385,8 +384,9 @@ erDiagram
     care_relations {
         bigint id PK
         bigint senior_id FK
-        bigint caregiver_id FK
-        varchar invite_code
+        bigint caregiver_id FK "nullable"
+        varchar invite_code "nullable"
+        datetime expires_at "nullable"
         timestamp deleted_at
         timestamp created_at
         timestamp updated_at

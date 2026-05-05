@@ -18,6 +18,7 @@ import com.ppiyaki.prescription.PrescriptionStatus;
 import com.ppiyaki.prescription.controller.dto.PrescriptionMedicineAddRequest;
 import com.ppiyaki.prescription.repository.PrescriptionMedicineCandidateRepository;
 import com.ppiyaki.prescription.repository.PrescriptionRepository;
+import com.ppiyaki.user.AuthProvider;
 import com.ppiyaki.user.CareMode;
 import com.ppiyaki.user.CareRelation;
 import com.ppiyaki.user.Gender;
@@ -191,7 +192,7 @@ class PrescriptionServicePermissionTest {
 
     private User givenSenior(final CareMode careMode) throws Exception {
         final User user = new User(
-                "senior", "password", UserRole.SENIOR, "시니어",
+                "senior", "password", UserRole.SENIOR, AuthProvider.LOCAL, "시니어",
                 Gender.UNKNOWN, LocalDate.of(1950, 1, 1), null);
         setField(user, "id", SENIOR_ID);
         user.changeCareMode(careMode);
