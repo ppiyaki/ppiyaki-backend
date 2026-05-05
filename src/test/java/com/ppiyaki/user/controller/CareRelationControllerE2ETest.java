@@ -1,5 +1,6 @@
 package com.ppiyaki.user.controller;
 
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
 import io.restassured.RestAssured;
@@ -24,74 +25,84 @@ class CareRelationControllerE2ETest {
     @BeforeEach
     void setUp() {
         RestAssured.port = port;
-        jdbcTemplate.update("DELETE FROM care_relations WHERE senior_id IN "
-                + "(SELECT id FROM users WHERE login_id IN ('caregiver_care_e2e', 'senior_care_e2e')) "
-                + "OR caregiver_id IN "
-                + "(SELECT id FROM users WHERE login_id IN ('caregiver_care_e2e', 'senior_care_e2e'))");
+        jdbcTemplate.update("DELETE FROM care_relations WHERE caregiver_id IN "
+                + "(SELECT id FROM users WHERE login_id = 'cg_code_e2e')");
         jdbcTemplate.update("DELETE FROM refresh_tokens WHERE user_id IN "
-                + "(SELECT id FROM users WHERE login_id IN ('caregiver_care_e2e', 'senior_care_e2e'))");
-        jdbcTemplate.update("DELETE FROM users WHERE login_id IN ('caregiver_care_e2e', 'senior_care_e2e')");
+                + "(SELECT id FROM users WHERE login_id = 'cg_code_e2e')");
+        jdbcTemplate.update("DELETE FROM pets WHERE id IN "
+                + "(SELECT pet FROM users WHERE nickname = '시니어코드E2E' AND pet IS NOT NULL)");
+        jdbcTemplate.update("DELETE FROM users WHERE nickname = '시니어코드E2E'");
+        jdbcTemplate.update("DELETE FROM users WHERE login_id = 'cg_code_e2e'");
     }
 
     @Test
-    @DisplayName("보호자가 초대 코드를 발급하고 시니어가 수락하면 연동이 생성된다")
-    void inviteAndAccept_success() {
-        // given
-        final String caregiverAccessToken = signupAndGetToken("caregiver_care_e2e", "pass1234!", "보호자E2E");
-        setUserRole("caregiver_care_e2e", "CAREGIVER");
-
-        final String seniorAccessToken = signupAndGetToken("senior_care_e2e", "pass1234!", "시니어E2E");
-        setUserRole("senior_care_e2e", "SENIOR");
-
-        // when — 보호자가 초대 코드 발급
-        final String inviteCode = RestAssured.given()
-                .header("Authorization", "Bearer " + caregiverAccessToken)
-                .when()
-                .post("/api/v1/care-relations/invite")
-                .then()
-                .statusCode(201)
-                .body("inviteCode", notNullValue())
-                .body("expiresAt", notNullValue())
-                .extract()
-                .path("inviteCode");
-
-        // then — 시니어가 초대 코드로 연동 수락
-        RestAssured.given()
-                .header("Authorization", "Bearer " + seniorAccessToken)
+    @DisplayName("보호자가 시니어 생성 후 초대 코드를 발급하고 코드 로그인이 성공한다")
+    void inviteAndCodeLogin_success() {
+        // given — 보호자 회원가입
+        final String caregiverToken = RestAssured.given()
                 .contentType(ContentType.JSON)
                 .body("""
                         {
-                            "inviteCode": "%s"
+                            "loginId": "cg_code_e2e",
+                            "password": "pass1234!",
+                            "nickname": "보호자코드E2E"
                         }
-                        """.formatted(inviteCode))
-                .when()
-                .post("/api/v1/care-relations/accept")
-                .then()
-                .statusCode(200)
-                .body("careRelationId", notNullValue())
-                .body("seniorId", notNullValue())
-                .body("caregiverId", notNullValue());
-    }
-
-    private String signupAndGetToken(final String loginId, final String password, final String nickname) {
-        return RestAssured.given()
-                .contentType(ContentType.JSON)
-                .body("""
-                        {
-                            "loginId": "%s",
-                            "password": "%s",
-                            "nickname": "%s"
-                        }
-                        """.formatted(loginId, password, nickname))
+                        """)
                 .when()
                 .post("/api/v1/auth/signup")
                 .then()
                 .statusCode(201)
                 .extract()
                 .path("accessToken");
-    }
 
-    private void setUserRole(final String loginId, final String role) {
-        jdbcTemplate.update("UPDATE users SET role = ? WHERE login_id = ?", role, loginId);
+        // given — 시니어 대리 생성
+        final Integer seniorId = RestAssured.given()
+                .header("Authorization", "Bearer " + caregiverToken)
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "nickname": "��니어코드E2E",
+                            "dob": "1945-03-15"
+                        }
+                        """)
+                .when()
+                .post("/api/v1/seniors")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("seniorId");
+
+        // when — 보호자��� 초대 코드 발급
+        final String inviteCode = RestAssured.given()
+                .header("Authorization", "Bearer " + caregiverToken)
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "seniorId": %d
+                        }
+                        """.formatted(seniorId))
+                .when()
+                .post("/api/v1/care-relations/invite")
+                .then()
+                .statusCode(201)
+                .body("inviteCode", notNullValue())
+                .extract()
+                .path("inviteCode");
+
+        // then — 시니어가 코드로 로그인
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "code": "%s"
+                        }
+                        """.formatted(inviteCode))
+                .when()
+                .post("/api/v1/auth/code-login")
+                .then()
+                .statusCode(200)
+                .body("accessToken", notNullValue())
+                .body("refreshToken", notNullValue())
+                .body("isOnboarded", is(true));
     }
 }

@@ -163,6 +163,11 @@ public class AuthService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
+    @Transactional
+    public void saveRefreshTokenForUser(final Long userId, final String tokenValue) {
+        saveRefreshToken(userId, tokenValue);
+    }
+
     private void saveRefreshToken(final Long userId, final String tokenValue) {
         final LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(jwtProperties.refreshTokenExpiry() / 1000);
 
