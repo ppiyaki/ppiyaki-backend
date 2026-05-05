@@ -1,8 +1,9 @@
 package com.ppiyaki.user.controller;
 
-import com.ppiyaki.user.controller.dto.AcceptInviteRequest;
-import com.ppiyaki.user.controller.dto.AcceptInviteResponse;
+import com.ppiyaki.user.controller.dto.CodeLoginRequest;
+import com.ppiyaki.user.controller.dto.InviteCodeRequest;
 import com.ppiyaki.user.controller.dto.InviteCodeResponse;
+import com.ppiyaki.user.controller.dto.LoginResponse;
 import com.ppiyaki.user.service.CareRelationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/care-relations")
+@RequestMapping("/api/v1")
 public class CareRelationController {
 
     private final CareRelationService careRelationService;
@@ -23,19 +24,19 @@ public class CareRelationController {
         this.careRelationService = careRelationService;
     }
 
-    @PostMapping("/invite")
-    public ResponseEntity<InviteCodeResponse> createInviteCode(@AuthenticationPrincipal final Long userId) {
-        final InviteCodeResponse inviteCodeResponse = careRelationService.createInviteCode(userId);
+    @PostMapping("/care-relations/invite")
+    public ResponseEntity<InviteCodeResponse> createInviteCode(
+            @AuthenticationPrincipal final Long userId,
+            @Valid @RequestBody final InviteCodeRequest inviteCodeRequest
+    ) {
+        final InviteCodeResponse inviteCodeResponse = careRelationService.createInviteCode(
+                userId, inviteCodeRequest.seniorId());
         return ResponseEntity.status(HttpStatus.CREATED).body(inviteCodeResponse);
     }
 
-    @PostMapping("/accept")
-    public ResponseEntity<AcceptInviteResponse> acceptInvite(
-            @AuthenticationPrincipal final Long userId,
-            @Valid @RequestBody final AcceptInviteRequest acceptInviteRequest
-    ) {
-        final AcceptInviteResponse acceptInviteResponse = careRelationService.acceptInvite(
-                userId, acceptInviteRequest.inviteCode());
-        return ResponseEntity.ok(acceptInviteResponse);
+    @PostMapping("/auth/code-login")
+    public ResponseEntity<LoginResponse> codeLogin(@Valid @RequestBody final CodeLoginRequest codeLoginRequest) {
+        final LoginResponse loginResponse = careRelationService.codeLogin(codeLoginRequest.code());
+        return ResponseEntity.ok(loginResponse);
     }
 }

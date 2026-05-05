@@ -39,6 +39,7 @@ public enum ErrorCode {
     CARE_RELATION_INVITE_NOT_FOUND(HttpStatus.NOT_FOUND, "CARE_006", "Invite code not found"),
     CARE_RELATION_ALREADY_EXISTS(HttpStatus.CONFLICT, "CARE_007", "Care relation already exists"),
     CARE_RELATION_ROLE_MISMATCH(HttpStatus.FORBIDDEN, "CARE_008", "Role does not match the required action"),
+    CARE_RELATION_INVITE_INVALID(HttpStatus.UNAUTHORIZED, "CARE_009", "잘못된 초대 코드입니다"),
 
     // Chat
     CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_001", "Chat session not found"),
