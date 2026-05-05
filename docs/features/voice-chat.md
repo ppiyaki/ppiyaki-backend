@@ -50,8 +50,8 @@ last_reviewed: 2026-04-14
 
 | Method | Path | 설명 | 인증 | Req | Res |
 |---|---|---|---|---|---|
-| POST | /api/v1/chat/sessions/{sessionId}/messages | 텍스트 대화 (기존) | 필수 | `ChatMessageRequest` (JSON) | `ChatMessageResponse` (JSON) |
-| POST | /api/v1/chat/sessions/{sessionId}/voice-messages | 음성 대화 (신규) | 필수 | `MultipartFile` (form-data) | SSE 스트림 (text/event-stream, base64 audio 청크) |
+| POST | /api/v1/chat/sessions/{sessionId}/messages | 텍스트 대화 | 필수 | `ChatMessageRequest` (JSON) | SSE 스트림 (`text/event-stream`, 토큰 chunk + `[DONE]`. `chat-streaming.md §5-1`로 전환됨) |
+| POST | /api/v1/chat/sessions/{sessionId}/voice-messages | 음성 대화 | 필수 | `MultipartFile` (form-data, file + language) | SSE 스트림 (`text/event-stream`, `{text, audio: base64 mp3}` chunk + `[DONE]`. `chat-streaming.md §5-2`) |
 
 ### 5-2) 데이터 흐름
 
