@@ -5,7 +5,7 @@ status: draft
 owner: @qkrehgus02
 scope: user
 related_issues: [210]
-related_prs: []
+related_prs: [214]
 last_reviewed: 2026-05-05
 ---
 
@@ -83,7 +83,8 @@ last_reviewed: 2026-05-05
 시니어 기기에서 코드 입력 → CareRelation에서 inviteCode 조회 → 만료 검증 → 해당 seniorId로 JWT 발급 → 코드 폐기 → LoginResponse 반환
 
 ### 5-5) DB 마이그레이션
-- 기존 테이블 그대로 사용 (변경 없음)
+- `care_relations` 테이블: `expires_at datetime(6)` 컬럼 추가, `invite_code`에 UNIQUE 제약 추가
+- `users` 테이블: `auth_provider enum ('INVITE_ONLY','KAKAO','LOCAL') NOT NULL` 컬럼 추가
 - `users` 테이블: loginId/password nullable은 이미 허용된 상태
 
 ## 6) 보안 강화 로드맵
