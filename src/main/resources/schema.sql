@@ -11,6 +11,16 @@
         primary key (id)
     ) engine=InnoDB;
 
+    create table invite_codes (
+        created_at datetime(6),
+        expires_at datetime(6) not null,
+        id bigint not null auto_increment,
+        senior_id bigint not null,
+        used_at datetime(6),
+        code_hash varchar(255) not null,
+        primary key (id)
+    ) engine=InnoDB;
+
     create table device_tokens (
         is_active bit not null,
         created_at datetime(6),
