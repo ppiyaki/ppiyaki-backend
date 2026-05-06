@@ -54,8 +54,9 @@ public class MedicationLog extends CreatedTimeEntity {
     @Column(name = "photo_url")
     private String photoObjectKey;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "ai_status")
-    private String aiStatus;
+    private LogAiStatus aiStatus;
 
     @Column(name = "is_proxy", nullable = false)
     private Boolean isProxy;
@@ -95,5 +96,9 @@ public class MedicationLog extends CreatedTimeEntity {
         this.confirmedByUserId = Objects.requireNonNull(confirmedByUserId, "confirmedByUserId must not be null");
         this.takenAt = takenAt;
         this.photoObjectKey = photoObjectKey;
+    }
+
+    public void updateAiStatus(final LogAiStatus aiStatus) {
+        this.aiStatus = aiStatus;
     }
 }
