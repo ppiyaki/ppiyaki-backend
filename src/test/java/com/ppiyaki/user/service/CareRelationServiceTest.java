@@ -149,6 +149,23 @@ class CareRelationServiceTest {
         verify(rateLimiter).recordFailure("code-login:127.0.0.1");
     }
 
+    @Test
+    @DisplayName("Rate Limit 초과 시 429 에러가 발생하고 downstream은 호출되지 않는다")
+    void codeLogin_rateLimitExceeded_throws() {
+        // given
+        org.mockito.Mockito.doThrow(new BusinessException(ErrorCode.RATE_LIMIT_EXCEEDED))
+                .when(rateLimiter).checkAllowed("code-login:127.0.0.1");
+
+        // when & then
+        assertThatThrownBy(() -> careRelationService.codeLogin("ABC123", "127.0.0.1"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> {
+                    final BusinessException be = (BusinessException) exception;
+                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.RATE_LIMIT_EXCEEDED);
+                });
+        verify(inviteCodeRepository, org.mockito.Mockito.never()).findAll();
+    }
+
     private User mockUser(final Long id, final UserRole role) {
         final User user = mock(User.class);
         lenient().when(user.getId()).thenReturn(id);

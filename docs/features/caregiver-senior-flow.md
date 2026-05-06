@@ -1,7 +1,7 @@
 ---
 feature: 보호자 기반 시니어 계정 대리 생성 및 코드 로그인
 slug: caregiver-senior-flow
-status: draft
+status: implementing
 owner: @qkrehgus02
 scope: user
 related_issues: [210]
@@ -57,8 +57,8 @@ last_reviewed: 2026-05-06
 ## 5) 설계
 ### 5-1) 도메인 모델
 - `User` 엔티티: 회원가입 시 role=CAREGIVER 세팅. 시니어 계정은 보호자가 생성하므로 password=null, loginId=null 가능.
-- `CareRelation` 엔티티: 시니어 대리 생성 시 즉시 생성 (기존 invite 플로우와 달리 seniorId가 확정된 상태)
-- 초대 코드: 시니어 로그인 용도. CareRelation.inviteCode/expiresAt 재활용.
+- `CareRelation` 엔티티: 시니어 대리 생성 시 즉시 생성 (seniorId가 확정된 상태)
+- `InviteCode` 엔티티: 시니어 코드 로그인 용도. code_hash(BCrypt), expires_at, used_at 관리. 별도 invite_codes 테이블.
 
 ### 5-2) API 엔드포인트
 
@@ -80,12 +80,13 @@ last_reviewed: 2026-05-06
 보호자 인증 → seniorId 지정 → CareRelation 조회/검증 → inviteCode + expiresAt 세팅 → 코드 응답
 
 **코드 로그인:**
-시니어 기기에서 코드 입력 → CareRelation에서 inviteCode 조회 → 만료 검증 → 해당 seniorId로 JWT 발급 → 코드 폐기 → LoginResponse 반환
+시니어 기기에서 코드 입력 → IP Rate Limit 확인 → InviteCode에서 BCrypt 매칭 → 만료 검증 → usedAt 기록 → 해당 seniorId로 JWT 발급 → LoginResponse 반환
 
 ### 5-5) DB 마이그레이션
-- `care_relations` 테이블: `expires_at datetime(6)` 컬럼 추가, `invite_code`에 UNIQUE 제약 추가
+- `invite_codes` 테이블 신설 (senior_id, code_hash, expires_at, used_at, created_at)
 - `users` 테이블: `auth_provider enum ('INVITE_ONLY','KAKAO','LOCAL') NOT NULL` 컬럼 추가
 - `users` 테이블: loginId/password nullable은 이미 허용된 상태
+- `care_relations`의 invite_code/expires_at 컬럼은 레거시 (추후 제거)
 
 ## 6) 보안 강화 로드맵
 

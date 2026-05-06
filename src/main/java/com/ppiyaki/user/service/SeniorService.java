@@ -33,7 +33,7 @@ public class SeniorService {
     }
 
     @Transactional
-    public SeniorCreateResponse createSenior(final Long caregiverId, final SeniorCreateRequest request) {
+    public SeniorCreateResponse createSenior(final Long caregiverId, final SeniorCreateRequest seniorCreateRequest) {
         final User caregiver = userRepository.findById(caregiverId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
@@ -43,7 +43,7 @@ public class SeniorService {
 
         final User senior = userRepository.save(
                 new User(null, null, UserRole.SENIOR, AuthProvider.INVITE_ONLY,
-                        request.nickname(), null, request.dob(), null));
+                        seniorCreateRequest.nickname(), null, seniorCreateRequest.dob(), null));
 
         final Pet pet = petRepository.save(Pet.create());
         senior.assignPet(pet.getId());
