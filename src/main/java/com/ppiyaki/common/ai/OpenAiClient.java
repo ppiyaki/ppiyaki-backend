@@ -49,8 +49,7 @@ public class OpenAiClient {
         final long startTime = System.currentTimeMillis();
 
         try {
-            final String model = properties.model() != null ? properties.model() : "gpt-5.4-nano";
-            final String requestBody = buildRequest(model, maskedOcrText);
+            final String requestBody = buildRequest(properties.textModel(), maskedOcrText);
 
             final String responseBody = restClient.post()
                     .uri(API_URL)
@@ -181,8 +180,7 @@ public class OpenAiClient {
         for (int attempt = 1; attempt <= 2; attempt++) {
             final long startTime = System.currentTimeMillis();
             try {
-                final String model = properties.model() != null ? properties.model() : "gpt-5.4-nano";
-                final String requestBody = buildCountRequest(model, imageBytes, mediaType);
+                final String requestBody = buildCountRequest(properties.visionModel(), imageBytes, mediaType);
 
                 final String responseBody = restClient.post()
                         .uri(API_URL)
