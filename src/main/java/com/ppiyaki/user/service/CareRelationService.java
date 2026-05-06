@@ -69,10 +69,6 @@ public class CareRelationService {
         }
 
         final Long seniorId = careRelation.getSeniorId();
-        if (seniorId == null) {
-            throw new BusinessException(ErrorCode.CARE_RELATION_INVITE_INVALID);
-        }
-
         careRelation.consumeInviteCode();
 
         final String accessToken = jwtProvider.createAccessToken(seniorId);
