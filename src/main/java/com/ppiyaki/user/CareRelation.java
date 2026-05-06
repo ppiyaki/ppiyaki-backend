@@ -101,6 +101,7 @@ public class CareRelation extends BaseTimeEntity {
     }
 
     public boolean isExpired(final LocalDateTime now) {
+        Objects.requireNonNull(now, "now must not be null");
         return this.expiresAt != null && now.isAfter(this.expiresAt);
     }
 

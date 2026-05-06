@@ -125,10 +125,10 @@
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| senior_id | bigint nullable | `users.id` 참조. 초대 코드 발급 시점에는 NULL (시니어 미정). 시니어가 수락 시 세팅 |
+| senior_id | bigint | `users.id` 참조. 보호자가 시니어 대리 생성 시 또는 초대 코드 발급 시 세팅 |
 | caregiver_id | bigint | `users.id` 참조. 보호자가 초대 코드 발급 시 세팅 |
-| invite_code | varchar nullable | 6자리 영숫자 초대 코드. 보호자(CAREGIVER)가 발급, 시니어(SENIOR)가 수락. 연동 수락 시 NULL 처리(폐기) |
-| expires_at | datetime nullable | 초대 코드 만료 시각 (발급 후 5분). 연동 수락 시 NULL 처리 |
+| invite_code | varchar nullable | 6자리 영숫자 초대 코드. 코드 사용 시 NULL 처리(폐기). 초대 코드는 별도 `invite_codes` 테이블로 분리 예정 |
+| expires_at | datetime nullable | 초대 코드 만료 시각 (발급 후 5분). 코드 사용 시 NULL 처리 |
 | deleted_at | timestamp nullable | soft delete. NULL이면 활성 관계 |
 | created_at / updated_at | timestamp | `BaseTimeEntity` |
 
@@ -384,7 +384,7 @@ erDiagram
     care_relations {
         bigint id PK
         bigint senior_id FK
-        bigint caregiver_id FK "nullable"
+        bigint caregiver_id FK
         varchar invite_code "nullable"
         datetime expires_at "nullable"
         timestamp deleted_at
