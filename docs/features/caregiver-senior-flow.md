@@ -50,9 +50,11 @@ last_reviewed: 2026-05-06
 
 ### 제외 (Out of Scope)
 - 시니어 단독 회원가입 (보호자 없이 사용하는 케이스)
-- 연동 해제 API
+- 보호자-시니어 연동 해제 API (CareRelation soft delete)
 - 보호자 계정 삭제 시 시니어 계정 처리
 - 시니어 권한별 API 접근 제어 상세 구현 (별도 이슈)
+
+> 참고: 시니어 **기기** 해제 API는 Phase 3에서 구현됨 (SeniorDevice revoke). 보호자-시니어 **관계** 해제는 별도.
 
 ## 5) 설계
 ### 5-1) 도메인 모델
@@ -110,14 +112,14 @@ last_reviewed: 2026-05-06
 
 ### Phase 3 — 기기 관리 및 토큰 폐기
 
-| # | 내용 | 우선순위 |
-|---|---|---|
-| 3-1 | SeniorDevice 엔티티 (senior_devices 테이블, status ACTIVE/REVOKED) | 중간 |
-| 3-2 | 코드 로그인 시 deviceId/deviceName 수신 → SeniorDevice 생성 | 중간 |
-| 3-3 | Refresh token hash를 SeniorDevice에 저장 | 중간 |
-| 3-4 | Refresh token 갱신 시 device status == ACTIVE 확인 | 중간 |
-| 3-5 | Refresh token rotation (갱신 시 기존 토큰 무효화) | 중간 |
-| 3-6 | 보호자 시니어 기기 연동 해제 API (DELETE /api/v1/seniors/{id}/devices) | 중간 |
+| # | 내용 | 우선순위 | 상태 |
+|---|---|---|---|
+| 3-1 | SeniorDevice 엔티티 (senior_devices 테이블, status ACTIVE/REVOKED) | 중간 | ✅ 완료 |
+| 3-2 | 코드 로그인 시 deviceId/deviceName 수신 → SeniorDevice 생성 | 중간 | ✅ 완료 |
+| 3-3 | Refresh token hash를 SeniorDevice에 저장 | 중간 | ✅ 완료 |
+| 3-4 | Refresh token 갱신 시 device status == ACTIVE 확인 | 중간 | ✅ 완료 |
+| 3-5 | Refresh token rotation (갱신 시 기존 토큰 무효화) | 중간 | 미착수 |
+| 3-6 | 보호자 시니어 기기 연동 해제 API (DELETE /api/v1/seniors/{id}/devices) | 중간 | ✅ 완료 |
 
 ### Phase 4 — 인가 검증 강화
 

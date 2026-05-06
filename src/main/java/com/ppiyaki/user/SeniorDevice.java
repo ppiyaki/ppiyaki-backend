@@ -62,6 +62,9 @@ public class SeniorDevice extends BaseTimeEntity {
     }
 
     public void updateRefreshToken(final String refreshTokenHash) {
+        if (!isActive()) {
+            throw new IllegalStateException("Cannot update refresh token on revoked device");
+        }
         this.refreshTokenHash = Objects.requireNonNull(refreshTokenHash, "refreshTokenHash must not be null");
         this.lastUsedAt = LocalDateTime.now();
     }

@@ -68,7 +68,7 @@ public class User extends BaseTimeEntity {
     ) {
         this.loginId = loginId;
         this.password = password;
-        this.role = role;
+        this.role = Objects.requireNonNull(role, "role must not be null");
         this.authProvider = Objects.requireNonNull(authProvider, "authProvider must not be null");
         this.nickname = nickname;
         this.gender = gender;

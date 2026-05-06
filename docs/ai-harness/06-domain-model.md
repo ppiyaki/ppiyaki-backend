@@ -144,6 +144,21 @@
 | used_at | datetime nullable | 사용 완료 시각. NULL이면 미사용 |
 | created_at | timestamp | `CreatedTimeEntity` |
 
+### senior_devices (`@Table(name = "senior_devices")`, extends `BaseTimeEntity`)
+시니어 기기 관리. 코드 로그인 시 생성, 보호자가 원격 해제 가능.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | bigint PK | |
+| senior_id | bigint NOT NULL | `users.id` 참조 |
+| device_id | varchar NOT NULL | 클라이언트 기기 식별자 |
+| device_name | varchar nullable | 기기 표시명 (예: "Galaxy S24") |
+| refresh_token_hash | varchar nullable | refresh token의 SHA-256 hash. REVOKED 시 null |
+| status | varchar NOT NULL | `SeniorDeviceStatus` enum: `ACTIVE` / `REVOKED` |
+| last_used_at | datetime nullable | 마지막 사용 시각 |
+| revoked_at | datetime nullable | 해제 시각 |
+| created_at / updated_at | timestamp | `BaseTimeEntity` |
+
 ### health_profiles (`@Table(name = "health_profiles")`, extends `CreatedTimeEntity`)
 시니어별 건강 배경 정보 (1:1).
 
@@ -356,6 +371,7 @@ erDiagram
     users ||--o{ care_relations : "senior"
     users ||--o{ care_relations : "caregiver"
     users ||--o{ invite_codes : "senior"
+    users ||--o{ senior_devices : "senior"
     users ||--|| health_profiles : "has"
     users ||--o{ prescriptions : "owner"
     users ||--o{ medicines : "owns"
@@ -409,6 +425,18 @@ erDiagram
         datetime expires_at
         datetime used_at "nullable"
         timestamp created_at
+    }
+    senior_devices {
+        bigint id PK
+        bigint senior_id FK
+        varchar device_id
+        varchar device_name "nullable"
+        varchar refresh_token_hash "nullable"
+        varchar status
+        datetime last_used_at "nullable"
+        datetime revoked_at "nullable"
+        timestamp created_at
+        timestamp updated_at
     }
     health_profiles {
         bigint id PK

@@ -11,6 +11,7 @@ import com.ppiyaki.user.OAuthIdentity;
 import com.ppiyaki.user.OAuthProvider;
 import com.ppiyaki.user.RefreshToken;
 import com.ppiyaki.user.SeniorDevice;
+import com.ppiyaki.user.SeniorDeviceStatus;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.controller.dto.KakaoLoginRequest;
@@ -23,6 +24,7 @@ import com.ppiyaki.user.repository.RefreshTokenRepository;
 import com.ppiyaki.user.repository.SeniorDeviceRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -180,8 +182,8 @@ public class AuthService {
         if (user == null || user.getRole() != UserRole.SENIOR) {
             return;
         }
-        final java.util.List<SeniorDevice> activeDevices = seniorDeviceRepository
-                .findBySeniorIdAndStatus(userId, com.ppiyaki.user.SeniorDeviceStatus.ACTIVE);
+        final List<SeniorDevice> activeDevices = seniorDeviceRepository
+                .findBySeniorIdAndStatus(userId, SeniorDeviceStatus.ACTIVE);
         if (activeDevices.isEmpty()) {
             throw new BusinessException(ErrorCode.SENIOR_DEVICE_REVOKED);
         }
