@@ -9,6 +9,7 @@ public enum ErrorCode {
     MALFORMED_REQUEST(HttpStatus.BAD_REQUEST, "COMMON_002", "Malformed request"),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_003", "Internal server error"),
     FORBIDDEN(HttpStatus.FORBIDDEN, "COMMON_004", "Access denied"),
+    RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "COMMON_005", "Too many requests"),
 
     // Auth
     AUTH_INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_001", "Invalid token"),
@@ -35,6 +36,9 @@ public enum ErrorCode {
     CARE_RELATION_NOT_CAREGIVER(HttpStatus.FORBIDDEN, "CARE_003", "Only caregivers can specify seniorId"),
     CARE_MODE_RESTRICTED(HttpStatus.FORBIDDEN, "CARE_004",
             "Senior cannot mutate prescription before caregiver review window"),
+    CARE_RELATION_ALREADY_EXISTS(HttpStatus.CONFLICT, "CARE_007", "Care relation already exists"),
+    CARE_RELATION_ROLE_MISMATCH(HttpStatus.FORBIDDEN, "CARE_008", "Role does not match the required action"),
+    CARE_RELATION_INVITE_INVALID(HttpStatus.UNAUTHORIZED, "CARE_009", "Invalid invite code"),
 
     // Chat
     CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_001", "Chat session not found"),

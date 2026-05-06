@@ -27,4 +27,8 @@ public class Pet extends BaseTimeEntity {
     public Pet(final Long point) {
         this.point = point;
     }
+
+    public static Pet create() {
+        return new Pet(0L);
+    }
 }

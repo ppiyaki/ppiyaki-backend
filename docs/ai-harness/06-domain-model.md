@@ -126,13 +126,24 @@
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| senior_id | bigint | `users.id` 참조 |
-| caregiver_id | bigint | `users.id` 참조 |
-| invite_code | varchar | 시니어가 보호자에게 발급/공유 |
+| senior_id | bigint | `users.id` 참조. 보호자가 시니어 대리 생성 시 세팅 |
+| caregiver_id | bigint | `users.id` 참조. 보호자 ID |
 | deleted_at | timestamp nullable | soft delete. NULL이면 활성 관계 |
 | created_at / updated_at | timestamp | `BaseTimeEntity` |
 
-> **코드 갭**: 현재 코드는 `caregiver_senior_mappings` 이름으로 존재하며 `deleted_at`이 없다. 타깃 이름과 soft delete 도입은 별도 PR. 추적: §7-17.
+> 초대 코드는 `invite_codes` 테이블로 분리됨. `care_relations`의 `invite_code`/`expires_at` 컬럼은 레거시이며 추후 제거 예정.
+
+### invite_codes (`@Table(name = "invite_codes")`, extends `CreatedTimeEntity`)
+시니어 코드 로그인용 1회용 초대 코드. 평문이 아닌 hash로 저장.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | bigint PK | |
+| senior_id | bigint NOT NULL | `users.id` 참조. 로그인 대상 시니어 |
+| code_hash | varchar NOT NULL | 초대 코드의 BCrypt hash (평문 저장 안 함) |
+| expires_at | datetime NOT NULL | 만료 시각 (발급 후 5분) |
+| used_at | datetime nullable | 사용 완료 시각. NULL이면 미사용 |
+| created_at | timestamp | `CreatedTimeEntity` |
 
 ### health_profiles (`@Table(name = "health_profiles")`, extends `CreatedTimeEntity`)
 시니어별 건강 배경 정보 (1:1).
@@ -345,6 +356,7 @@ erDiagram
     users ||--o{ oauth_identities : "links"
     users ||--o{ care_relations : "senior"
     users ||--o{ care_relations : "caregiver"
+    users ||--o{ invite_codes : "senior"
     users ||--|| health_profiles : "has"
     users ||--o{ prescriptions : "owner"
     users ||--o{ medicines : "owns"
@@ -387,10 +399,17 @@ erDiagram
         bigint id PK
         bigint senior_id FK
         bigint caregiver_id FK
-        varchar invite_code
         timestamp deleted_at
         timestamp created_at
         timestamp updated_at
+    }
+    invite_codes {
+        bigint id PK
+        bigint senior_id FK
+        varchar code_hash
+        datetime expires_at
+        datetime used_at "nullable"
+        timestamp created_at
     }
     health_profiles {
         bigint id PK

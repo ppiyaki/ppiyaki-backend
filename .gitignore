@@ -48,6 +48,9 @@ out/
 ### Local-only imports (Notion export 등, 개인정보 포함 가능) ###
 docs/_import/
 
+### Claude Code ###
+.claude/settings.local.json
+
 ### 환경변수 / 시크릿 ###
 .env
 .env.*
