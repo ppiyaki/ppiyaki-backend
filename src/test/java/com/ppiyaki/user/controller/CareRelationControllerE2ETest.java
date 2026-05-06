@@ -65,7 +65,7 @@ class CareRelationControllerE2ETest {
                 .contentType(ContentType.JSON)
                 .body("""
                         {
-                            "nickname": "��니어코드E2E",
+                            "nickname": "시니어코드E2E",
                             "dob": "1945-03-15"
                         }
                         """)

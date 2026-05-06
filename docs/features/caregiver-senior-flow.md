@@ -5,8 +5,8 @@ status: draft
 owner: @qkrehgus02
 scope: user
 related_issues: [210]
-related_prs: [214]
-last_reviewed: 2026-05-05
+related_prs: [214, 217]
+last_reviewed: 2026-05-06
 ---
 
 # 보호자 기반 시니어 계정 대리 생성 및 코드 로그인
@@ -99,13 +99,13 @@ last_reviewed: 2026-05-05
 
 ### Phase 2 — 초대 코드 보안 강화
 
-| # | 내용 | 우선순위 |
-|---|---|---|
-| 2-1 | InviteCode 엔티티 분리 (invite_codes 테이블) | 높음 |
-| 2-2 | 초대 코드 hash 저장 (평문 저장 금지) | 높음 |
-| 2-3 | 코드 로그인 API Rate Limit (IP 기준 1분 10회 실패 차단, 429 반환) | 높음 |
-| 2-4 | Rate Limit 인터페이스 추상화 (인메모리 → Redis 교체 가능) | 높음 |
-| 2-5 | 만료된 초대 코드 배치/스케줄러 정리 (DB 누적 방지) | 낮음 |
+| # | 내용 | 우선순위 | 상태 |
+|---|---|---|---|
+| 2-1 | InviteCode 엔티티 분리 (invite_codes 테이블) | 높음 | ✅ 완료 |
+| 2-2 | 초대 코드 hash 저장 (평문 저장 금지) | 높음 | ✅ 완료 |
+| 2-3 | 코드 로그인 API Rate Limit (IP 기준 1분 10회 실패 차단, 429 반환) | 높음 | ✅ 완료 |
+| 2-4 | Rate Limit 인터페이스 추상화 (인메모리 → Redis 교체 가능) | 높음 | ✅ 완료 |
+| 2-5 | 만료된 초대 코드 배치/스케줄러 정리 (DB 누적 방지) | 낮음 | 미착수 |
 
 ### Phase 3 — 기기 관리 및 토큰 폐기
 

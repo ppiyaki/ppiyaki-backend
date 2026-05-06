@@ -53,5 +53,8 @@ public class InMemoryRateLimiter implements RateLimiter {
         while (!timestamps.isEmpty() && timestamps.peekFirst().isBefore(windowStart)) {
             timestamps.pollFirst();
         }
+        if (timestamps.isEmpty()) {
+            attempts.remove(key, timestamps);
+        }
     }
 }

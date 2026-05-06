@@ -60,10 +60,12 @@ public class InviteCode extends CreatedTimeEntity {
     }
 
     public boolean matches(final String rawCode) {
+        Objects.requireNonNull(rawCode, "rawCode must not be null");
         return ENCODER.matches(rawCode, this.codeHash);
     }
 
     public boolean isExpired(final LocalDateTime now) {
+        Objects.requireNonNull(now, "now must not be null");
         return now.isAfter(this.expiresAt);
     }
 
@@ -72,6 +74,13 @@ public class InviteCode extends CreatedTimeEntity {
     }
 
     public void markUsed(final LocalDateTime now) {
+        Objects.requireNonNull(now, "now must not be null");
+        if (this.usedAt != null) {
+            throw new IllegalStateException("Invite code already used");
+        }
+        if (isExpired(now)) {
+            throw new IllegalStateException("Invite code has expired");
+        }
         this.usedAt = now;
     }
 
