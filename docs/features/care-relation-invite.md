@@ -47,9 +47,10 @@ last_reviewed: 2026-05-02
 
 ## 5) 설계
 ### 5-1) 도메인 모델
-- `CareRelation` 엔티티에 `expiresAt` 필드 추가 (초대 코드 만료 시각)
-- 보호자가 seniorId를 지정하여 초대 코드 발급 (seniorId는 발급 시점에 세팅됨)
-- 코드 사용 시 `inviteCode`/`expiresAt`를 null 처리(폐기)
+- 초대 코드는 별도 `InviteCode` 엔티티로 관리 (invite_codes 테이블)
+- 코드는 BCrypt hash로 저장 (평문 저장 안 함)
+- 보호자가 seniorId를 지정하여 초대 코드 발급
+- 코드 사용 시 `usedAt`에 시각 기록
 
 ### 5-2) API 엔드포인트
 
@@ -62,11 +63,15 @@ last_reviewed: 2026-05-02
 - 없음
 
 ### 5-4) 데이터 흐름
-1. **발급**: 보호자 인증 확인 → seniorId 지정 → CareRelation 검증 → CareRelation(seniorId, caregiverId, inviteCode, expiresAt) 저장 → 코드 응답
-2. **코드 로그인**: 시니어 기기에서 코드 입력 → inviteCode로 CareRelation 조회 → 만료 검증 → 해당 seniorId로 JWT 발급 → 코드 폐기 → LoginResponse 반환
+1. **발급**: 보호자 인증 확인 → seniorId 지정 → CareRelation 존재 검증 → InviteCode 생성(code_hash, expiresAt) 저장 → 평문 코드 응답
+2. **코드 로그인**: 시니어 기기에서 코드 입력 → IP Rate Limit 확인 → 미사용 InviteCode 순회하며 BCrypt 매칭 → 만료 검증 → usedAt 기록 → 해당 seniorId로 JWT 발급 → LoginResponse 반환
 
 ### 5-5) DB 마이그레이션
-- `care_relations` 테이블에 `expires_at datetime(6)` 컬럼 추가
+- `invite_codes` 테이블 신설 (senior_id, code_hash, expires_at, used_at, created_at)
+- `care_relations`의 invite_code/expires_at 컬럼은 레거시 (추후 제거)
+
+### 비기능 요구사항 (추가)
+- IP 기준 brute force 방어: 1분 10회 실패 시 429 반환
 
 ## 6) 작업 분할 (예상 PR 리스트)
 - [ ] PR 1: 초대 코드 발급 + 수락 API 전체 (단일 PR)
