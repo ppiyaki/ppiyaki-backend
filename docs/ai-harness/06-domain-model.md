@@ -125,12 +125,24 @@
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| senior_id | bigint | `users.id` 참조. 보호자가 시니어 대리 생성 시 또는 초대 코드 발급 시 세팅 |
-| caregiver_id | bigint | `users.id` 참조. 보호자가 초대 코드 발급 시 세팅 |
-| invite_code | varchar nullable | 6자리 영숫자 초대 코드. 코드 사용 시 NULL 처리(폐기). 초대 코드는 별도 `invite_codes` 테이블로 분리 예정 |
-| expires_at | datetime nullable | 초대 코드 만료 시각 (발급 후 5분). 코드 사용 시 NULL 처리 |
+| senior_id | bigint | `users.id` 참조. 보호자가 시니어 대리 생성 시 세팅 |
+| caregiver_id | bigint | `users.id` 참조. 보호자 ID |
 | deleted_at | timestamp nullable | soft delete. NULL이면 활성 관계 |
 | created_at / updated_at | timestamp | `BaseTimeEntity` |
+
+> 초대 코드는 `invite_codes` 테이블로 분리됨. `care_relations`의 `invite_code`/`expires_at` 컬럼은 레거시이며 추후 제거 예정.
+
+### invite_codes (`@Table(name = "invite_codes")`, extends `CreatedTimeEntity`)
+시니어 코드 로그인용 1회용 초대 코드. 평문이 아닌 hash로 저장.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | bigint PK | |
+| senior_id | bigint NOT NULL | `users.id` 참조. 로그인 대상 시니어 |
+| code_hash | varchar NOT NULL | 초대 코드의 BCrypt hash (평문 저장 안 함) |
+| expires_at | datetime NOT NULL | 만료 시각 (발급 후 5분) |
+| used_at | datetime nullable | 사용 완료 시각. NULL이면 미사용 |
+| created_at | timestamp | `CreatedTimeEntity` |
 
 ### health_profiles (`@Table(name = "health_profiles")`, extends `CreatedTimeEntity`)
 시니어별 건강 배경 정보 (1:1).
@@ -343,6 +355,7 @@ erDiagram
     users ||--o{ oauth_identities : "links"
     users ||--o{ care_relations : "senior"
     users ||--o{ care_relations : "caregiver"
+    users ||--o{ invite_codes : "senior"
     users ||--|| health_profiles : "has"
     users ||--o{ prescriptions : "owner"
     users ||--o{ medicines : "owns"
@@ -385,11 +398,17 @@ erDiagram
         bigint id PK
         bigint senior_id FK
         bigint caregiver_id FK
-        varchar invite_code "nullable"
-        datetime expires_at "nullable"
         timestamp deleted_at
         timestamp created_at
         timestamp updated_at
+    }
+    invite_codes {
+        bigint id PK
+        bigint senior_id FK
+        varchar code_hash
+        datetime expires_at
+        datetime used_at "nullable"
+        timestamp created_at
     }
     health_profiles {
         bigint id PK
