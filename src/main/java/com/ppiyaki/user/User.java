@@ -49,6 +49,10 @@ public class User extends BaseTimeEntity {
     private Long pet;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", nullable = false)
+    private AuthProvider authProvider;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "care_mode", nullable = false)
     private CareMode careMode;
 
@@ -56,6 +60,7 @@ public class User extends BaseTimeEntity {
             final String loginId,
             final String password,
             final UserRole role,
+            final AuthProvider authProvider,
             final String nickname,
             final Gender gender,
             final LocalDate dob,
@@ -64,11 +69,16 @@ public class User extends BaseTimeEntity {
         this.loginId = loginId;
         this.password = password;
         this.role = role;
+        this.authProvider = Objects.requireNonNull(authProvider, "authProvider must not be null");
         this.nickname = nickname;
         this.gender = gender;
         this.dob = dob;
         this.pet = pet;
         this.careMode = CareMode.MANAGED;
+    }
+
+    public void assignPet(final Long petId) {
+        this.pet = Objects.requireNonNull(petId, "petId must not be null");
     }
 
     public void changeCareMode(final CareMode careMode) {

@@ -3,6 +3,7 @@
         caregiver_id bigint,
         created_at datetime(6),
         deleted_at datetime(6),
+        expires_at datetime(6),
         id bigint not null auto_increment,
         senior_id bigint,
         updated_at datetime(6),
@@ -152,6 +153,7 @@
         login_id varchar(255),
         nickname varchar(255),
         password varchar(255),
+        auth_provider enum ('INVITE_ONLY','KAKAO','LOCAL') not null,
         care_mode enum ('AUTONOMOUS','MANAGED') not null,
         gender enum ('FEMALE','MALE','OTHER','UNKNOWN'),
         role enum ('CAREGIVER','SENIOR'),
@@ -167,5 +169,8 @@
     alter table reports 
        add constraint uk_reports_senior_period unique (senior_id, period_type, period_start);
 
-    alter table users 
+    alter table care_relations
+       add constraint uk_care_relations_invite_code unique (invite_code);
+
+    alter table users
        add constraint UKi3xs7wmfu2i3jt079uuetycit unique (login_id);
