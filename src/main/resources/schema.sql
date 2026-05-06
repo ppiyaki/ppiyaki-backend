@@ -170,7 +170,10 @@
         primary key (id)
     ) engine=InnoDB;
 
-    alter table device_tokens 
+    create index idx_invite_codes_senior_used on invite_codes (senior_id, used_at);
+    create index idx_invite_codes_expires on invite_codes (expires_at);
+
+    alter table device_tokens
        add constraint UK8se1i37nto56x9252rmrit8ib unique (token);
 
     alter table oauth_identities 
