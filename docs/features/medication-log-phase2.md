@@ -36,8 +36,8 @@ last_reviewed: 2026-04-30
 - [ ] 결과를 `ai_status` 컬럼에 저장. 응답 DTO에 노출 (이미 Phase 1 응답에 `aiStatus` 필드 있음).
 
 ### 비기능 요구사항
-- **응답 시간**: 동기 처리. **실측 기반(2026-04-30 prod 서버에서 OpenAI Vision API 직접 호출): gpt-5.4-nano 평균 ~3s (1x1 더미 이미지), 실제 폰 카메라 사진은 ~4-6s 예상.** p50 ~3s / p95 ~6s 목표. 클라이언트 timeout 30s 권장.
-- **비용**: gpt-5.4-nano 호출당 약 0.4~1원 수준 추정 (이미지 토큰 포함). 처방전 OCR 비용 대비 차수 동일. 일일 트래픽 모니터링 권장.
+- **응답 시간**: 동기 처리. **실측 기반(2026-05-06 prod 서버에서 OpenAI Vision API 직접 호출): gpt-5.4-mini 평균 ~1.7s (custom 사진 3장 × 3-run), 실제 폰 카메라 사진은 ~3-5s 예상.** p50 ~2s / p95 ~5s 목표. 클라이언트 timeout 30s 권장.
+- **비용**: gpt-5.4-mini 호출당 약 2원 수준 추정 (이미지 토큰 포함). gpt-5.4-nano 대비 약 4-5배. MVP 단계 트래픽 작아 절대값 부담 미미. 일일 트래픽 모니터링 권장.
 - **보안**: 사진은 메모리에서만 처리 (이미 NCP S3에 저장된 것을 fetch). Vision API에 사용자 ID/PII 전송 안 함.
 - **타임아웃**: 서버측 30초 (Vision LLM 처리 시간 여유). 클라이언트 측 타임아웃 30초 이상 권장.
 - **민감정보 로깅 금지**: dosage·objectKey·결과 카운트는 로그에 남기지 않음 (id/userId만).
@@ -82,10 +82,10 @@ public enum LogAiStatus {
 ### 5-2) API 엔드포인트 변경
 **없음**. 기존 `PUT /api/v1/medication-logs` / `GET /api/v1/medication-logs` 응답에 `aiStatus`가 enum 값으로 채워질 뿐.
 
-### 5-3) 외부 연동 — OpenAI GPT-4o Vision
+### 5-3) 외부 연동 — OpenAI Vision
 
 - 엔드포인트: `https://api.openai.com/v1/chat/completions` (이미 사용 중)
-- 모델: **`gpt-5.4-nano`** — 프로젝트 표준 (prescription-ocr와 동일, `OpenAiProperties.model`로 주입). vision 입력 지원.
+- 모델: **`gpt-5.4-mini`** — `OpenAiProperties.visionModel`로 주입 (`OPENAI_VISION_MODEL` env, default `gpt-5.4-mini`). 텍스트 모델(`textModel`)과 분리 구성. vision 입력 지원.
 - 입력: `messages` 배열에 image_url(base64 data URL) + system prompt
 - 출력: JSON Mode로 `{"count": <integer>}` 강제. 파싱 실패 시 retry 1회.
 - System prompt 초안:
@@ -161,11 +161,12 @@ public enum LogAiStatus {
 | # | 질문 | 선택지 | 담당/기한 |
 |---|---|---|---|
 | Q1 | 동일 시각 정렬 허용 오차 | 동일 `scheduledTime` 정확 일치만 합산. 인접 시각 합산은 후속 | ✅ 결정 |
-| Q2 | gpt-5.4-nano vision 정확도 | 운영 데이터로 측정 후 모델 변경 여부 결정 | 운영 모니터링 |
+| ~~Q2~~ | ~~gpt-5.4-nano vision 정확도~~ | ✅ **해소됨** (2026-05-06). custom 사진 3장 × 3-run 정확도 테스트에서 nano가 정답 11→8로 misread. mini로 분리 업그레이드 (11/11/11 정확). 결정 로그 §9 참조 |
 
 ## 9) 결정 로그
 - 2026-04-30: 초안 작성. Phase 1 머지 직후 진행.
-- 2026-04-30: **Vision LLM = OpenAI gpt-5.4-nano** — 프로젝트 표준 모델 사용 (prescription-ocr와 동일). 기존 `OpenAiClient` + `OpenAiProperties.model` 인프라 그대로 확장. Clova Vision 미채택.
+- 2026-04-30: **Vision LLM = OpenAI gpt-5.4-nano** — 프로젝트 표준 모델 사용 (prescription-ocr와 동일). 기존 `OpenAiClient` + `OpenAiProperties.model` 인프라 그대로 확장. Clova Vision 미채택. (→ 2026-05-06 mini 업그레이드, 하단 참조)
+- 2026-05-06: **Vision LLM gpt-5.4-mini 업그레이드 + 텍스트 모델 분리** — 사용자 제공 custom 사진 3장 × 3-run 정확도 테스트에서 gpt-5.4-nano가 정답 11→8로 misread (재현 가능). gpt-4o(11/11/11) 동등 정확도 + 5.x 패밀리 유지 + 응답시간 ~1.7s + gpt-4o 대비 비용↓ 이유로 **gpt-5.4-mini 채택**. 텍스트 모델은 OCR 속도/비용 우선 고려해 nano 유지하고 `OpenAiProperties.textModel` / `visionModel`로 분리. env: `OPENAI_TEXT_MODEL` (default nano) / `OPENAI_VISION_MODEL` (default mini).
 - 2026-04-30: **동기 처리** — UX 단순성 우선. 실측 기반 p50 ~3s / p95 ~6s 응답 시간 감수. 시니어가 응답 받기 전 화면이 안 넘어가는 자연 차단 효과까지 부수적으로 확보. 비동기는 운영 트래픽 데이터 보고 후속 결정.
 - 2026-04-30: **트리거 = `photoObjectKey != null && status == TAKEN`** — 미복용/사진 없음은 검증 무의미.
 - 2026-04-30: **동일 시각 schedule 합산** — 시니어가 같은 시각에 여러 약 한 번에 촬영하는 실제 행동 패턴 정합.
