@@ -5,6 +5,7 @@ import com.ppiyaki.user.controller.dto.InviteCodeRequest;
 import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
 import com.ppiyaki.user.service.CareRelationService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,8 +36,13 @@ public class CareRelationController {
     }
 
     @PostMapping("/auth/code-login")
-    public ResponseEntity<LoginResponse> codeLogin(@Valid @RequestBody final CodeLoginRequest codeLoginRequest) {
-        final LoginResponse loginResponse = careRelationService.codeLogin(codeLoginRequest.code());
+    public ResponseEntity<LoginResponse> codeLogin(
+            @Valid @RequestBody final CodeLoginRequest codeLoginRequest,
+            final HttpServletRequest request
+    ) {
+        final String clientIp = request.getRemoteAddr();
+        final LoginResponse loginResponse = careRelationService.codeLogin(
+                codeLoginRequest.code(), clientIp);
         return ResponseEntity.ok(loginResponse);
     }
 }
