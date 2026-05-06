@@ -40,6 +40,10 @@ public enum ErrorCode {
     CARE_RELATION_ROLE_MISMATCH(HttpStatus.FORBIDDEN, "CARE_008", "Role does not match the required action"),
     CARE_RELATION_INVITE_INVALID(HttpStatus.UNAUTHORIZED, "CARE_009", "Invalid invite code"),
 
+    // Senior Device
+    SENIOR_DEVICE_NOT_FOUND(HttpStatus.NOT_FOUND, "DEVICE_001", "Device not found"),
+    SENIOR_DEVICE_REVOKED(HttpStatus.UNAUTHORIZED, "DEVICE_002", "Device has been revoked"),
+
     // Chat
     CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_001", "Chat session not found"),
     CHAT_SESSION_EXPIRED(HttpStatus.GONE, "CHAT_002", "Chat session expired"),

@@ -10,6 +10,7 @@ import com.ppiyaki.user.AuthProvider;
 import com.ppiyaki.user.OAuthIdentity;
 import com.ppiyaki.user.OAuthProvider;
 import com.ppiyaki.user.RefreshToken;
+import com.ppiyaki.user.SeniorDevice;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.controller.dto.KakaoLoginRequest;
@@ -19,6 +20,7 @@ import com.ppiyaki.user.controller.dto.SignupRequest;
 import com.ppiyaki.user.controller.dto.TokenResponse;
 import com.ppiyaki.user.repository.OAuthIdentityRepository;
 import com.ppiyaki.user.repository.RefreshTokenRepository;
+import com.ppiyaki.user.repository.SeniorDeviceRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -36,6 +38,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final OAuthIdentityRepository oAuthIdentityRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final SeniorDeviceRepository seniorDeviceRepository;
 
     public AuthService(
             final KakaoIdTokenVerifier kakaoIdTokenVerifier,
@@ -44,7 +47,8 @@ public class AuthService {
             final PasswordEncoder passwordEncoder,
             final UserRepository userRepository,
             final OAuthIdentityRepository oAuthIdentityRepository,
-            final RefreshTokenRepository refreshTokenRepository
+            final RefreshTokenRepository refreshTokenRepository,
+            final SeniorDeviceRepository seniorDeviceRepository
     ) {
         this.kakaoIdTokenVerifier = kakaoIdTokenVerifier;
         this.jwtProvider = jwtProvider;
@@ -53,6 +57,7 @@ public class AuthService {
         this.userRepository = userRepository;
         this.oAuthIdentityRepository = oAuthIdentityRepository;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.seniorDeviceRepository = seniorDeviceRepository;
     }
 
     @Transactional
@@ -142,6 +147,8 @@ public class AuthService {
         }
 
         final Long userId = refreshToken.getUserId();
+        validateSeniorDeviceIfApplicable(userId);
+
         final String newAccessToken = jwtProvider.createAccessToken(userId);
         final String newRefreshTokenValue = jwtProvider.createRefreshToken(userId);
 
@@ -166,6 +173,18 @@ public class AuthService {
     @Transactional
     public void saveRefreshTokenForUser(final Long userId, final String tokenValue) {
         saveRefreshToken(userId, tokenValue);
+    }
+
+    private void validateSeniorDeviceIfApplicable(final Long userId) {
+        final User user = userRepository.findById(userId).orElse(null);
+        if (user == null || user.getRole() != UserRole.SENIOR) {
+            return;
+        }
+        final java.util.List<SeniorDevice> activeDevices = seniorDeviceRepository
+                .findBySeniorIdAndStatus(userId, com.ppiyaki.user.SeniorDeviceStatus.ACTIVE);
+        if (activeDevices.isEmpty()) {
+            throw new BusinessException(ErrorCode.SENIOR_DEVICE_REVOKED);
+        }
     }
 
     private void saveRefreshToken(final Long userId, final String tokenValue) {

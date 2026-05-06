@@ -21,6 +21,20 @@
         primary key (id)
     ) engine=InnoDB;
 
+    create table senior_devices (
+        created_at datetime(6),
+        id bigint not null auto_increment,
+        last_used_at datetime(6),
+        revoked_at datetime(6),
+        senior_id bigint not null,
+        updated_at datetime(6),
+        device_id varchar(255) not null,
+        device_name varchar(255),
+        refresh_token_hash varchar(255),
+        status enum ('ACTIVE','REVOKED') not null,
+        primary key (id)
+    ) engine=InnoDB;
+
     create table device_tokens (
         is_active bit not null,
         created_at datetime(6),

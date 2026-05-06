@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
 public record CodeLoginRequest(
-        @NotBlank @Pattern(regexp = "^[A-Z0-9]{6}$", message = "Invite code must be 6 uppercase alphanumeric characters") String code
+        @NotBlank @Pattern(regexp = "^[A-Z0-9]{6}$", message = "Invite code must be 6 uppercase alphanumeric characters") String code,
+        @NotBlank String deviceId,
+        String deviceName
 ) {
 }

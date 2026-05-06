@@ -78,9 +78,6 @@ public class InviteCode extends CreatedTimeEntity {
         if (this.usedAt != null) {
             throw new IllegalStateException("Invite code already used");
         }
-        if (isExpired(now)) {
-            throw new IllegalStateException("Invite code has expired");
-        }
         this.usedAt = now;
     }
 

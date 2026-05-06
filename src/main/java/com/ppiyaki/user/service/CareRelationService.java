@@ -6,12 +6,14 @@ import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.common.ratelimit.RateLimiter;
 import com.ppiyaki.user.InviteCode;
 import com.ppiyaki.user.InviteCode.InviteCodeWithRaw;
+import com.ppiyaki.user.SeniorDevice;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.InviteCodeRepository;
+import com.ppiyaki.user.repository.SeniorDeviceRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,6 +25,7 @@ public class CareRelationService {
 
     private final CareRelationRepository careRelationRepository;
     private final InviteCodeRepository inviteCodeRepository;
+    private final SeniorDeviceRepository seniorDeviceRepository;
     private final UserRepository userRepository;
     private final JwtProvider jwtProvider;
     private final AuthService authService;
@@ -31,6 +34,7 @@ public class CareRelationService {
     public CareRelationService(
             final CareRelationRepository careRelationRepository,
             final InviteCodeRepository inviteCodeRepository,
+            final SeniorDeviceRepository seniorDeviceRepository,
             final UserRepository userRepository,
             final JwtProvider jwtProvider,
             final AuthService authService,
@@ -38,6 +42,7 @@ public class CareRelationService {
     ) {
         this.careRelationRepository = careRelationRepository;
         this.inviteCodeRepository = inviteCodeRepository;
+        this.seniorDeviceRepository = seniorDeviceRepository;
         this.userRepository = userRepository;
         this.jwtProvider = jwtProvider;
         this.authService = authService;
@@ -59,14 +64,15 @@ public class CareRelationService {
     }
 
     @Transactional
-    public LoginResponse codeLogin(final String code, final String clientIp) {
+    public LoginResponse codeLogin(
+            final String code,
+            final String clientIp,
+            final String deviceId,
+            final String deviceName
+    ) {
         final String rateLimitKey = "code-login:" + clientIp;
         rateLimiter.checkAllowed(rateLimitKey);
 
-        final List<InviteCode> candidates = inviteCodeRepository
-                .findBySeniorIdAndUsedAtIsNullOrderByCreatedAtDesc(null);
-
-        // 모든 미사용 초대 코드를 순회하며 hash 매칭
         final InviteCode matched = findMatchingInviteCode(code);
         if (matched == null) {
             rateLimiter.recordFailure(rateLimitKey);
@@ -86,6 +92,13 @@ public class CareRelationService {
         final String refreshToken = jwtProvider.createRefreshToken(seniorId);
         authService.saveRefreshTokenForUser(seniorId, refreshToken);
 
+        final String refreshTokenHash = hashToken(refreshToken);
+        seniorDeviceRepository.findBySeniorIdAndDeviceId(seniorId, deviceId)
+                .ifPresentOrElse(
+                        existing -> existing.updateRefreshToken(refreshTokenHash),
+                        () -> seniorDeviceRepository.save(
+                                new SeniorDevice(seniorId, deviceId, deviceName, refreshTokenHash)));
+
         return new LoginResponse(accessToken, refreshToken, true);
     }
 
@@ -100,6 +113,16 @@ public class CareRelationService {
             }
         }
         return null;
+    }
+
+    private String hashToken(final String token) {
+        try {
+            final java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            final byte[] hash = digest.digest(token.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(hash);
+        } catch (final java.security.NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not available", e);
+        }
     }
 
     private User findUserById(final Long userId) {

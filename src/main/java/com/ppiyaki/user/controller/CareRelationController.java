@@ -42,7 +42,8 @@ public class CareRelationController {
     ) {
         final String clientIp = request.getRemoteAddr();
         final LoginResponse loginResponse = careRelationService.codeLogin(
-                codeLoginRequest.code(), clientIp);
+                codeLoginRequest.code(), clientIp,
+                codeLoginRequest.deviceId(), codeLoginRequest.deviceName());
         return ResponseEntity.ok(loginResponse);
     }
 }

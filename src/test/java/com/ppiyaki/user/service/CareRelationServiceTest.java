@@ -20,6 +20,7 @@ import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.InviteCodeRepository;
+import com.ppiyaki.user.repository.SeniorDeviceRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,6 +40,9 @@ class CareRelationServiceTest {
 
     @Mock
     private InviteCodeRepository inviteCodeRepository;
+
+    @Mock
+    private SeniorDeviceRepository seniorDeviceRepository;
 
     @Mock
     private UserRepository userRepository;
@@ -105,7 +109,7 @@ class CareRelationServiceTest {
         given(jwtProvider.createRefreshToken(2L)).willReturn("refresh-token");
 
         // when
-        final LoginResponse response = careRelationService.codeLogin(rawCode, "127.0.0.1");
+        final LoginResponse response = careRelationService.codeLogin(rawCode, "127.0.0.1", "test-device", "TestDevice");
 
         // then
         assertThat(response.accessToken()).isEqualTo("access-token");
@@ -121,7 +125,7 @@ class CareRelationServiceTest {
         given(inviteCodeRepository.findAll()).willReturn(List.of());
 
         // when & then
-        assertThatThrownBy(() -> careRelationService.codeLogin("BADCOD", "127.0.0.1"))
+        assertThatThrownBy(() -> careRelationService.codeLogin("BADCOD", "127.0.0.1", "test-device", "TestDevice"))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(exception -> {
                     final BusinessException be = (BusinessException) exception;
@@ -140,7 +144,7 @@ class CareRelationServiceTest {
         given(inviteCodeRepository.findAll()).willReturn(List.of(inviteCodeWithRaw.inviteCode()));
 
         // when & then
-        assertThatThrownBy(() -> careRelationService.codeLogin(rawCode, "127.0.0.1"))
+        assertThatThrownBy(() -> careRelationService.codeLogin(rawCode, "127.0.0.1", "test-device", "TestDevice"))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(exception -> {
                     final BusinessException be = (BusinessException) exception;
@@ -157,7 +161,7 @@ class CareRelationServiceTest {
                 .when(rateLimiter).checkAllowed("code-login:127.0.0.1");
 
         // when & then
-        assertThatThrownBy(() -> careRelationService.codeLogin("ABC123", "127.0.0.1"))
+        assertThatThrownBy(() -> careRelationService.codeLogin("ABC123", "127.0.0.1", "test-device", "TestDevice"))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(exception -> {
                     final BusinessException be = (BusinessException) exception;

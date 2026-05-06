@@ -25,6 +25,8 @@ class CareRelationControllerE2ETest {
     @BeforeEach
     void setUp() {
         RestAssured.port = port;
+        jdbcTemplate.update("DELETE FROM senior_devices WHERE senior_id IN "
+                + "(SELECT id FROM users WHERE nickname = '시니어코드E2E')");
         jdbcTemplate.update("DELETE FROM invite_codes WHERE senior_id IN "
                 + "(SELECT id FROM users WHERE nickname = '시니어코드E2E')");
         jdbcTemplate.update("DELETE FROM care_relations WHERE caregiver_id IN "
@@ -98,7 +100,9 @@ class CareRelationControllerE2ETest {
                 .contentType(ContentType.JSON)
                 .body("""
                         {
-                            "code": "%s"
+                            "code": "%s",
+                            "deviceId": "test-device-001",
+                            "deviceName": "TestPhone"
                         }
                         """.formatted(inviteCode))
                 .when()
