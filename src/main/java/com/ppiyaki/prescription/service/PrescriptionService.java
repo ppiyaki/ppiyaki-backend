@@ -142,7 +142,8 @@ public class PrescriptionService {
                         matched != null ? matched.itemSeq() : null,
                         matched != null ? matched.itemName() : null,
                         matchResult.matchType(),
-                        matchResult.reason()
+                        matchResult.reason(),
+                        med.mealSlots()
                 ));
             }
 
@@ -197,6 +198,10 @@ public class PrescriptionService {
             case REJECTED -> candidate.reject();
             case MANUALLY_CORRECTED -> candidate.correctManually(request.chosenItemSeq());
             default -> throw new BusinessException(ErrorCode.INVALID_INPUT, "Invalid decision: " + request.decision());
+        }
+
+        if (request.confirmedMealSlots() != null) {
+            candidate.updateConfirmedMealSlots(request.confirmedMealSlots());
         }
     }
 

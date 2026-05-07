@@ -51,6 +51,42 @@ class MealSlotTest {
                 .isInstanceOf(NullPointerException.class);
     }
 
+    @Test
+    @DisplayName("parseCsv: 표준 CSV → 리스트")
+    void parseCsv_standard() {
+        assertThat(MealSlot.parseCsv("BREAKFAST,LUNCH,DINNER"))
+                .containsExactly(MealSlot.BREAKFAST, MealSlot.LUNCH, MealSlot.DINNER);
+    }
+
+    @Test
+    @DisplayName("parseCsv: 공백/빈 토큰/잘못된 enum 값 → 무시")
+    void parseCsv_normalizes() {
+        assertThat(MealSlot.parseCsv(" BREAKFAST , ,BEDTIME, LUNCH "))
+                .containsExactly(MealSlot.BREAKFAST, MealSlot.LUNCH);
+    }
+
+    @Test
+    @DisplayName("parseCsv: null/blank → 빈 리스트")
+    void parseCsv_blank() {
+        assertThat(MealSlot.parseCsv(null)).isEmpty();
+        assertThat(MealSlot.parseCsv("")).isEmpty();
+        assertThat(MealSlot.parseCsv("   ")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("toCsv: 표준 리스트 → CSV")
+    void toCsv_standard() {
+        assertThat(MealSlot.toCsv(java.util.List.of(MealSlot.BREAKFAST, MealSlot.DINNER)))
+                .isEqualTo("BREAKFAST,DINNER");
+    }
+
+    @Test
+    @DisplayName("toCsv: null/empty → null (DB에 null 저장)")
+    void toCsv_empty_returnsNull() {
+        assertThat(MealSlot.toCsv(null)).isNull();
+        assertThat(MealSlot.toCsv(java.util.List.of())).isNull();
+    }
+
     private User userWith(
             final LocalTime breakfast,
             final LocalTime lunch,
