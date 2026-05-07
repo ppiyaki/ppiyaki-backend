@@ -48,7 +48,7 @@ last_reviewed: 2026-05-02
 ## 5) 설계
 ### 5-1) 도메인 모델
 - 초대 코드는 별도 `InviteCode` 엔티티로 관리 (invite_codes 테이블)
-- 코드는 BCrypt hash로 저장 (평문 저장 안 함)
+- 코드는 SHA-256 hash로 저장 (평문 저장 안 함, O(1) lookup)
 - 보호자가 seniorId를 지정하여 초대 코드 발급
 - 코드 사용 시 `usedAt`에 시각 기록
 
@@ -64,7 +64,7 @@ last_reviewed: 2026-05-02
 
 ### 5-4) 데이터 흐름
 1. **발급**: 보호자 인증 확인 → seniorId 지정 → CareRelation 존재 검증 → InviteCode 생성(code_hash, expiresAt) 저장 → 평문 코드 응답
-2. **코드 로그인**: 시니어 기기에서 코드 입력 → IP Rate Limit 확인 → 미사용 InviteCode 순회하며 BCrypt 매칭 → 만료 검증 → usedAt 기록 → 해당 seniorId로 JWT 발급 → LoginResponse 반환
+2. **코드 로그인**: 시니어 기기에서 코드 입력 → IP Rate Limit 확인 → SHA-256 hash로 InviteCode O(1) lookup → 만료 검증 → usedAt 기록 → 해당 seniorId로 JWT(role 포함) 발급 → LoginResponse 반환
 
 ### 5-5) DB 마이그레이션
 - `invite_codes` 테이블 신설 (senior_id, code_hash, expires_at, used_at, created_at)
