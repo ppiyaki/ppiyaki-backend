@@ -47,7 +47,7 @@ class UserServiceCareModeTest {
         final User senior = givenSenior(seniorId);
         when(userRepository.findById(seniorId)).thenReturn(Optional.of(senior));
         when(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(caregiverId, seniorId))
-                .thenReturn(Optional.of(new CareRelation(seniorId, caregiverId, "INVITE")));
+                .thenReturn(Optional.of(CareRelation.createLinked(seniorId, caregiverId)));
 
         // when
         final CareModeResponse response = userService.updateCareMode(caregiverId, seniorId, CareMode.AUTONOMOUS);

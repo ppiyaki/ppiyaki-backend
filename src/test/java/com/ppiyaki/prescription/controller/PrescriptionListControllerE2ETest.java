@@ -161,7 +161,7 @@ class PrescriptionListControllerE2ETest {
     }
 
     private void seedCareRelation(final Long seniorId, final Long caregiverId) {
-        careRelationRepository.save(new CareRelation(seniorId, caregiverId, "INV-" + seniorId + "-" + caregiverId));
+        careRelationRepository.save(CareRelation.createLinked(seniorId, caregiverId));
     }
 
     private void seedPrescription(final Long ownerId, final PrescriptionStatus status) {
