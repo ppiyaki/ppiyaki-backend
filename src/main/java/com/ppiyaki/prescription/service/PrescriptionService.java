@@ -8,6 +8,9 @@ import com.ppiyaki.common.ocr.ClovaOcrClient;
 import com.ppiyaki.common.ocr.ClovaOcrClient.OcrResult;
 import com.ppiyaki.common.ocr.ClovaOcrClient.OcrToken;
 import com.ppiyaki.common.storage.NcpStorageProperties;
+import com.ppiyaki.medication.MealSlot;
+import com.ppiyaki.medication.MedicationSchedule;
+import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.controller.dto.MedicineCandidate;
 import com.ppiyaki.medicine.repository.MedicineRepository;
@@ -33,6 +36,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -59,6 +63,7 @@ public class PrescriptionService {
     private final PrescriptionRepository prescriptionRepository;
     private final PrescriptionMedicineCandidateRepository candidateRepository;
     private final MedicineRepository medicineRepository;
+    private final MedicationScheduleRepository medicationScheduleRepository;
     private final CareRelationRepository careRelationRepository;
     private final UserRepository userRepository;
     private final ClovaOcrClient clovaOcrClient;
@@ -73,6 +78,7 @@ public class PrescriptionService {
             final PrescriptionRepository prescriptionRepository,
             final PrescriptionMedicineCandidateRepository candidateRepository,
             final MedicineRepository medicineRepository,
+            final MedicationScheduleRepository medicationScheduleRepository,
             final CareRelationRepository careRelationRepository,
             final UserRepository userRepository,
             final ClovaOcrClient clovaOcrClient,
@@ -86,6 +92,7 @@ public class PrescriptionService {
         this.prescriptionRepository = prescriptionRepository;
         this.candidateRepository = candidateRepository;
         this.medicineRepository = medicineRepository;
+        this.medicationScheduleRepository = medicationScheduleRepository;
         this.careRelationRepository = careRelationRepository;
         this.userRepository = userRepository;
         this.clovaOcrClient = clovaOcrClient;
@@ -245,27 +252,63 @@ public class PrescriptionService {
                     "All candidates must be decided before confirming.");
         }
 
+        // 시니어 mealTimes 사전 검증: 슬롯 자동 생성 대상 candidate가 있는데
+        // 해당 슬롯의 mealTime이 null이면 트랜잭션 변경 시작 전에 거절 (spec §3, USER_002).
+        final User owner = userRepository.findById(prescription.getOwnerId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         for (final PrescriptionMedicineCandidate candidate : candidates) {
-            if (candidate.getCaregiverDecision() == CaregiverDecision.ACCEPTED
-                    || candidate.getCaregiverDecision() == CaregiverDecision.MANUALLY_CORRECTED) {
+            if (!isAcceptedOrCorrected(candidate) || candidate.getCreatedMedicineId() != null) {
+                continue;
+            }
+            for (final MealSlot slot : candidate.getConfirmedMealSlotsList()) {
+                if (slot.resolveTime(owner) == null) {
+                    throw new BusinessException(ErrorCode.MEAL_TIMES_NOT_SET);
+                }
+            }
+        }
 
-                final String itemSeq = candidate.getCaregiverChosenItemSeq() != null
-                        ? candidate.getCaregiverChosenItemSeq()
-                        : candidate.getMatchedItemSeq();
-                final String name = candidate.getMatchedItemName() != null
-                        ? candidate.getMatchedItemName()
-                        : candidate.getExtractedName();
+        final LocalDate today = LocalDate.now();
+        for (final PrescriptionMedicineCandidate candidate : candidates) {
+            if (!isAcceptedOrCorrected(candidate)) {
+                continue;
+            }
+            // 멱등: 이미 Medicine이 생성된 candidate는 skip (재confirm 시 중복 생성 방지).
+            if (candidate.getCreatedMedicineId() != null) {
+                continue;
+            }
 
-                final Medicine medicine = new Medicine(
-                        prescription.getOwnerId(), prescription.getId(),
-                        name, 0, 0, itemSeq, null);
-                medicineRepository.save(medicine);
-                candidate.linkMedicine(medicine.getId());
+            final String itemSeq = candidate.getCaregiverChosenItemSeq() != null
+                    ? candidate.getCaregiverChosenItemSeq()
+                    : candidate.getMatchedItemSeq();
+            final String name = candidate.getMatchedItemName() != null
+                    ? candidate.getMatchedItemName()
+                    : candidate.getExtractedName();
+
+            final Medicine medicine = new Medicine(
+                    prescription.getOwnerId(), prescription.getId(),
+                    name, 0, 0, itemSeq, null);
+            medicineRepository.save(medicine);
+            candidate.linkMedicine(medicine.getId());
+
+            // dosage가 비어있으면 schedule 자동 생성 skip — Medicine만 등록.
+            // 보호자가 후속으로 schedule CRUD API로 보완 (spec §3 Q2).
+            final String dosage = candidate.getExtractedDosage();
+            if (dosage == null || dosage.isBlank()) {
+                continue;
+            }
+            for (final MealSlot slot : candidate.getConfirmedMealSlotsList()) {
+                medicationScheduleRepository.save(new MedicationSchedule(
+                        medicine.getId(), slot, dosage, "DAILY", today, null));
             }
         }
 
         prescription.confirm();
         return PrescriptionDetailResponse.from(prescription, candidates);
+    }
+
+    private boolean isAcceptedOrCorrected(final PrescriptionMedicineCandidate candidate) {
+        return candidate.getCaregiverDecision() == CaregiverDecision.ACCEPTED
+                || candidate.getCaregiverDecision() == CaregiverDecision.MANUALLY_CORRECTED;
     }
 
     @Transactional
