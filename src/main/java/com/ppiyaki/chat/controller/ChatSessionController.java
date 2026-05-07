@@ -5,11 +5,13 @@ import com.ppiyaki.chat.controller.dto.ChatSessionResponse;
 import com.ppiyaki.chat.domain.ChatSession;
 import com.ppiyaki.chat.service.ChatSessionPersistenceService;
 import com.ppiyaki.chat.service.ChatSessionService;
+import com.ppiyaki.chat.service.PhotoMessageValidator;
 import com.ppiyaki.chat.service.SttService;
 import com.ppiyaki.chat.service.TtsService;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import jakarta.validation.Valid;
+import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -63,5 +65,23 @@ public class ChatSessionController {
         persistenceService.validateSession(userId, sessionId);
         final String transcribedText = sttService.transcribe(file.getResource(), language);
         return chatSessionService.sendVoiceMessageStream(userId, sessionId, transcribedText, ttsService);
+    }
+
+    @PostMapping(value = "/{sessionId}/photo-messages", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public SseEmitter sendPhotoMessage(
+            @AuthenticationPrincipal final Long userId,
+            @PathVariable final Long sessionId,
+            @RequestParam("file") final MultipartFile file,
+            @RequestParam(value = "message", required = false) final String message) {
+        PhotoMessageValidator.validate(file);
+        persistenceService.validateSession(userId, sessionId);
+        final byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (final IOException e) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to read photo bytes");
+        }
+        return chatSessionService.sendPhotoMessageStream(
+                userId, sessionId, bytes, file.getContentType(), message);
     }
 }
