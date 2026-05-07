@@ -47,20 +47,19 @@ class SeniorServiceTest {
     void createSenior_success() {
         // given
         final User caregiver = mock(User.class);
-        lenient().when(caregiver.getId()).thenReturn(1L);
-        lenient().when(caregiver.getRole()).thenReturn(UserRole.CAREGIVER);
+        given(caregiver.getRole()).willReturn(UserRole.CAREGIVER);
         given(userRepository.findById(1L)).willReturn(Optional.of(caregiver));
 
         final User senior = mock(User.class);
-        lenient().when(senior.getId()).thenReturn(2L);
+        given(senior.getId()).willReturn(2L);
         given(userRepository.save(any(User.class))).willReturn(senior);
 
         final Pet pet = mock(Pet.class);
-        lenient().when(pet.getId()).thenReturn(1L);
+        given(pet.getId()).willReturn(1L);
         given(petRepository.save(any(Pet.class))).willReturn(pet);
 
         final CareRelation careRelation = mock(CareRelation.class);
-        lenient().when(careRelation.getId()).thenReturn(1L);
+        given(careRelation.getId()).willReturn(1L);
         given(careRelationRepository.save(any(CareRelation.class))).willReturn(careRelation);
 
         final SeniorCreateRequest request = new SeniorCreateRequest("시니어할머니", LocalDate.of(1945, 3, 15));

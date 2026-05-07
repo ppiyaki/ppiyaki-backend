@@ -76,7 +76,7 @@ class CareRelationControllerE2ETest {
                 .extract()
                 .path("seniorId");
 
-        // when — 보호자��� 초대 코드 발급
+        // when — 보호자가 초대 코드 발급
         final String inviteCode = RestAssured.given()
                 .header("Authorization", "Bearer " + caregiverToken)
                 .contentType(ContentType.JSON)

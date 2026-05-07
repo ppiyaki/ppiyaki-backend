@@ -22,6 +22,7 @@ public class JwtProvider {
         this.refreshTokenExpiry = jwtProperties.refreshTokenExpiry();
     }
 
+    @Deprecated
     public String createAccessToken(final Long userId) {
         return createToken(userId, null, accessTokenExpiry);
     }

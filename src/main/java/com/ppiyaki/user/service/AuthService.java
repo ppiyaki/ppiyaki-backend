@@ -144,9 +144,9 @@ public class AuthService {
         }
 
         final Long userId = refreshToken.getUserId();
-        final User user = userRepository.findById(userId).orElse(null);
-        final String roleName = (user != null && user.getRole() != null) ? user.getRole().name() : null;
-        final String newAccessToken = jwtProvider.createAccessToken(userId, roleName);
+        final User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        final String newAccessToken = jwtProvider.createAccessToken(userId, user.getRole().name());
         final String newRefreshTokenValue = jwtProvider.createRefreshToken(userId);
 
         final LocalDateTime newExpiresAt = LocalDateTime.now().plusSeconds(jwtProperties.refreshTokenExpiry() / 1000);

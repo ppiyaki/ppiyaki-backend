@@ -75,12 +75,13 @@ public class CareRelationService {
             throw new BusinessException(ErrorCode.CARE_RELATION_INVITE_INVALID);
         }
 
-        if (inviteCode.isExpired(LocalDateTime.now())) {
+        final LocalDateTime now = LocalDateTime.now();
+        if (inviteCode.isExpired(now)) {
             rateLimiter.recordFailure(rateLimitKey);
             throw new BusinessException(ErrorCode.CARE_RELATION_INVITE_INVALID);
         }
 
-        inviteCode.markUsed(LocalDateTime.now());
+        inviteCode.markUsed(now);
         rateLimiter.clearFailures(rateLimitKey);
 
         final Long seniorId = inviteCode.getSeniorId();

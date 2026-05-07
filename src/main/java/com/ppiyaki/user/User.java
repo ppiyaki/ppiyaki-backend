@@ -77,6 +77,11 @@ public class User extends BaseTimeEntity {
         this.careMode = CareMode.MANAGED;
     }
 
+    public static User createSenior(final String nickname, final LocalDate dob) {
+        return new User(null, null, UserRole.SENIOR, AuthProvider.INVITE_ONLY,
+                nickname, null, dob, null);
+    }
+
     public void assignPet(final Long petId) {
         this.pet = Objects.requireNonNull(petId, "petId must not be null");
     }
