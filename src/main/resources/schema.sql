@@ -127,6 +127,39 @@
         primary key (id)
     ) engine=InnoDB;
 
+    create table pill_identifications (
+        synced_at datetime(6) not null,
+        bizrno varchar(32),
+        change_date varchar(20),
+        class_no varchar(16),
+        color_class1 varchar(32),
+        color_class2 varchar(32),
+        drug_shape varchar(32),
+        edi_code varchar(32),
+        etc_otc_name varchar(32),
+        leng_long varchar(16),
+        leng_short varchar(16),
+        line_back varchar(32),
+        line_front varchar(32),
+        mark_code_back varchar(64),
+        mark_code_front varchar(64),
+        print_back varchar(64),
+        print_front varchar(64),
+        thick varchar(16),
+        class_name varchar(128),
+        item_seq varchar(20) not null,
+        item_image varchar(512),
+        item_name varchar(255) not null,
+        entp_name varchar(255),
+        chart TEXT,
+        primary key (item_seq)
+    ) engine=InnoDB;
+
+    create index idx_pill_print_front on pill_identifications (print_front);
+    create index idx_pill_shape_color on pill_identifications (drug_shape, color_class1);
+    create index idx_pill_color_shape_line on pill_identifications (color_class1, drug_shape, line_front);
+    create index idx_pill_item_name on pill_identifications (item_name);
+
     create table prescriptions (
         caregiver_id bigint,
         created_at datetime(6),
