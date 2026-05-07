@@ -63,4 +63,46 @@ class CareRelationTest {
         assertThat(relation.getExpiresAt()).isNull();
         assertThat(relation.isPending()).isFalse();
     }
+
+    @Test
+    @DisplayName("createInviteForSenior로 생성하면 seniorId, caregiverId, inviteCode가 모두 세팅된다")
+    void createInviteForSenior_setsAllFields() {
+        // given & when
+        final CareRelation relation = CareRelation.createInviteForSenior(
+                10L, 20L, LocalDateTime.now());
+
+        // then
+        assertThat(relation.getSeniorId()).isEqualTo(10L);
+        assertThat(relation.getCaregiverId()).isEqualTo(20L);
+        assertThat(relation.getInviteCode()).matches("[A-Z0-9]{6}");
+        assertThat(relation.getExpiresAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("consumeInviteCode 호출 시 inviteCode와 expiresAt이 null이 된다")
+    void consumeInviteCode_clearsCodeAndExpiry() {
+        // given
+        final CareRelation relation = CareRelation.createInviteForSenior(
+                10L, 20L, LocalDateTime.now());
+
+        // when
+        relation.consumeInviteCode();
+
+        // then
+        assertThat(relation.getInviteCode()).isNull();
+        assertThat(relation.getExpiresAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("isExpired는 만료 시각 직후부터 true를 반환한다")
+    void isExpired_boundaryCheck() {
+        // given
+        final LocalDateTime now = LocalDateTime.of(2026, 5, 5, 12, 0);
+        final CareRelation relation = CareRelation.createInviteForSenior(10L, 20L, now);
+        final LocalDateTime expiresAt = relation.getExpiresAt();
+
+        // when & then
+        assertThat(relation.isExpired(expiresAt)).isFalse();
+        assertThat(relation.isExpired(expiresAt.plusNanos(1))).isTrue();
+    }
 }
