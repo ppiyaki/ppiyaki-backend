@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
+import com.ppiyaki.medication.MealSlot;
 import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.user.CareRelation;
@@ -11,7 +12,6 @@ import com.ppiyaki.user.repository.CareRelationRepository;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -175,10 +175,10 @@ class MedicineControllerE2ETest {
         final Integer medicineId = createMedicine(token, "캐스케이드약", 30, 20);
 
         medicationScheduleRepository.save(
-                new MedicationSchedule(Long.valueOf(medicineId), LocalTime.of(8, 0),
+                new MedicationSchedule(Long.valueOf(medicineId), MealSlot.BREAKFAST,
                         "1정", "DAILY", LocalDate.now(), null));
         medicationScheduleRepository.save(
-                new MedicationSchedule(Long.valueOf(medicineId), LocalTime.of(20, 0),
+                new MedicationSchedule(Long.valueOf(medicineId), MealSlot.DINNER,
                         "1정", "DAILY", LocalDate.now(), null));
 
         // when & then

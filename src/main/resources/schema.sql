@@ -80,13 +80,13 @@
 
     create table medication_schedules (
         end_date date,
-        scheduled_time time(6),
         start_date date,
         created_at datetime(6),
         id bigint not null auto_increment,
         medicine_id bigint,
         days_of_week varchar(255),
         dosage varchar(255),
+        meal_slot varchar(16) not null,
         primary key (id)
     ) engine=InnoDB;
 
@@ -146,6 +146,9 @@
 
     create table users (
         dob date,
+        breakfast_time time(6),
+        lunch_time time(6),
+        dinner_time time(6),
         created_at datetime(6),
         id bigint not null auto_increment,
         pet bigint,

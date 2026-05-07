@@ -54,4 +54,5 @@ mfds:
     read-timeout: 5000
 
 openai:
-  model: gpt-5.4-nano
+  text-model: ${OPENAI_TEXT_MODEL:gpt-5.4-nano}
+  vision-model: ${OPENAI_VISION_MODEL:gpt-5.4-mini}

@@ -3,12 +3,13 @@ package com.ppiyaki.medication;
 import com.ppiyaki.common.entity.CreatedTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -27,8 +28,9 @@ public class MedicationSchedule extends CreatedTimeEntity {
     @Column(name = "medicine_id")
     private Long medicineId;
 
-    @Column(name = "scheduled_time")
-    private LocalTime scheduledTime;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "meal_slot", nullable = false, length = 16)
+    private MealSlot mealSlot;
 
     @Column(name = "dosage")
     private String dosage;
@@ -44,14 +46,14 @@ public class MedicationSchedule extends CreatedTimeEntity {
 
     public MedicationSchedule(
             final Long medicineId,
-            final LocalTime scheduledTime,
+            final MealSlot mealSlot,
             final String dosage,
             final String daysOfWeek,
             final LocalDate startDate,
             final LocalDate endDate
     ) {
         this.medicineId = Objects.requireNonNull(medicineId, "medicineId must not be null");
-        this.scheduledTime = Objects.requireNonNull(scheduledTime, "scheduledTime must not be null");
+        this.mealSlot = Objects.requireNonNull(mealSlot, "mealSlot must not be null");
         this.dosage = Objects.requireNonNull(dosage, "dosage must not be null");
         this.daysOfWeek = daysOfWeek;
         this.startDate = startDate;
@@ -59,14 +61,14 @@ public class MedicationSchedule extends CreatedTimeEntity {
     }
 
     public void update(
-            final LocalTime scheduledTime,
+            final MealSlot mealSlot,
             final String dosage,
             final String daysOfWeek,
             final LocalDate startDate,
             final LocalDate endDate
     ) {
-        if (scheduledTime != null) {
-            this.scheduledTime = scheduledTime;
+        if (mealSlot != null) {
+            this.mealSlot = mealSlot;
         }
         if (dosage != null) {
             this.dosage = dosage;

@@ -41,6 +41,7 @@ class MedicationScheduleControllerE2ETest {
     void create_success() {
         // given
         final String token = loginAsNewUser("일정등록유저");
+        setDefaultMealTimes(token);
         final Integer medicineId = createMedicine(token, "타이레놀정", 30, 25);
 
         // when & then
@@ -49,7 +50,7 @@ class MedicationScheduleControllerE2ETest {
                 .header("Authorization", "Bearer " + token)
                 .body("""
                         {
-                            "scheduledTime": "08:00",
+                            "mealSlot": "BREAKFAST",
                             "dosage": "1정",
                             "daysOfWeek": "DAILY",
                             "startDate": "2026-04-11"
@@ -61,9 +62,81 @@ class MedicationScheduleControllerE2ETest {
                 .statusCode(201)
                 .body("id", notNullValue())
                 .body("medicineId", is(medicineId))
+                .body("mealSlot", is("BREAKFAST"))
                 .body("scheduledTime", is("08:00:00"))
                 .body("dosage", is("1정"))
                 .body("daysOfWeek", is("DAILY"));
+    }
+
+    @Test
+    @DisplayName("시니어 mealTimes 미설정 상태에서 schedule 등록 시 400 USER_002")
+    void create_mealTimesNotSet_returns400() {
+        // given
+        final String token = loginAsNewUser("미설정유저");
+        final Integer medicineId = createMedicine(token, "약", 30, 25);
+
+        // when & then
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + token)
+                .body("""
+                        {
+                            "mealSlot": "LUNCH",
+                            "dosage": "1정"
+                        }
+                        """)
+                .when()
+                .post("/api/v1/medicines/" + medicineId + "/schedules")
+                .then()
+                .statusCode(400)
+                .body("error.code", is("USER_002"));
+    }
+
+    @Test
+    @DisplayName("잘못된 mealSlot 값이면 400")
+    void create_invalidMealSlot_returns400() {
+        // given
+        final String token = loginAsNewUser("잘못된슬롯유저");
+        setDefaultMealTimes(token);
+        final Integer medicineId = createMedicine(token, "약", 30, 25);
+
+        // when & then
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + token)
+                .body("""
+                        {
+                            "mealSlot": "MIDNIGHT",
+                            "dosage": "1정"
+                        }
+                        """)
+                .when()
+                .post("/api/v1/medicines/" + medicineId + "/schedules")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    @DisplayName("mealTimes 변경 시 schedule 응답의 scheduledTime이 새 값으로 반영된다")
+    void scheduledTime_reflectsUpdatedMealTimes() {
+        // given
+        final String token = loginAsNewUser("시간변경유저");
+        setMealTimes(token, "08:00:00", "12:30:00", "18:30:00");
+        final Integer medicineId = createMedicine(token, "약", 30, 25);
+        final Integer scheduleId = createSchedule(token, medicineId, "LUNCH", "1정");
+
+        // when: mealTimes 변경
+        setMealTimes(token, "08:00:00", "13:15:00", "18:30:00");
+
+        // then
+        RestAssured.given()
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .get("/api/v1/medicines/" + medicineId + "/schedules/" + scheduleId)
+                .then()
+                .statusCode(200)
+                .body("mealSlot", is("LUNCH"))
+                .body("scheduledTime", is("13:15:00"));
     }
 
     @Test
@@ -71,9 +144,10 @@ class MedicationScheduleControllerE2ETest {
     void readAll_success() {
         // given
         final String token = loginAsNewUser("목록유저");
+        setDefaultMealTimes(token);
         final Integer medicineId = createMedicine(token, "비타민C", 60, 50);
-        createSchedule(token, medicineId, "08:00", "1정");
-        createSchedule(token, medicineId, "20:00", "1정");
+        createSchedule(token, medicineId, "BREAKFAST", "1정");
+        createSchedule(token, medicineId, "DINNER", "1정");
 
         // when & then
         RestAssured.given()
@@ -90,8 +164,9 @@ class MedicationScheduleControllerE2ETest {
     void readById_success() {
         // given
         final String token = loginAsNewUser("상세유저");
+        setDefaultMealTimes(token);
         final Integer medicineId = createMedicine(token, "오메가3", 90, 80);
-        final Integer scheduleId = createSchedule(token, medicineId, "09:00", "2정");
+        final Integer scheduleId = createSchedule(token, medicineId, "LUNCH", "2정");
 
         // when & then
         RestAssured.given()
@@ -101,7 +176,8 @@ class MedicationScheduleControllerE2ETest {
                 .then()
                 .statusCode(200)
                 .body("dosage", is("2정"))
-                .body("scheduledTime", is("09:00:00"));
+                .body("mealSlot", is("LUNCH"))
+                .body("scheduledTime", is("12:30:00"));
     }
 
     @Test
@@ -109,8 +185,9 @@ class MedicationScheduleControllerE2ETest {
     void update_success() {
         // given
         final String token = loginAsNewUser("수정유저");
+        setDefaultMealTimes(token);
         final Integer medicineId = createMedicine(token, "아스피린", 20, 15);
-        final Integer scheduleId = createSchedule(token, medicineId, "08:00", "1정");
+        final Integer scheduleId = createSchedule(token, medicineId, "BREAKFAST", "1정");
 
         // when & then
         RestAssured.given()
@@ -118,7 +195,7 @@ class MedicationScheduleControllerE2ETest {
                 .header("Authorization", "Bearer " + token)
                 .body("""
                         {
-                            "scheduledTime": "09:30",
+                            "mealSlot": "DINNER",
                             "dosage": "2정"
                         }
                         """)
@@ -126,7 +203,8 @@ class MedicationScheduleControllerE2ETest {
                 .patch("/api/v1/medicines/" + medicineId + "/schedules/" + scheduleId)
                 .then()
                 .statusCode(200)
-                .body("scheduledTime", is("09:30:00"))
+                .body("mealSlot", is("DINNER"))
+                .body("scheduledTime", is("18:30:00"))
                 .body("dosage", is("2정"));
     }
 
@@ -135,8 +213,9 @@ class MedicationScheduleControllerE2ETest {
     void delete_success() {
         // given
         final String token = loginAsNewUser("삭제유저");
+        setDefaultMealTimes(token);
         final Integer medicineId = createMedicine(token, "삭제약", 10, 5);
-        final Integer scheduleId = createSchedule(token, medicineId, "12:00", "1정");
+        final Integer scheduleId = createSchedule(token, medicineId, "LUNCH", "1정");
 
         // when & then
         RestAssured.given()
@@ -152,6 +231,7 @@ class MedicationScheduleControllerE2ETest {
     void caregiver_canAccessSeniorSchedules() {
         // given
         final String seniorToken = loginAsNewUser("시니어");
+        setDefaultMealTimes(seniorToken);
         final Long seniorUserId = readUserId(seniorToken);
         final Integer medicineId = createMedicine(seniorToken, "시니어약", 30, 20);
 
@@ -166,7 +246,7 @@ class MedicationScheduleControllerE2ETest {
                 .header("Authorization", "Bearer " + caregiverToken)
                 .body("""
                         {
-                            "scheduledTime": "07:30",
+                            "mealSlot": "BREAKFAST",
                             "dosage": "1정",
                             "daysOfWeek": "DAILY"
                         }
@@ -186,7 +266,8 @@ class MedicationScheduleControllerE2ETest {
                 .get("/api/v1/medicines/" + medicineId + "/schedules/" + scheduleId)
                 .then()
                 .statusCode(200)
-                .body("dosage", is("1정"));
+                .body("dosage", is("1정"))
+                .body("scheduledTime", is("08:00:00"));
     }
 
     @Test
@@ -194,9 +275,11 @@ class MedicationScheduleControllerE2ETest {
     void create_forbidden() {
         // given
         final String ownerToken = loginAsNewUser("소유자");
+        setDefaultMealTimes(ownerToken);
         final Integer medicineId = createMedicine(ownerToken, "소유자약", 10, 5);
 
         final String otherToken = loginAsNewUser("다른유저");
+        setDefaultMealTimes(otherToken);
 
         // when & then
         RestAssured.given()
@@ -204,7 +287,7 @@ class MedicationScheduleControllerE2ETest {
                 .header("Authorization", "Bearer " + otherToken)
                 .body("""
                         {
-                            "scheduledTime": "08:00",
+                            "mealSlot": "BREAKFAST",
                             "dosage": "1정"
                         }
                         """)
@@ -232,6 +315,32 @@ class MedicationScheduleControllerE2ETest {
                 .path("accessToken");
     }
 
+    private void setDefaultMealTimes(final String token) {
+        setMealTimes(token, "08:00:00", "12:30:00", "18:30:00");
+    }
+
+    private void setMealTimes(
+            final String token,
+            final String breakfast,
+            final String lunch,
+            final String dinner
+    ) {
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + token)
+                .body("""
+                        {
+                            "breakfast": "%s",
+                            "lunch": "%s",
+                            "dinner": "%s"
+                        }
+                        """.formatted(breakfast, lunch, dinner))
+                .when()
+                .put("/api/v1/users/me/meal-times")
+                .then()
+                .statusCode(200);
+    }
+
     private Integer createMedicine(final String token, final String name,
             final int totalAmount, final int remainingAmount) {
         final Long userId = readUserId(token);
@@ -255,7 +364,7 @@ class MedicationScheduleControllerE2ETest {
     private Integer createSchedule(
             final String token,
             final Integer medicineId,
-            final String time,
+            final String mealSlot,
             final String dosage
     ) {
         return RestAssured.given()
@@ -263,10 +372,10 @@ class MedicationScheduleControllerE2ETest {
                 .header("Authorization", "Bearer " + token)
                 .body("""
                         {
-                            "scheduledTime": "%s",
+                            "mealSlot": "%s",
                             "dosage": "%s"
                         }
-                        """.formatted(time, dosage))
+                        """.formatted(mealSlot, dosage))
                 .when()
                 .post("/api/v1/medicines/" + medicineId + "/schedules")
                 .then()
