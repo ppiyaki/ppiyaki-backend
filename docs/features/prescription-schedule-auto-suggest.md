@@ -1,11 +1,11 @@
 ---
 feature: 처방전 confirm 시 복약 일정 자동 제안 (시간대 Phase 3)
 slug: prescription-schedule-auto-suggest
-status: draft
+status: done
 owner: @goohong
 scope: prescription
 related_issues: []
-related_prs: []
+related_prs: [#228, #229]
 last_reviewed: 2026-05-07
 ---
 
@@ -30,19 +30,19 @@ last_reviewed: 2026-05-07
 
 ## 3) 요구사항
 ### 기능 요구사항
-- [ ] `OpenAiClient.ExtractedMedicine`에 `mealSlots: List<MealSlot>` 필드 추가, 시스템 프롬프트에 슬롯 매핑 규칙 추가
-- [ ] LLM 응답 파싱: `mealSlots`가 누락/null이면 빈 리스트로 처리. 잘못된 enum 값(예: "BEDTIME")은 필터링
-- [ ] `PrescriptionMedicineCandidate`에 `suggested_meal_slots`, `confirmed_meal_slots` (둘 다 VARCHAR CSV, nullable) 컬럼 신설
-- [ ] OCR 처리(`PrescriptionService.processAndCreate`)에서 LLM `mealSlots`를 `suggestedMealSlots`로 저장
-- [ ] `PrescriptionMedicineCandidateResponse`에 `suggestedMealSlots`, `confirmedMealSlots` 노출
-- [ ] `PATCH /api/v1/prescriptions/{id}/medicines/{candidateId}` 본문에 `confirmedMealSlots: List<MealSlot>` 추가 (선택, 기존 결정 갱신과 별도 갱신 가능)
-- [ ] `POST /api/v1/prescriptions/{id}/confirm`: ACCEPTED/MANUALLY_CORRECTED candidate 중 `confirmedMealSlots`가 비어있지 않으면 슬롯별로 `MedicationSchedule` 자동 생성 (dosage는 candidate `extractedDosage` 사용, daysOfWeek=`DAILY`, startDate=오늘, endDate=null)
-- [ ] confirm 시 시니어 mealTimes의 해당 슬롯이 null이면 400 `MEAL_TIMES_NOT_SET`로 거절 (기존 `MedicationScheduleService.create` 검증 재사용)
-- [ ] confirm 호출의 멱등성: 동일 candidate 재confirm 시 `created_medicine_id`가 이미 있으면 schedule 중복 생성 방지 (Medicine 1건당 schedule N건 제한 — schedule도 동일 (medicineId, mealSlot) 중복 방지)
-- [ ] 도메인 문서 §4 유비쿼터스 랭귀지에 "제안 슬롯 / 확정 슬롯" 등재
-- [ ] 도메인 문서 §5 `prescription_medicine_candidates` 컬럼 추가
-- [ ] `schema.sql` 동기화 + prod 마이그레이션 SQL
-- [ ] Notion API 명세: candidate 응답·PATCH 본문·confirm 동작 변경
+- [x] `OpenAiClient.ExtractedMedicine`에 `mealSlots: List<MealSlot>` 필드 추가, 시스템 프롬프트에 슬롯 매핑 규칙 추가 (PR #229)
+- [x] LLM 응답 파싱: `mealSlots`가 누락/null이면 빈 리스트로 처리. 잘못된 enum 값(예: "BEDTIME")은 필터링 (PR #229)
+- [x] `PrescriptionMedicineCandidate`에 `suggested_meal_slots`, `confirmed_meal_slots` (둘 다 VARCHAR CSV, nullable) 컬럼 신설 (PR #229)
+- [x] OCR 처리(`PrescriptionService.processAndCreate`)에서 LLM `mealSlots`를 `suggestedMealSlots`로 저장 (PR #229)
+- [x] `PrescriptionMedicineCandidateResponse`에 `suggestedMealSlots`, `confirmedMealSlots` 노출 (PR #229)
+- [x] `PATCH /api/v1/prescriptions/{id}/medicines/{candidateId}` 본문에 `confirmedMealSlots: List<MealSlot>` 추가 (선택, 기존 결정 갱신과 별도 갱신 가능) (PR #229)
+- [x] `POST /api/v1/prescriptions/{id}/confirm`: ACCEPTED/MANUALLY_CORRECTED candidate 중 `confirmedMealSlots`가 비어있지 않으면 슬롯별로 `MedicationSchedule` 자동 생성 (dosage는 candidate `extractedDosage` 사용, daysOfWeek=`DAILY`, startDate=오늘, endDate=null) (PR #230)
+- [x] confirm 시 시니어 mealTimes의 해당 슬롯이 null이면 400 `MEAL_TIMES_NOT_SET`로 거절 — 트랜잭션 변경 시작 전 사전 검증으로 구현(전체 롤백). `MedicationScheduleService.create` 검증과 동일 의미. (PR #230)
+- [x] confirm 호출의 멱등성: 동일 candidate 재confirm 시 `created_medicine_id`가 이미 있으면 Medicine·schedule 중복 생성 방지 (PR #230). (medicineId, mealSlot) UNIQUE 인덱스는 본 spec 외 follow-up
+- [x] 도메인 문서 §4 유비쿼터스 랭귀지에 "제안 슬롯 / 확정 슬롯" 등재 (PR #229)
+- [x] 도메인 문서 §5 `prescription_medicine_candidates` 컬럼 추가 (PR #229)
+- [x] `schema.sql` 동기화 + prod 마이그레이션 SQL — `prescription_medicine_candidates`는 `clova.ocr.secret` ConditionalOnProperty로 schema.sql에서 제외되므로 DDL은 prod 마이그레이션 SQL로만 관리 (§5-5)
+- [x] Notion API 명세: candidate 응답·PATCH 본문·confirm 동작 변경 — 사용자 사이클 안에서 동기화
 
 ### 비기능 요구사항
 - **성능**: confirm은 ACCEPTED candidate × 슬롯 수만큼 schedule INSERT. 평균 3종 약 × 평균 2슬롯 = 6 INSERT. 추가 비용 미미.
@@ -181,9 +181,9 @@ ALTER TABLE prescription_medicine_candidates
 | `test/.../PrescriptionServiceTest.java` 또는 `PrescriptionControllerE2ETest.java` | confirm 시 schedule 자동 생성 검증, mealTimes 미설정 400 |
 
 ## 6) 작업 분할 (예상 PR 리스트)
-- [ ] PR 1 (`docs(prescription)`): 본 spec
-- [ ] PR 2 (`feat(prescription)`): LLM 프롬프트 + candidate 컬럼 + suggestedMealSlots 응답 노출 + PATCH 갱신
-- [ ] PR 3 (`feat(prescription)`): confirm 시 schedule 자동 생성 + 멱등 보장 + E2E
+- [x] PR 1 (`docs(prescription)`): 본 spec — PR #228
+- [x] PR 2 (`feat(prescription)`): LLM 프롬프트 + candidate 컬럼 + suggestedMealSlots 응답 노출 + PATCH 갱신 — PR #229
+- [x] PR 3 (`feat(prescription)`): confirm 시 schedule 자동 생성 + 멱등 보장 + E2E — PR #230
 
 PR 2/3 분리 이유: PR 2는 prod 동작 변경 없이 데이터/응답만 확장 (사용자 기존 흐름 유지). PR 3는 confirm 동작 변경(schedule 자동 생성). 각각 독립 검증 가능.
 
