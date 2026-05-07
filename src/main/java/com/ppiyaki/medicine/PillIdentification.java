@@ -63,13 +63,13 @@ public class PillIdentification {
     @Column(name = "line_back", length = 32)
     private String lineBack;
 
-    @Column(name = "leng_long", length = 16)
+    @Column(name = "leng_long", length = 32)
     private String lengLong;
 
-    @Column(name = "leng_short", length = 16)
+    @Column(name = "leng_short", length = 32)
     private String lengShort;
 
-    @Column(name = "thick", length = 16)
+    @Column(name = "thick", length = 32)
     private String thick;
 
     @Column(name = "chart", columnDefinition = "TEXT")
@@ -93,13 +93,13 @@ public class PillIdentification {
     @Column(name = "mark_code_back", length = 64)
     private String markCodeBack;
 
-    @Column(name = "edi_code", length = 32)
+    @Column(name = "edi_code", length = 255)
     private String ediCode;
 
     @Column(name = "bizrno", length = 32)
     private String bizrno;
 
-    @Column(name = "change_date", length = 20)
+    @Column(name = "change_date", length = 32)
     private String changeDate;
 
     @Column(name = "synced_at", nullable = false)

@@ -24,6 +24,8 @@ public enum ErrorCode {
 
     // Medicine
     MEDICINE_NOT_FOUND(HttpStatus.NOT_FOUND, "MEDICINE_001", "Medicine not found"),
+    PILL_SYNC_IN_PROGRESS(HttpStatus.CONFLICT, "MEDICINE_002",
+            "Pill identification sync already in progress"),
 
     // Medication Schedule
     SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SCHEDULE_001", "Schedule not found"),
