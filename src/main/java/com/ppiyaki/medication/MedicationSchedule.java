@@ -29,7 +29,7 @@ public class MedicationSchedule extends CreatedTimeEntity {
     private Long medicineId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "meal_slot", nullable = false)
+    @Column(name = "meal_slot", nullable = false, length = 16)
     private MealSlot mealSlot;
 
     @Column(name = "dosage")

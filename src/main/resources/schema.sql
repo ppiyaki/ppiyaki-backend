@@ -85,7 +85,7 @@
         medicine_id bigint,
         days_of_week varchar(255),
         dosage varchar(255),
-        meal_slot varchar(255) not null,
+        meal_slot varchar(16) not null,
         primary key (id)
     ) engine=InnoDB;
 

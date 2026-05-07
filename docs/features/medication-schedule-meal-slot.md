@@ -1,11 +1,11 @@
 ---
 feature: 복약 일정 식사 슬롯 모델
 slug: medication-schedule-meal-slot
-status: draft
+status: done
 owner: @goohong
 scope: medication
 related_issues: [#225]
-related_prs: []
+related_prs: [#225]
 last_reviewed: 2026-05-07
 ---
 
@@ -25,21 +25,21 @@ last_reviewed: 2026-05-07
 
 ## 3) 요구사항
 ### 기능 요구사항
-- [ ] `MealSlot` enum 추가: `BREAKFAST` / `LUNCH` / `DINNER`
-- [ ] `MedicationSchedule.scheduled_time` 컬럼 제거, `meal_slot VARCHAR NOT NULL` 컬럼 추가 (Java enum + AttributeConverter 또는 EnumType.STRING)
-- [ ] `ScheduleCreateRequest`/`ScheduleUpdateRequest`: `scheduledTime LocalTime` → `mealSlot MealSlot` 치환. 검증: `@NotNull MealSlot`, jackson enum binding으로 잘못된 값 시 400
-- [ ] `ScheduleResponse`: `mealSlot` + 동적 계산된 `scheduledTime` 둘 다 포함. service 레이어에서 owner의 mealTimes 한 번 join해 매핑
-- [ ] `POST /api/v1/medicines/{medicineId}/schedules`: 시니어(=`medicine.owner_id`)의 해당 슬롯 mealTime이 NULL이면 `MEAL_TIMES_NOT_SET` 400
-- [ ] `PATCH /api/v1/medicines/{medicineId}/schedules/{scheduleId}`: 동일 검증
-- [ ] `MedicationScheduleRepository.findActiveByOwnerAndScheduledTime` → `findActiveByOwnerAndMealSlot`으로 변경. medication-log-phase2 약 개수 검증 흐름 갱신
-- [ ] MCP tool `get_today_medication_schedule`: `scheduledTime` → 시니어 mealTimes로 동적 변환해 반환 (LLM 응답 포맷 유지)
-- [ ] 기존 `medication_schedules` 데이터 전부 DROP (마이그레이션 SQL에 포함)
-- [ ] `ErrorCode.MEAL_TIMES_NOT_SET` 추가: HTTP 400, code `USER_002`
-- [ ] 도메인 문서 §4 유비쿼터스 랭귀지에 `식사 슬롯 / Meal Slot` 등재
-- [ ] 도메인 문서 §5 `medication_schedules` 갱신 (scheduled_time 제거, meal_slot 추가)
-- [ ] 도메인 문서 §6 ERD 갱신
-- [ ] `schema.sql` 동기화
-- [ ] Notion API 명세 동기화: schedule POST/PATCH/GET 응답 변경
+- [x] `MealSlot` enum 추가: `BREAKFAST` / `LUNCH` / `DINNER`
+- [x] `MedicationSchedule.scheduled_time` 컬럼 제거, `meal_slot VARCHAR NOT NULL` 컬럼 추가 (Java enum + AttributeConverter 또는 EnumType.STRING)
+- [x] `ScheduleCreateRequest`/`ScheduleUpdateRequest`: `scheduledTime LocalTime` → `mealSlot MealSlot` 치환. 검증: `@NotNull MealSlot`, jackson enum binding으로 잘못된 값 시 400
+- [x] `ScheduleResponse`: `mealSlot` + 동적 계산된 `scheduledTime` 둘 다 포함. service 레이어에서 owner의 mealTimes 한 번 join해 매핑
+- [x] `POST /api/v1/medicines/{medicineId}/schedules`: 시니어(=`medicine.owner_id`)의 해당 슬롯 mealTime이 NULL이면 `MEAL_TIMES_NOT_SET` 400
+- [x] `PATCH /api/v1/medicines/{medicineId}/schedules/{scheduleId}`: 동일 검증
+- [x] `MedicationScheduleRepository.findActiveByOwnerAndScheduledTime` → `findActiveByOwnerAndMealSlot`으로 변경. medication-log-phase2 약 개수 검증 흐름 갱신
+- [x] MCP tool `get_today_medication_schedule`: `scheduledTime` → 시니어 mealTimes로 동적 변환해 반환 (LLM 응답 포맷 유지)
+- [x] 기존 `medication_schedules` 데이터 전부 DROP (마이그레이션 SQL에 포함)
+- [x] `ErrorCode.MEAL_TIMES_NOT_SET` 추가: HTTP 400, code `USER_002`
+- [x] 도메인 문서 §4 유비쿼터스 랭귀지에 `식사 슬롯 / Meal Slot` 등재
+- [x] 도메인 문서 §5 `medication_schedules` 갱신 (scheduled_time 제거, meal_slot 추가)
+- [x] 도메인 문서 §6 ERD 갱신
+- [x] `schema.sql` 동기화
+- [x] Notion API 명세 동기화: schedule POST/PATCH/GET 응답 변경
 
 ### 비기능 요구사항
 - **성능**: schedule 조회 시 owner의 mealTimes를 가져오기 위한 join 1회 추가. medicine→user 1-hop이라 비용 작음. n+1 방지 위해 service 레이어에서 owner 1회 fetch 후 schedule 리스트 매핑.
@@ -196,7 +196,7 @@ ALTER TABLE medication_schedules
 ## 6) 작업 분할
 단일 PR `feat(medication)`로 진행. 컬럼 변경 + 모든 호출처 동시 갱신이 분리 시 빌드 깨짐.
 
-- [ ] PR `feat(medication)`:
+- [x] PR #225 `feat(medication)`:
   - `MealSlot` enum 신규
   - 엔티티/repository/service/controller/DTO 변경
   - MCP tool 갱신
