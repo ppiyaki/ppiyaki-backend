@@ -23,16 +23,25 @@ public class JwtProvider {
     }
 
     public String createAccessToken(final Long userId) {
-        return createToken(userId, accessTokenExpiry);
+        return createToken(userId, null, accessTokenExpiry);
+    }
+
+    public String createAccessToken(final Long userId, final String role) {
+        return createToken(userId, role, accessTokenExpiry);
     }
 
     public String createRefreshToken(final Long userId) {
-        return createToken(userId, refreshTokenExpiry);
+        return createToken(userId, null, refreshTokenExpiry);
     }
 
     public Long extractUserId(final String token) {
         final Claims claims = parseClaims(token);
         return claims.get("userId", Long.class);
+    }
+
+    public String extractRole(final String token) {
+        final Claims claims = parseClaims(token);
+        return claims.get("role", String.class);
     }
 
     public boolean isValid(final String token) {
@@ -44,16 +53,21 @@ public class JwtProvider {
         }
     }
 
-    private String createToken(final Long userId, final long expiryMillis) {
+    private String createToken(final Long userId, final String role, final long expiryMillis) {
         final Date now = new Date();
         final Date expiry = new Date(now.getTime() + expiryMillis);
 
-        return Jwts.builder()
+        final var builder = Jwts.builder()
                 .claim("userId", userId)
                 .issuedAt(now)
                 .expiration(expiry)
-                .signWith(secretKey)
-                .compact();
+                .signWith(secretKey);
+
+        if (role != null) {
+            builder.claim("role", role);
+        }
+
+        return builder.compact();
     }
 
     private Claims parseClaims(final String token) {

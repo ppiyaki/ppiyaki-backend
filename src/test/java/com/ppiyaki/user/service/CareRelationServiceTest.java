@@ -20,9 +20,9 @@ import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.InviteCodeRepository;
+import com.ppiyaki.user.repository.RefreshTokenRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,6 +39,9 @@ class CareRelationServiceTest {
 
     @Mock
     private InviteCodeRepository inviteCodeRepository;
+
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
 
     @Mock
     private UserRepository userRepository;
@@ -100,8 +103,13 @@ class CareRelationServiceTest {
         // given
         final InviteCode.InviteCodeWithRaw inviteCodeWithRaw = InviteCode.create(2L, LocalDateTime.now());
         final String rawCode = inviteCodeWithRaw.rawCode();
-        given(inviteCodeRepository.findAll()).willReturn(List.of(inviteCodeWithRaw.inviteCode()));
-        given(jwtProvider.createAccessToken(2L)).willReturn("access-token");
+        final String codeHash = InviteCode.sha256(rawCode);
+        given(inviteCodeRepository.findByCodeHashAndUsedAtIsNull(codeHash))
+                .willReturn(java.util.Optional.of(inviteCodeWithRaw.inviteCode()));
+
+        final User senior = mockUser(2L, UserRole.SENIOR);
+        given(userRepository.findById(2L)).willReturn(java.util.Optional.of(senior));
+        given(jwtProvider.createAccessToken(2L, "SENIOR")).willReturn("access-token");
         given(jwtProvider.createRefreshToken(2L)).willReturn("refresh-token");
 
         // when
@@ -118,7 +126,9 @@ class CareRelationServiceTest {
     @DisplayName("존재하지 않는 코드로 로그인 시도하면 CARE_RELATION_INVITE_INVALID 에러")
     void codeLogin_invalidCode_throws() {
         // given
-        given(inviteCodeRepository.findAll()).willReturn(List.of());
+        final String codeHash = InviteCode.sha256("BADCOD");
+        given(inviteCodeRepository.findByCodeHashAndUsedAtIsNull(codeHash))
+                .willReturn(java.util.Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> careRelationService.codeLogin("BADCOD", "127.0.0.1"))
@@ -137,7 +147,9 @@ class CareRelationServiceTest {
         final InviteCode.InviteCodeWithRaw inviteCodeWithRaw = InviteCode.create(
                 2L, LocalDateTime.now().minusMinutes(10));
         final String rawCode = inviteCodeWithRaw.rawCode();
-        given(inviteCodeRepository.findAll()).willReturn(List.of(inviteCodeWithRaw.inviteCode()));
+        final String codeHash = InviteCode.sha256(rawCode);
+        given(inviteCodeRepository.findByCodeHashAndUsedAtIsNull(codeHash))
+                .willReturn(java.util.Optional.of(inviteCodeWithRaw.inviteCode()));
 
         // when & then
         assertThatThrownBy(() -> careRelationService.codeLogin(rawCode, "127.0.0.1"))
@@ -163,7 +175,7 @@ class CareRelationServiceTest {
                     final BusinessException be = (BusinessException) exception;
                     assertThat(be.getErrorCode()).isEqualTo(ErrorCode.RATE_LIMIT_EXCEEDED);
                 });
-        verify(inviteCodeRepository, org.mockito.Mockito.never()).findAll();
+        verify(inviteCodeRepository, org.mockito.Mockito.never()).findByCodeHashAndUsedAtIsNull(any());
     }
 
     private User mockUser(final Long id, final UserRole role) {

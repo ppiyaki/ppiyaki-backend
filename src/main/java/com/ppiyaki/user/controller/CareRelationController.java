@@ -10,6 +10,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,5 +46,14 @@ public class CareRelationController {
         final LoginResponse loginResponse = careRelationService.codeLogin(
                 codeLoginRequest.code(), clientIp);
         return ResponseEntity.ok(loginResponse);
+    }
+
+    @DeleteMapping("/seniors/{seniorId}/logout")
+    public ResponseEntity<Void> forceLogoutSenior(
+            @AuthenticationPrincipal final Long userId,
+            @PathVariable final Long seniorId
+    ) {
+        careRelationService.forceLogoutSenior(userId, seniorId);
+        return ResponseEntity.noContent().build();
     }
 }
