@@ -2,6 +2,7 @@ package com.ppiyaki.chat.service;
 
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
@@ -29,6 +30,7 @@ public class ChatSessionService {
 
         chatStreamExecutor.execute(() -> {
             final Disposable subscription = chatClient.prompt(new Prompt(promptMessages))
+                    .toolContext(Map.of("userId", userId))
                     .stream()
                     .content()
                     .doOnNext(token -> {
@@ -73,6 +75,7 @@ public class ChatSessionService {
 
         chatStreamExecutor.execute(() -> {
             final Disposable subscription = chatClient.prompt(new Prompt(promptMessages))
+                    .toolContext(Map.of("userId", userId))
                     .stream()
                     .content()
                     .doOnNext(token -> {
