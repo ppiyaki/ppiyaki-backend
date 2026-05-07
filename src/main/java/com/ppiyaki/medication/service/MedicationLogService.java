@@ -121,7 +121,7 @@ public class MedicationLogService {
     }
 
     /**
-     * 동일 시각 schedule들의 dosage 합 vs Vision 추출 개수 비교.
+     * 동일 식사 슬롯 schedule들의 dosage 합 vs Vision 추출 개수 비교.
      * spec medication-log-phase2 §5-4.
      */
     private LogAiStatus verifyPillCount(
@@ -130,8 +130,8 @@ public class MedicationLogService {
             final MedicationLogUpsertRequest request
     ) {
         final List<MedicationSchedule> schedules = medicationScheduleRepository
-                .findActiveByOwnerAndScheduledTime(
-                        seniorId, request.targetDate(), triggerSchedule.getScheduledTime());
+                .findActiveByOwnerAndMealSlot(
+                        seniorId, request.targetDate(), triggerSchedule.getMealSlot());
 
         int expected = 0;
         for (final MedicationSchedule s : schedules) {

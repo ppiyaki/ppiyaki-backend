@@ -64,7 +64,8 @@
 | OCR 원문 | Extracted Text | Clova OCR이 추출한 텍스트(구조화 전) |
 | 파싱 결과 | Parsed Result | LLM이 OCR 원문을 구조화한 약물 목록(JSON) |
 | 약물 | Medicine | 처방전에서 파생되거나 수동 등록된 복용 대상 |
-| 복약 일정 | Medication Schedule | 특정 약물을 언제 복용할지(`scheduled_time`, `dosage`) |
+| 복약 일정 | Medication Schedule | 특정 약물을 어떤 식사 슬롯에 복용할지(`meal_slot`, `dosage`). 실제 시각은 시니어 mealTimes로 동적 계산 |
+| 식사 슬롯 | Meal Slot | 복약 일정이 묶이는 식사 단위. `BREAKFAST`/`LUNCH`/`DINNER`. 실제 시각은 시니어의 `breakfast_time`/`lunch_time`/`dinner_time`을 매번 참조 |
 | 복약 기록 | Medication Log | 실제 복용 이행 여부 기록 (`status`, `ai_status`) |
 | 복약 상태 | Log Status | 복약 기록의 사용자 확정 상태. `TAKEN` / `MISSED` / `PENDING`. `medication_logs.status`에 enum 매핑 |
 | AI 검증 상태 | Log AI Status | 복약 인증 사진 약 개수 AI 검증 결과. `COUNT_MATCH` / `COUNT_MISMATCH` / `COUNT_UNKNOWN` / `COUNT_FAILED`. `medication_logs.ai_status`에 enum 매핑 (Phase 2). 사진 + status=TAKEN일 때만 채워짐 |
@@ -206,20 +207,20 @@ OCR + LLM 파싱으로 추출된 약물 후보. 처방전 1건당 N행. 보호�
 > **코드 갭**: `item_seq` 컬럼 추가 필요. 추적: §7-A 항목 추가.
 
 ### medication_schedules (target: `@Table(name = "medication_schedules")`, extends `CreatedTimeEntity`)
-복약 일정. `medicine` 1건당 시간대별 N행.
+복약 일정. `medicine` 1건당 식사 슬롯별 N행.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
 | medicine_id | bigint | `medicines.id` 참조 |
-| scheduled_time | time (`LocalTime`) | 복용 시각 |
+| meal_slot | varchar | DB는 varchar, Java는 `MealSlot` enum(`BREAKFAST`/`LUNCH`/`DINNER`). NOT NULL. 실제 시각은 시니어 mealTimes로 동적 계산 |
 | dosage | varchar | 1회 복용량 (예: `1정`) |
 | days_of_week | varchar | 요일 패턴 (예: `MON,TUE,WED,THU,FRI` 또는 `DAILY`). 7비트 마스크 대신 가독성 우선 |
 | start_date | date | 복약 시작일 |
 | end_date | date nullable | 복약 종료일. NULL이면 무기한 |
 | created_at | timestamp | `CreatedTimeEntity` |
 
-> **코드 갭 해소됨**: `days_of_week`, `start_date`, `end_date` 추가 완료 (#16). 현재 코드와 타깃 스키마 일치.
+> 시각 컬럼(`scheduled_time`)은 v0.9.0에서 제거되고 `meal_slot`으로 대체. 시니어 식사 시간 변경이 자동 반영되어 cascade 불필요. 자세한 내용은 `docs/features/medication-schedule-meal-slot.md`.
 
 ### medication_logs (`@Table(name = "medication_logs")`, extends `CreatedTimeEntity`)
 복약 이행 기록. 일자별 × 스케줄별 1행.
@@ -447,7 +448,7 @@ erDiagram
     medication_schedules {
         bigint id PK
         bigint medicine_id FK
-        time scheduled_time
+        varchar meal_slot "BREAKFAST/LUNCH/DINNER"
         varchar dosage
         varchar days_of_week
         date start_date

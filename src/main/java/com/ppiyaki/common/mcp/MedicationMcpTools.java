@@ -4,8 +4,11 @@ import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
+import com.ppiyaki.user.User;
+import com.ppiyaki.user.repository.UserRepository;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.ai.tool.annotation.Tool;
@@ -18,18 +21,25 @@ public class MedicationMcpTools {
 
     private final MedicineRepository medicineRepository;
     private final MedicationScheduleRepository scheduleRepository;
+    private final UserRepository userRepository;
 
     public MedicationMcpTools(
             final MedicineRepository medicineRepository,
-            final MedicationScheduleRepository scheduleRepository
+            final MedicationScheduleRepository scheduleRepository,
+            final UserRepository userRepository
     ) {
         this.medicineRepository = medicineRepository;
         this.scheduleRepository = scheduleRepository;
+        this.userRepository = userRepository;
     }
 
-    @Tool(description = "Get today's medication schedule for the user. Returns medicine names, scheduled times, and dosages for today.")
+    @Tool(description = "Get today's medication schedule for the user. Returns medicine names, scheduled times (resolved from the senior's meal times), and dosages for today.")
     public List<ScheduleSummary> getTodaySchedules() {
         final Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        final User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return List.of();
+        }
         final List<Medicine> medicines = medicineRepository.findByOwnerId(userId);
         final LocalDate today = LocalDate.now();
         final String todayDay = dayOfWeekToKorean(today.getDayOfWeek());
@@ -41,9 +51,10 @@ public class MedicationMcpTools {
                 if (!isActiveToday(schedule, today, todayDay)) {
                     continue;
                 }
+                final LocalTime resolved = schedule.getMealSlot().resolveTime(user);
                 result.add(new ScheduleSummary(
                         medicine.getName(),
-                        schedule.getScheduledTime() != null ? schedule.getScheduledTime().toString() : null,
+                        resolved != null ? resolved.toString() : null,
                         schedule.getDosage()
                 ));
             }
