@@ -5,22 +5,26 @@ status: in-review
 owner: @goohong
 scope: medication
 related_issues: []
-related_prs: [91]
-last_reviewed: 2026-04-11
+related_prs: [91, #225]
+last_reviewed: 2026-05-07
 ---
 
 # 복약 일정 등록/조회/수정/삭제
 
+> **v0.9.0 변경 (#225)**: `scheduledTime` (LocalTime) → `mealSlot` (BREAKFAST/LUNCH/DINNER) 모델 전환.
+> 절대 시각 대신 식사 슬롯을 저장하고, 응답 시 시니어의 mealTimes(Phase 1)를 join해 동적 시각을 함께 반환한다.
+> 모델 배경/결정 근거: `docs/features/medication-schedule-meal-slot.md`
+
 ## 1) 개요 (What / Why)
-- 약물(Medicine)에 대한 복약 일정(시간, 용량, 요일, 기간)을 등록·관리할 수 있도록 한다.
+- 약물(Medicine)에 대한 복약 일정(식사 슬롯, 용량, 요일, 기간)을 등록·관리할 수 있도록 한다.
 - 복약 일정은 알림(MedicationReminder), 복약 기록(MedicationLog)의 기반이 되므로 선행 구현이 필수이다.
-- 하나의 약물에 여러 시간대의 일정을 등록할 수 있다 (예: 아침 8시 1정, 저녁 8시 1정).
+- 하나의 약물에 여러 슬롯의 일정을 등록할 수 있다 (예: 아침 1정, 저녁 1정).
 
 ## 2) 사용자 시나리오
 
 ### SC-1: 시니어가 약물에 복약 일정 등록
 1. 시니어가 약 상세 화면에서 "일정 추가"를 탭한다.
-2. 복용 시각, 1회 복용량, 요일 패턴, 시작일을 입력한다.
+2. 식사 슬롯(아침/점심/저녁), 1회 복용량, 요일 패턴, 시작일을 입력한다.
 3. `POST /api/v1/medicines/{medicineId}/schedules`로 일정이 생성된다.
 
 ### SC-2: 시니어가 약물의 복약 일정 목록 확인
@@ -28,7 +32,7 @@ last_reviewed: 2026-04-11
 2. `GET /api/v1/medicines/{medicineId}/schedules`로 조회.
 
 ### SC-3: 시니어가 복약 일정 수정
-1. 복용 시각이나 용량을 변경한다.
+1. 식사 슬롯이나 용량을 변경한다.
 2. `PATCH /api/v1/medicines/{medicineId}/schedules/{scheduleId}`로 수정.
 
 ### SC-4: 시니어가 복약 일정 삭제
@@ -38,14 +42,16 @@ last_reviewed: 2026-04-11
 ## 3) 요구사항
 
 ### 기능 요구사항
-- [x] 약물에 복약 일정을 등록할 수 있다 (scheduledTime, dosage 필수)
+- [x] 약물에 복약 일정을 등록할 수 있다 (mealSlot, dosage 필수)
 - [x] 등록 시 medicineId가 존재하는지 검증
 - [x] 등록 시 해당 약물의 소유자(또는 연동된 보호자)인지 검증
+- [x] 시니어 mealTimes 미설정 상태에서 등록 시 400 (`MEAL_TIMES_NOT_SET` / `USER_002`)
 - [x] 약물별 복약 일정 목록 조회 (페이징 없이 전체 반환)
 - [x] 복약 일정 단건 상세 조회
-- [x] 복약 일정 수정 (scheduledTime, dosage, daysOfWeek, startDate, endDate)
+- [x] 복약 일정 수정 (mealSlot, dosage, daysOfWeek, startDate, endDate)
 - [x] 복약 일정 삭제
 - [x] 소유자 또는 연동된 보호자가 아닌 사용자의 접근 시 403 응답
+- [x] 응답에 `mealSlot`과 함께 시니어 mealTimes를 join한 동적 `scheduledTime` 포함
 
 ### 비기능 요구사항
 - daysOfWeek는 "MON,TUE,WED" 또는 "DAILY" 형식의 문자열
@@ -91,7 +97,7 @@ last_reviewed: 2026-04-11
 **ScheduleCreateRequest**
 ```json
 {
-  "scheduledTime": "08:00" (필수, HH:mm),
+  "mealSlot": "BREAKFAST" (필수, BREAKFAST/LUNCH/DINNER),
   "dosage": "1정" (필수),
   "daysOfWeek": "DAILY" (선택, 기본값 "DAILY"),
   "startDate": "2026-04-11" (선택, 기본값 오늘),
@@ -102,7 +108,7 @@ last_reviewed: 2026-04-11
 **ScheduleUpdateRequest**
 ```json
 {
-  "scheduledTime": "09:00" (선택),
+  "mealSlot": "LUNCH" (선택),
   "dosage": "2정" (선택),
   "daysOfWeek": "MON,WED,FRI" (선택),
   "startDate": "2026-04-15" (선택),
@@ -115,7 +121,8 @@ last_reviewed: 2026-04-11
 {
   "id": Long,
   "medicineId": Long,
-  "scheduledTime": "08:00",
+  "mealSlot": "BREAKFAST",
+  "scheduledTime": "08:00:00",
   "dosage": "1정",
   "daysOfWeek": "DAILY",
   "startDate": "2026-04-11",
@@ -123,6 +130,7 @@ last_reviewed: 2026-04-11
   "createdAt": LocalDateTime
 }
 ```
+> `scheduledTime`은 service 레이어에서 시니어의 `breakfastTime/lunchTime/dinnerTime` 중 슬롯에 해당하는 값을 매핑한 결과(읽기 전용 파생 필드).
 
 **ScheduleListResponse**
 ```json
@@ -147,7 +155,7 @@ Client → [Authorization: Bearer token]
 ```
 
 ### 5-5) DB 마이그레이션
-- 없음. `medication_schedules` 테이블과 `MedicationSchedule.java` 엔티티가 이미 타깃 스키마와 일치.
+- v0.9.0 (#225)에서 `scheduled_time` → `meal_slot` 컬럼 교체. 자세한 SQL은 `docs/features/medication-schedule-meal-slot.md §5-5`.
 
 ## 6) 작업 분할 (예상 PR 리스트)
 - [x] PR 1 (#91): `feat(medication)` MedicationScheduleService + MedicationScheduleController (CRUD 5개) + DTO + E2E 테스트
@@ -172,3 +180,4 @@ Client → [Authorization: Bearer token]
 - 2026-04-11: 초안 작성 (status=draft). 알림/복약 기록은 out-of-scope.
 - 2026-04-11: Q1 결정 — 소유자 검증은 medicine.ownerId를 통한 간접 검증. schedule 자체에 ownerId를 두지 않음.
 - 2026-04-11: Q2 결정 — URI는 중첩 방식(`/medicines/{medicineId}/schedules`). schedule은 medicine의 종속 리소스이므로 관계가 URL에 드러나는 게 RESTful.
+- 2026-05-07: v0.9.0 (#225) — `scheduledTime` (LocalTime) → `mealSlot` (BREAKFAST/LUNCH/DINNER) 모델 전환. 응답엔 시니어 mealTimes로 매핑된 동적 `scheduledTime` 포함. mealTimes 미설정 시 등록 400. 자세한 결정 로그는 `medication-schedule-meal-slot.md §9`.

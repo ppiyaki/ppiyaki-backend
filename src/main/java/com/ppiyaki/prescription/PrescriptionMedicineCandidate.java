@@ -1,6 +1,7 @@
 package com.ppiyaki.prescription;
 
 import com.ppiyaki.common.entity.CreatedTimeEntity;
+import com.ppiyaki.medication.MealSlot;
 import com.ppiyaki.medicine.service.MatchType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,6 +12,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -67,6 +69,12 @@ public class PrescriptionMedicineCandidate extends CreatedTimeEntity {
     @Column(name = "created_medicine_id")
     private Long createdMedicineId;
 
+    @Column(name = "suggested_meal_slots", length = 64)
+    private String suggestedMealSlots;
+
+    @Column(name = "confirmed_meal_slots", length = 64)
+    private String confirmedMealSlots;
+
     private static final String MANUAL_ADD_REASON = "보호자 수동 추가";
     private static final String MANUAL_ADD_RAW_TEXT = "보호자 수동 추가";
 
@@ -79,7 +87,8 @@ public class PrescriptionMedicineCandidate extends CreatedTimeEntity {
             final String matchedItemSeq,
             final String matchedItemName,
             final MatchType matchType,
-            final String matchReason
+            final String matchReason,
+            final List<MealSlot> suggestedMealSlots
     ) {
         this.prescriptionId = Objects.requireNonNull(prescriptionId, "prescriptionId must not be null");
         this.ocrRawText = ocrRawText;
@@ -91,6 +100,7 @@ public class PrescriptionMedicineCandidate extends CreatedTimeEntity {
         this.matchType = matchType;
         this.matchReason = matchReason;
         this.caregiverDecision = CaregiverDecision.PENDING;
+        this.suggestedMealSlots = MealSlot.toCsv(suggestedMealSlots);
     }
 
     public static PrescriptionMedicineCandidate manualAdd(
@@ -111,7 +121,8 @@ public class PrescriptionMedicineCandidate extends CreatedTimeEntity {
                 itemSeq,
                 itemName,
                 MatchType.EXACT,
-                MANUAL_ADD_REASON
+                MANUAL_ADD_REASON,
+                List.of()
         );
         candidate.caregiverDecision = CaregiverDecision.ACCEPTED;
         candidate.caregiverChosenItemSeq = itemSeq;
@@ -137,5 +148,17 @@ public class PrescriptionMedicineCandidate extends CreatedTimeEntity {
 
     public void linkMedicine(final Long medicineId) {
         this.createdMedicineId = medicineId;
+    }
+
+    public void updateConfirmedMealSlots(final List<MealSlot> slots) {
+        this.confirmedMealSlots = MealSlot.toCsv(slots);
+    }
+
+    public List<MealSlot> getSuggestedMealSlotsList() {
+        return MealSlot.parseCsv(this.suggestedMealSlots);
+    }
+
+    public List<MealSlot> getConfirmedMealSlotsList() {
+        return MealSlot.parseCsv(this.confirmedMealSlots);
     }
 }

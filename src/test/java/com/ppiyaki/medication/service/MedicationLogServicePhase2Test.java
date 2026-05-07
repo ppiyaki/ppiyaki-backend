@@ -12,6 +12,7 @@ import com.ppiyaki.common.storage.NcpStorageProperties;
 import com.ppiyaki.common.storage.PhotoUrlAssembler;
 import com.ppiyaki.medication.LogAiStatus;
 import com.ppiyaki.medication.LogStatus;
+import com.ppiyaki.medication.MealSlot;
 import com.ppiyaki.medication.MedicationLog;
 import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.controller.dto.MedicationLogUpsertRequest;
@@ -22,7 +23,6 @@ import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -65,7 +65,7 @@ class MedicationLogServicePhase2Test {
     private static final Long SCHEDULE_ID = 1L;
     private static final Long MEDICINE_ID = 10L;
     private static final LocalDate TARGET_DATE = LocalDate.of(2026, 4, 30);
-    private static final LocalTime SCHEDULED_TIME = LocalTime.of(8, 0);
+    private static final MealSlot MEAL_SLOT = MealSlot.BREAKFAST;
     private static final String VALID_OBJECT_KEY = "medication-log/100/9b3e7a1c-8d55-4f0a-b2e1-5f9a7b3d8c21.jpg";
 
     @Test
@@ -184,8 +184,8 @@ class MedicationLogServicePhase2Test {
     }
 
     private void givenSiblingSchedules(final List<MedicationSchedule> schedules) {
-        when(medicationScheduleRepository.findActiveByOwnerAndScheduledTime(
-                eq(SENIOR_ID), eq(TARGET_DATE), eq(SCHEDULED_TIME))).thenReturn(schedules);
+        when(medicationScheduleRepository.findActiveByOwnerAndMealSlot(
+                eq(SENIOR_ID), eq(TARGET_DATE), eq(MEAL_SLOT))).thenReturn(schedules);
     }
 
     private void givenUpsertSucceeds() {
@@ -219,7 +219,7 @@ class MedicationLogServicePhase2Test {
         setField(s, "id", id);
         setField(s, "medicineId", MEDICINE_ID);
         setField(s, "dosage", dosage);
-        setField(s, "scheduledTime", SCHEDULED_TIME);
+        setField(s, "mealSlot", MEAL_SLOT);
         return s;
     }
 
