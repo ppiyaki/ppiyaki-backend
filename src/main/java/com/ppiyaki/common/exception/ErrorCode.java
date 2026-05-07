@@ -46,7 +46,11 @@ public enum ErrorCode {
     CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_001", "Chat session not found"),
     CHAT_SESSION_EXPIRED(HttpStatus.GONE, "CHAT_002", "Chat session expired"),
     CHAT_SESSION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "CHAT_003", "Chat session access denied"),
-    CHAT_VOICE_FILE_EMPTY(HttpStatus.BAD_REQUEST, "CHAT_004", "Voice file is empty");
+    CHAT_VOICE_FILE_EMPTY(HttpStatus.BAD_REQUEST, "CHAT_004", "Voice file is empty"),
+    CHAT_PHOTO_FILE_EMPTY(HttpStatus.BAD_REQUEST, "CHAT_005", "Photo file is empty"),
+    CHAT_PHOTO_TYPE_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "CHAT_006",
+            "Photo file type not supported (jpeg/png/webp only)"),
+    CHAT_PHOTO_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "CHAT_007", "Photo file exceeds 10MB limit");
 
     private final HttpStatus status;
     private final String code;
