@@ -145,6 +145,9 @@
 
     create table users (
         dob date,
+        breakfast_time time(6),
+        lunch_time time(6),
+        dinner_time time(6),
         created_at datetime(6),
         id bigint not null auto_increment,
         pet bigint,
