@@ -217,7 +217,7 @@ class MedicineControllerE2ETest {
         final Long caregiverUserId = readUserId(caregiverToken);
         setUserRoleToCaregiver(caregiverUserId);
 
-        careRelationRepository.save(new CareRelation(seniorUserId, caregiverUserId, "INVITE-OK"));
+        careRelationRepository.save(CareRelation.createLinked(seniorUserId, caregiverUserId));
 
         // when & then: caregiver creates medicine for senior
         RestAssured.given()

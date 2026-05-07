@@ -242,7 +242,7 @@ class MedicationLogControllerE2ETest {
     }
 
     private void seedCareRelation(final Long seniorId, final Long caregiverId) {
-        careRelationRepository.save(new CareRelation(seniorId, caregiverId, "INVITE-" + seniorId + "-" + caregiverId));
+        careRelationRepository.save(CareRelation.createLinked(seniorId, caregiverId));
     }
 
     private Long seedMedicine(final Long ownerId) {
