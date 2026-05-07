@@ -200,6 +200,7 @@
         auth_provider enum ('INVITE_ONLY','KAKAO','LOCAL') not null,
         care_mode enum ('AUTONOMOUS','MANAGED') not null,
         gender enum ('FEMALE','MALE','OTHER','UNKNOWN'),
+        notification_mode enum ('BASIC_ALERT','INTENSIVE_CARE'),
         role enum ('CAREGIVER','SENIOR'),
         primary key (id)
     ) engine=InnoDB;
