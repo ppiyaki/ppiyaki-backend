@@ -6,7 +6,16 @@
         id bigint not null auto_increment,
         senior_id bigint,
         updated_at datetime(6),
-        invite_code varchar(255),
+        primary key (id)
+    ) engine=InnoDB;
+
+    create table invite_codes (
+        created_at datetime(6),
+        expires_at datetime(6) not null,
+        id bigint not null auto_increment,
+        senior_id bigint not null,
+        used_at datetime(6),
+        code_hash varchar(255) not null,
         primary key (id)
     ) engine=InnoDB;
 
@@ -155,13 +164,18 @@
         login_id varchar(255),
         nickname varchar(255),
         password varchar(255),
+        auth_provider enum ('INVITE_ONLY','KAKAO','LOCAL') not null,
         care_mode enum ('AUTONOMOUS','MANAGED') not null,
         gender enum ('FEMALE','MALE','OTHER','UNKNOWN'),
         role enum ('CAREGIVER','SENIOR'),
         primary key (id)
     ) engine=InnoDB;
 
-    alter table device_tokens 
+    create index idx_invite_codes_codehash_used on invite_codes (code_hash, used_at);
+    create index idx_invite_codes_senior_used on invite_codes (senior_id, used_at);
+    create index idx_invite_codes_expires on invite_codes (expires_at);
+
+    alter table device_tokens
        add constraint UK8se1i37nto56x9252rmrit8ib unique (token);
 
     alter table oauth_identities 
@@ -170,5 +184,5 @@
     alter table reports 
        add constraint uk_reports_senior_period unique (senior_id, period_type, period_start);
 
-    alter table users 
+    alter table users
        add constraint UKi3xs7wmfu2i3jt079uuetycit unique (login_id);

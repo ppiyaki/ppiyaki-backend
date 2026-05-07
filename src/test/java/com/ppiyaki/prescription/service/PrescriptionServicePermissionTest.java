@@ -18,6 +18,7 @@ import com.ppiyaki.prescription.PrescriptionStatus;
 import com.ppiyaki.prescription.controller.dto.PrescriptionMedicineAddRequest;
 import com.ppiyaki.prescription.repository.PrescriptionMedicineCandidateRepository;
 import com.ppiyaki.prescription.repository.PrescriptionRepository;
+import com.ppiyaki.user.AuthProvider;
 import com.ppiyaki.user.CareMode;
 import com.ppiyaki.user.CareRelation;
 import com.ppiyaki.user.Gender;
@@ -96,7 +97,7 @@ class PrescriptionServicePermissionTest {
         final Prescription prescription = givenPrescription(LocalDateTime.now());
         when(prescriptionRepository.findById(PRESCRIPTION_ID)).thenReturn(Optional.of(prescription));
         when(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(CAREGIVER_ID, SENIOR_ID))
-                .thenReturn(Optional.of(new CareRelation(SENIOR_ID, CAREGIVER_ID, "INVITE")));
+                .thenReturn(Optional.of(CareRelation.createLinked(SENIOR_ID, CAREGIVER_ID)));
         when(candidateRepository.findByPrescriptionId(PRESCRIPTION_ID)).thenReturn(List.of());
 
         // when & then
@@ -140,7 +141,7 @@ class PrescriptionServicePermissionTest {
         final Prescription prescription = givenPrescription(LocalDateTime.now());
         when(prescriptionRepository.findById(PRESCRIPTION_ID)).thenReturn(Optional.of(prescription));
         when(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(CAREGIVER_ID, SENIOR_ID))
-                .thenReturn(Optional.of(new CareRelation(SENIOR_ID, CAREGIVER_ID, "INVITE")));
+                .thenReturn(Optional.of(CareRelation.createLinked(SENIOR_ID, CAREGIVER_ID)));
         when(candidateRepository.findByPrescriptionId(PRESCRIPTION_ID)).thenReturn(List.of());
 
         // when & then
@@ -191,7 +192,7 @@ class PrescriptionServicePermissionTest {
 
     private User givenSenior(final CareMode careMode) throws Exception {
         final User user = new User(
-                "senior", "password", UserRole.SENIOR, "시니어",
+                "senior", "password", UserRole.SENIOR, AuthProvider.LOCAL, "시니어",
                 Gender.UNKNOWN, LocalDate.of(1950, 1, 1), null);
         setField(user, "id", SENIOR_ID);
         user.changeCareMode(careMode);

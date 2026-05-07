@@ -44,17 +44,32 @@ class MedicineControllerE2ETest {
 
     private String loginAsNewUser(final String nickname) {
         final String loginId = "testuser" + userSequence++;
+        final String password = "password1234!";
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "loginId": "%s",
+                            "password": "%s",
+                            "nickname": "%s"
+                        }
+                        """.formatted(loginId, password, nickname))
+                .when()
+                .post("/api/v1/auth/signup")
+                .then()
+                .statusCode(201);
+        // 회원가입 시 CAREGIVER로 생성되므로 시니어 테스트를 위해 role 변경 후 재로그인
+        jdbcTemplate.update("UPDATE users SET role = 'SENIOR' WHERE login_id = ?", loginId);
         return RestAssured.given()
                 .contentType(ContentType.JSON)
                 .body("""
                         {
                             "loginId": "%s",
-                            "password": "password1234!",
-                            "nickname": "%s"
+                            "password": "%s"
                         }
-                        """.formatted(loginId, nickname))
+                        """.formatted(loginId, password))
                 .when()
-                .post("/api/v1/auth/signup")
+                .post("/api/v1/auth/login")
                 .then()
                 .extract()
                 .path("accessToken");
@@ -214,7 +229,7 @@ class MedicineControllerE2ETest {
         final Long caregiverUserId = readUserId(caregiverToken);
         setUserRoleToCaregiver(caregiverUserId);
 
-        careRelationRepository.save(new CareRelation(seniorUserId, caregiverUserId, "INVITE-OK"));
+        careRelationRepository.save(CareRelation.createLinked(seniorUserId, caregiverUserId));
 
         // when & then: caregiver creates medicine for senior
         RestAssured.given()

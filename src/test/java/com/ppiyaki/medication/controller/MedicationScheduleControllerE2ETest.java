@@ -238,7 +238,7 @@ class MedicationScheduleControllerE2ETest {
         final String caregiverToken = loginAsNewUser("보호자");
         final Long caregiverUserId = readUserId(caregiverToken);
 
-        careRelationRepository.save(new CareRelation(seniorUserId, caregiverUserId, "INVITE"));
+        careRelationRepository.save(CareRelation.createLinked(seniorUserId, caregiverUserId));
 
         // when & then: caregiver create
         final Integer scheduleId = RestAssured.given()
