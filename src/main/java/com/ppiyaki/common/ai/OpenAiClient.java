@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.medication.MealSlot;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -98,7 +99,7 @@ public class OpenAiClient {
                     - 약물이 없으면 빈 배열 반환.
 
                     ## 출력 형식
-                    {"medicines": [{"name": "약물명", "manufacturer": "제약사명", "ingredientName": "성분명", "dosage": "용량", "schedule": "복약주기"}]}
+                    {"medicines": [{"name": "약물명", "manufacturer": "제약사명", "ingredientName": "성분명", "dosage": "용량", "schedule": "복약주기", "mealSlots": ["BREAKFAST","LUNCH","DINNER"]}]}
                     - name: 제품명+제형+용량. 제약사명과 괄호 안 내용은 **제외**.
                       예: "위더스세파클러캡슐250밀리그람" → name: "세파클러캡슐250밀리그람", manufacturer: "위더스"
                       예: "에빅사정(메만틴염산염)_(10mg/1정)" → name: "에빅사정10밀리그램"
@@ -110,6 +111,15 @@ public class OpenAiClient {
                       주의: "(10mg/1정)" 같은 용량 표기는 성분명이 아님. 성분명은 한글 화학명.
                     - dosage: 1회 투약량 (예: "1정", "0.5정", "2캡슐"). 모르면 null.
                     - schedule: 복약주기 (예: "1일 3회 식후 30분"). 모르면 null.
+                    - mealSlots: schedule을 식사 슬롯으로 매핑한 배열. 가능한 값은 "BREAKFAST", "LUNCH", "DINNER"만.
+                      매핑 규칙:
+                      * "1일 3회 식후/식전" → ["BREAKFAST","LUNCH","DINNER"]
+                      * "1일 2회 (아침/저녁 또는 식후)" → ["BREAKFAST","DINNER"]
+                      * "1일 1회 아침" → ["BREAKFAST"]
+                      * "1일 1회 점심/저녁" → ["LUNCH"] / ["DINNER"]
+                      * "취침 전", "공복", "필요시" 등 식사 무관/불명확 → 빈 배열 []
+                      * schedule이 null이거나 슬롯 판단 불가 → 빈 배열 []
+                      * 다른 enum 값(예: "BEDTIME") 추측 금지 — 빈 배열로.
                     - JSON만 반환. 다른 텍스트 없이.
                     """;
 
@@ -154,7 +164,8 @@ public class OpenAiClient {
                         item.path("manufacturer").asText(null),
                         item.path("ingredientName").asText(null),
                         item.path("dosage").asText(null),
-                        item.path("schedule").asText(null)
+                        item.path("schedule").asText(null),
+                        parseMealSlots(item.path("mealSlots"))
                 ));
             }
 
@@ -165,6 +176,28 @@ public class OpenAiClient {
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
                     "AI response parse failed: " + e.getMessage());
         }
+    }
+
+    /**
+     * LLM 응답의 mealSlots 배열을 MealSlot 리스트로 정규화.
+     * 누락/null/잘못된 enum 값은 빈 리스트로.
+     */
+    private static List<MealSlot> parseMealSlots(final JsonNode node) {
+        if (node == null || node.isMissingNode() || !node.isArray()) {
+            return List.of();
+        }
+        final List<MealSlot> slots = new ArrayList<>();
+        for (final JsonNode item : node) {
+            if (!item.isTextual()) {
+                continue;
+            }
+            try {
+                slots.add(MealSlot.valueOf(item.asText().trim()));
+            } catch (final IllegalArgumentException ignored) {
+                // 잘못된 enum 값은 무시
+            }
+        }
+        return slots;
     }
 
     /**
@@ -257,7 +290,8 @@ public class OpenAiClient {
             String manufacturer,
             String ingredientName,
             String dosage,
-            String schedule
+            String schedule,
+            List<MealSlot> mealSlots
     ) {
     }
 }
