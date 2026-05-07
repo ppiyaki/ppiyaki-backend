@@ -126,12 +126,12 @@ UserMeResponse.from(user)
 ### 5-5) DB 마이그레이션
 ```sql
 ALTER TABLE users
-    ADD COLUMN breakfast_time TIME NULL,
-    ADD COLUMN lunch_time TIME NULL,
-    ADD COLUMN dinner_time TIME NULL;
+    ADD COLUMN breakfast_time TIME(6) NULL,
+    ADD COLUMN lunch_time TIME(6) NULL,
+    ADD COLUMN dinner_time TIME(6) NULL;
 ```
 - prod NCP MySQL에 머지 직후 수동 실행 (보호 영역)
-- `src/main/resources/schema.sql`도 같은 PR에서 갱신
+- `src/main/resources/schema.sql`은 Hibernate가 생성한 `time(6)` 형식과 동일
 
 ## 6) 작업 분할
 단일 PR로 진행 (Phase 1 자체가 작은 범위).

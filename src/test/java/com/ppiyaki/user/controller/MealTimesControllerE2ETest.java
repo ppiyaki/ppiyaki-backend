@@ -1,5 +1,6 @@
 package com.ppiyaki.user.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -60,9 +61,9 @@ class MealTimesControllerE2ETest {
                 .body("mealTimes.dinner", is("18:30:00"));
 
         final User reloaded = userRepository.findById(user.userId()).orElseThrow();
-        assert reloaded.getBreakfastTime().equals(LocalTime.of(8, 0));
-        assert reloaded.getLunchTime().equals(LocalTime.of(12, 30));
-        assert reloaded.getDinnerTime().equals(LocalTime.of(18, 30));
+        assertThat(reloaded.getBreakfastTime()).isEqualTo(LocalTime.of(8, 0));
+        assertThat(reloaded.getLunchTime()).isEqualTo(LocalTime.of(12, 30));
+        assertThat(reloaded.getDinnerTime()).isEqualTo(LocalTime.of(18, 30));
     }
 
     @Test
