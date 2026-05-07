@@ -3,6 +3,7 @@ package com.ppiyaki.chat;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -44,6 +45,7 @@ class VoiceMessageE2ETest {
             final ChatClient.StreamResponseSpec streamResponseSpec = mock(ChatClient.StreamResponseSpec.class);
 
             when(chatClient.prompt(any(Prompt.class))).thenReturn(requestSpec);
+            when(requestSpec.toolContext(anyMap())).thenReturn(requestSpec);
             when(requestSpec.stream()).thenReturn(streamResponseSpec);
             when(streamResponseSpec.content())
                     .thenReturn(Flux.just("아스피린은 공복에 복용을 피하세요."));
