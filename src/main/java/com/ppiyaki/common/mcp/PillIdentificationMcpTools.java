@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
@@ -35,21 +36,30 @@ public class PillIdentificationMcpTools {
             Use this when the user sends a photo and you can extract the pill's visual features \
             but cannot determine the drug name from the image alone. \
             All parameters are optional — the more provided, the narrower the candidate set. \
-            Returns up to 10 candidates from the MFDS pill identification database.""")
-    public List<PillCandidate> identifyPillByAppearance(
+            Returns totalMatches (전체 매칭 수) + up to 10 candidates. \
+            If totalMatches > candidates.size(), the result was truncated — ask the user for more detail \
+            (clearer imprint photo or spoken letters).""")
+    public PillIdentifyResult identifyPillByAppearance(
             @ToolParam(description = "Front imprint text/symbol (예: 'T', 'AT500'). null if not visible.") final String printFront,
             @ToolParam(description = "Back imprint. null if not visible.") final String printBack,
             @ToolParam(description = "Shape (예: '원형', '장방형', '타원형', '삼각형', '사각형', '마름모형', '반원형'). null if uncertain.") final String drugShape,
             @ToolParam(description = "Primary color (예: '하양', '노랑', '빨강', '파랑', '초록', '주황', '분홍', '자주', '갈색', '검정'). null if uncertain.") final String colorClass1,
             @ToolParam(description = "Front split line ('+형', '-형'). null if none.") final String lineFront
     ) {
-        final List<PillIdentification> results = repository.findAll(
+        final Page<PillIdentification> page = repository.findAll(
                 PillIdentificationSpecifications.byAppearance(
                         printFront, printBack, drugShape, colorClass1, lineFront),
                 PageRequest.of(0, LIMIT)
-        ).getContent();
+        );
+        final List<PillCandidate> candidates = page.getContent().stream()
+                .map(PillCandidate::from).toList();
+        return new PillIdentifyResult(page.getTotalElements(), candidates);
+    }
 
-        return results.stream().map(PillCandidate::from).toList();
+    public record PillIdentifyResult(
+            long totalMatches,
+            List<PillCandidate> candidates
+    ) {
     }
 
     public record PillCandidate(

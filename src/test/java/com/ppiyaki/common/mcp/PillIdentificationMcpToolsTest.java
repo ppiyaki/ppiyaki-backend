@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import com.ppiyaki.common.mcp.PillIdentificationMcpTools.PillCandidate;
+import com.ppiyaki.common.mcp.PillIdentificationMcpTools.PillIdentifyResult;
 import com.ppiyaki.medicine.PillIdentification;
 import com.ppiyaki.medicine.repository.PillIdentificationRepository;
 import java.time.LocalDateTime;
@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -32,19 +33,34 @@ class PillIdentificationMcpToolsTest {
     private PillIdentificationMcpTools tools;
 
     @Test
-    @DisplayName("후보 다수 반환 — PillCandidate로 변환")
-    void identify_returnsCandidates() {
+    @DisplayName("totalMatches == candidates 수 → 후보 그대로 반환")
+    void identify_returnsCandidatesWithTotal() {
         final PillIdentification a = pill("ITEM-1", "타이레놀정500밀리그람");
         final PillIdentification b = pill("ITEM-2", "이부프로펜정");
         when(repository.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(a, b)));
+                .thenReturn(new PageImpl<>(List.of(a, b), PageRequest.of(0, 10), 2));
 
-        final List<PillCandidate> result = tools.identifyPillByAppearance(
+        final PillIdentifyResult result = tools.identifyPillByAppearance(
                 "T", null, "장방형", "하양", null);
 
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).itemSeq()).isEqualTo("ITEM-1");
-        assertThat(result.get(0).itemName()).isEqualTo("타이레놀정500밀리그람");
+        assertThat(result.totalMatches()).isEqualTo(2);
+        assertThat(result.candidates()).hasSize(2);
+        assertThat(result.candidates().get(0).itemName()).isEqualTo("타이레놀정500밀리그람");
+    }
+
+    @Test
+    @DisplayName("totalMatches > candidates 수 (잘림) → totalMatches로 follow-up 신호 전달")
+    void identify_truncated_signalsTotalMatches() {
+        final PillIdentification a = pill("ITEM-1", "장방형하양약A");
+        when(repository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(a), PageRequest.of(0, 10), 1866));
+
+        final PillIdentifyResult result = tools.identifyPillByAppearance(
+                null, null, "장방형", "하양", null);
+
+        assertThat(result.totalMatches()).isEqualTo(1866);
+        assertThat(result.candidates()).hasSize(1);
+        // LLM은 totalMatches > candidates.size()로 truncation 인지 → 사용자에게 follow-up
     }
 
     @Test
@@ -62,15 +78,16 @@ class PillIdentificationMcpToolsTest {
     }
 
     @Test
-    @DisplayName("0건 → 빈 리스트 (LLM follow-up 결정 위임)")
-    void identify_emptyReturnsEmpty() {
+    @DisplayName("0건 → totalMatches=0, candidates=[]")
+    void identify_emptyReturnsZero() {
         when(repository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(Page.empty());
 
-        final List<PillCandidate> result = tools.identifyPillByAppearance(
+        final PillIdentifyResult result = tools.identifyPillByAppearance(
                 "ZZ", null, null, null, null);
 
-        assertThat(result).isEmpty();
+        assertThat(result.totalMatches()).isEqualTo(0);
+        assertThat(result.candidates()).isEmpty();
     }
 
     private PillIdentification pill(final String seq, final String name) {
