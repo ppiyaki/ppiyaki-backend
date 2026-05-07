@@ -90,7 +90,7 @@ class MedicationLogServiceTest {
         // given
         givenScheduleAndMedicine();
         when(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(CAREGIVER_ID, SENIOR_ID))
-                .thenReturn(Optional.of(new CareRelation(SENIOR_ID, CAREGIVER_ID, "INVITE")));
+                .thenReturn(Optional.of(CareRelation.createLinked(SENIOR_ID, CAREGIVER_ID)));
         when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
                 .thenReturn(Optional.empty());
         when(medicationLogRepository.saveAndFlush(any(MedicationLog.class)))
@@ -271,7 +271,7 @@ class MedicationLogServiceTest {
     void 조회_보호자_권한_검증() {
         // given
         when(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(CAREGIVER_ID, SENIOR_ID))
-                .thenReturn(Optional.of(new CareRelation(SENIOR_ID, CAREGIVER_ID, "INVITE")));
+                .thenReturn(Optional.of(CareRelation.createLinked(SENIOR_ID, CAREGIVER_ID)));
         when(medicationLogRepository.findBySeniorIdAndTargetDateBetweenOrderByTargetDateAscIdAsc(
                 eq(SENIOR_ID), any(), any())).thenReturn(List.of());
 

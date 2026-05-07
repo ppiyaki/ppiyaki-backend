@@ -98,6 +98,7 @@ class UserMealTimesTest {
                 "loginid",
                 "password",
                 UserRole.SENIOR,
+                AuthProvider.INVITE_ONLY,
                 "테스트유저",
                 Gender.UNKNOWN,
                 LocalDate.of(1950, 1, 1),

@@ -3,38 +3,48 @@ package com.ppiyaki.user.service;
 import com.ppiyaki.common.auth.JwtProvider;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.user.CareRelation;
+import com.ppiyaki.common.ratelimit.RateLimiter;
+import com.ppiyaki.user.InviteCode;
+import com.ppiyaki.user.InviteCode.InviteCodeWithRaw;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
 import com.ppiyaki.user.repository.CareRelationRepository;
+import com.ppiyaki.user.repository.InviteCodeRepository;
+import com.ppiyaki.user.repository.RefreshTokenRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CareRelationService {
 
-    private static final int MAX_INVITE_CODE_RETRIES = 3;
-
     private final CareRelationRepository careRelationRepository;
+    private final InviteCodeRepository inviteCodeRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
     private final JwtProvider jwtProvider;
     private final AuthService authService;
+    private final RateLimiter rateLimiter;
 
     public CareRelationService(
             final CareRelationRepository careRelationRepository,
+            final InviteCodeRepository inviteCodeRepository,
+            final RefreshTokenRepository refreshTokenRepository,
             final UserRepository userRepository,
             final JwtProvider jwtProvider,
-            final AuthService authService
+            final AuthService authService,
+            final RateLimiter rateLimiter
     ) {
         this.careRelationRepository = careRelationRepository;
+        this.inviteCodeRepository = inviteCodeRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
         this.userRepository = userRepository;
         this.jwtProvider = jwtProvider;
         this.authService = authService;
+        this.rateLimiter = rateLimiter;
     }
 
     @Transactional
@@ -45,37 +55,53 @@ public class CareRelationService {
         careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(caregiverId, seniorId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
 
-        for (int attempt = 0; attempt < MAX_INVITE_CODE_RETRIES; attempt++) {
-            final CareRelation inviteRelation = CareRelation.createInviteForSenior(
-                    seniorId, caregiverId, LocalDateTime.now());
-            try {
-                careRelationRepository.saveAndFlush(inviteRelation);
-                return new InviteCodeResponse(inviteRelation.getInviteCode(), inviteRelation.getExpiresAt());
-            } catch (final DataIntegrityViolationException ignored) {
-                // invite_code 중복 — 재생성 시도
-            }
-        }
-        throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "Failed to generate unique invite code");
+        final InviteCodeWithRaw inviteCodeWithRaw = InviteCode.create(seniorId, LocalDateTime.now());
+        inviteCodeRepository.save(inviteCodeWithRaw.inviteCode());
+
+        return new InviteCodeResponse(inviteCodeWithRaw.rawCode(), inviteCodeWithRaw.inviteCode().getExpiresAt());
     }
 
     @Transactional
-    public LoginResponse codeLogin(final String code) {
-        final CareRelation careRelation = careRelationRepository
-                .findByInviteCodeAndDeletedAtIsNull(code)
-                .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_INVITE_INVALID));
+    public LoginResponse codeLogin(final String code, final String clientIp) {
+        final String rateLimitKey = "code-login:" + clientIp;
+        rateLimiter.checkAllowed(rateLimitKey);
 
-        if (careRelation.isExpired(LocalDateTime.now())) {
+        final String codeHash = InviteCode.sha256(code);
+        final InviteCode inviteCode = inviteCodeRepository.findByCodeHashAndUsedAtIsNull(codeHash)
+                .orElse(null);
+
+        if (inviteCode == null) {
+            rateLimiter.recordFailure(rateLimitKey);
             throw new BusinessException(ErrorCode.CARE_RELATION_INVITE_INVALID);
         }
 
-        final Long seniorId = careRelation.getSeniorId();
-        careRelation.consumeInviteCode();
+        final LocalDateTime now = LocalDateTime.now();
+        if (inviteCode.isExpired(now)) {
+            rateLimiter.recordFailure(rateLimitKey);
+            throw new BusinessException(ErrorCode.CARE_RELATION_INVITE_INVALID);
+        }
 
-        final String accessToken = jwtProvider.createAccessToken(seniorId);
+        inviteCode.markUsed(now);
+        rateLimiter.clearFailures(rateLimitKey);
+
+        final Long seniorId = inviteCode.getSeniorId();
+        final User senior = findUserById(seniorId);
+        final String accessToken = jwtProvider.createAccessToken(seniorId, senior.getRole().name());
         final String refreshToken = jwtProvider.createRefreshToken(seniorId);
         authService.saveRefreshTokenForUser(seniorId, refreshToken);
 
         return new LoginResponse(accessToken, refreshToken, true);
+    }
+
+    @Transactional
+    public void forceLogoutSenior(final Long caregiverId, final Long seniorId) {
+        final User caregiver = findUserById(caregiverId);
+        validateRole(caregiver, UserRole.CAREGIVER);
+
+        careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(caregiverId, seniorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
+
+        refreshTokenRepository.deleteByUserId(seniorId);
     }
 
     private User findUserById(final Long userId) {

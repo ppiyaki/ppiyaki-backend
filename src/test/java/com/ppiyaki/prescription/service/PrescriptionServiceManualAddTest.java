@@ -120,7 +120,7 @@ class PrescriptionServiceManualAddTest {
                 PrescriptionStatus.PENDING_REVIEW);
         when(prescriptionRepository.findById(prescriptionId)).thenReturn(Optional.of(prescription));
         when(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(caregiverId, seniorId))
-                .thenReturn(Optional.of(new CareRelation(seniorId, caregiverId, "INVITE")));
+                .thenReturn(Optional.of(CareRelation.createLinked(seniorId, caregiverId)));
         when(candidateRepository.findByPrescriptionId(prescriptionId)).thenReturn(List.of());
 
         final PrescriptionMedicineAddRequest request = new PrescriptionMedicineAddRequest(

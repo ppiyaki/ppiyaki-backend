@@ -25,6 +25,8 @@ class CareRelationControllerE2ETest {
     @BeforeEach
     void setUp() {
         RestAssured.port = port;
+        jdbcTemplate.update("DELETE FROM invite_codes WHERE senior_id IN "
+                + "(SELECT id FROM users WHERE nickname = '시니어코드E2E')");
         jdbcTemplate.update("DELETE FROM care_relations WHERE caregiver_id IN "
                 + "(SELECT id FROM users WHERE login_id = 'cg_code_e2e')");
         jdbcTemplate.update("DELETE FROM refresh_tokens WHERE user_id IN "
@@ -63,7 +65,7 @@ class CareRelationControllerE2ETest {
                 .contentType(ContentType.JSON)
                 .body("""
                         {
-                            "nickname": "��니어코드E2E",
+                            "nickname": "시니어코드E2E",
                             "dob": "1945-03-15"
                         }
                         """)
@@ -74,7 +76,7 @@ class CareRelationControllerE2ETest {
                 .extract()
                 .path("seniorId");
 
-        // when — 보호자��� 초대 코드 발급
+        // when — 보호자가 초대 코드 발급
         final String inviteCode = RestAssured.given()
                 .header("Authorization", "Bearer " + caregiverToken)
                 .contentType(ContentType.JSON)
