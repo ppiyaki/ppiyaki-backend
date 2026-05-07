@@ -168,6 +168,7 @@
         primary key (id)
     ) engine=InnoDB;
 
+    create index idx_invite_codes_codehash_used on invite_codes (code_hash, used_at);
     create index idx_invite_codes_senior_used on invite_codes (senior_id, used_at);
     create index idx_invite_codes_expires on invite_codes (expires_at);
 

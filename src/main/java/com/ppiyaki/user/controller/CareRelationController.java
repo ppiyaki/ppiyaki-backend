@@ -42,7 +42,7 @@ public class CareRelationController {
             @Valid @RequestBody final CodeLoginRequest codeLoginRequest,
             final HttpServletRequest request
     ) {
-        final String clientIp = request.getRemoteAddr();
+        final String clientIp = resolveClientIp(request);
         final LoginResponse loginResponse = careRelationService.codeLogin(
                 codeLoginRequest.code(), clientIp);
         return ResponseEntity.ok(loginResponse);
@@ -55,5 +55,17 @@ public class CareRelationController {
     ) {
         careRelationService.forceLogoutSenior(userId, seniorId);
         return ResponseEntity.noContent().build();
+    }
+
+    private String resolveClientIp(final HttpServletRequest request) {
+        final String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isBlank()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        final String xRealIp = request.getHeader("X-Real-IP");
+        if (xRealIp != null && !xRealIp.isBlank()) {
+            return xRealIp.trim();
+        }
+        return request.getRemoteAddr();
     }
 }

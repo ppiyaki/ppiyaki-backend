@@ -5,8 +5,8 @@ status: implementing
 owner: @qkrehgus02
 scope: user
 related_issues: [210]
-related_prs: [214, 217]
-last_reviewed: 2026-05-06
+related_prs: [214, 217, 227]
+last_reviewed: 2026-05-07
 ---
 
 # 보호자 기반 시니어 계정 대리 생성 및 코드 로그인
@@ -116,10 +116,10 @@ last_reviewed: 2026-05-06
 
 | # | 내용 | 우선순위 | 상태 |
 |---|---|---|---|
-| 3-1 | JWT access token claim에 role 추가 (DB 조회 없이 인가) | 중간 | 구현 예정 |
-| 3-2 | InviteCode hash를 SHA-256/HMAC으로 변경 (O(1) lookup) | 중간 | 구현 예정 |
-| 3-3 | 미사용 코드 정리 (AuthorizationService, SeniorDevice, 미사용 Repository 메서드) | 중간 | 구현 예정 |
-| 3-4 | 보호자가 시니어 강제 로그아웃 API (refresh token 삭제) | 중간 | 구현 예정 |
+| 3-1 | JWT access token claim에 role 추가 (DB 조회 없이 인가) | 중간 | ✅ 완료 |
+| 3-2 | InviteCode hash를 SHA-256으로 변경 (O(1) lookup) | 중간 | ✅ 완료 |
+| 3-3 | 미사용 코드 정리 (CareRelation 레거시 초대 코드 로직 제거) | 중간 | ✅ 완료 |
+| 3-4 | 보호자가 시니어 강제 로그아웃 API (refresh token 삭제) | 중간 | ✅ 완료 |
 
 ### Phase 4 — 추가 보안 조치 (후순위)
 

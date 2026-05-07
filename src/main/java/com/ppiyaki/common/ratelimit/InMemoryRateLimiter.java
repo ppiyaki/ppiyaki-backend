@@ -17,26 +17,24 @@ public class InMemoryRateLimiter implements RateLimiter {
 
     @Override
     public void checkAllowed(final String key) {
-        final ConcurrentLinkedDeque<LocalDateTime> timestamps = attempts.get(key);
-        if (timestamps == null) {
-            return;
-        }
-
-        final LocalDateTime windowStart = LocalDateTime.now().minusMinutes(WINDOW_MINUTES);
-        final long recentAttempts = timestamps.stream()
-                .filter(t -> t.isAfter(windowStart))
-                .count();
-
-        if (recentAttempts >= MAX_ATTEMPTS_PER_MINUTE) {
-            throw new BusinessException(ErrorCode.RATE_LIMIT_EXCEEDED);
-        }
+        attempts.computeIfPresent(key, (k, timestamps) -> {
+            pruneOldEntries(timestamps);
+            if (timestamps.size() >= MAX_ATTEMPTS_PER_MINUTE) {
+                throw new BusinessException(ErrorCode.RATE_LIMIT_EXCEEDED);
+            }
+            return timestamps.isEmpty() ? null : timestamps;
+        });
     }
 
     @Override
     public void recordFailure(final String key) {
-        attempts.computeIfAbsent(key, k -> new ConcurrentLinkedDeque<>())
-                .addLast(LocalDateTime.now());
-        cleanupOldEntries(key);
+        attempts.compute(key, (k, timestamps) -> {
+            final ConcurrentLinkedDeque<LocalDateTime> deque = timestamps != null ? timestamps
+                    : new ConcurrentLinkedDeque<>();
+            deque.addLast(LocalDateTime.now());
+            pruneOldEntries(deque);
+            return deque;
+        });
     }
 
     @Override
@@ -44,17 +42,10 @@ public class InMemoryRateLimiter implements RateLimiter {
         attempts.remove(key);
     }
 
-    private void cleanupOldEntries(final String key) {
-        final ConcurrentLinkedDeque<LocalDateTime> timestamps = attempts.get(key);
-        if (timestamps == null) {
-            return;
-        }
+    private void pruneOldEntries(final ConcurrentLinkedDeque<LocalDateTime> timestamps) {
         final LocalDateTime windowStart = LocalDateTime.now().minusMinutes(WINDOW_MINUTES);
         while (!timestamps.isEmpty() && timestamps.peekFirst().isBefore(windowStart)) {
             timestamps.pollFirst();
-        }
-        if (timestamps.isEmpty()) {
-            attempts.remove(key, timestamps);
         }
     }
 }

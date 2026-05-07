@@ -44,23 +44,35 @@ class MedicineControllerE2ETest {
 
     private String loginAsNewUser(final String nickname) {
         final String loginId = "testuser" + userSequence++;
-        final String token = RestAssured.given()
+        final String password = "password1234!";
+        RestAssured.given()
                 .contentType(ContentType.JSON)
                 .body("""
                         {
                             "loginId": "%s",
-                            "password": "password1234!",
+                            "password": "%s",
                             "nickname": "%s"
                         }
-                        """.formatted(loginId, nickname))
+                        """.formatted(loginId, password, nickname))
                 .when()
                 .post("/api/v1/auth/signup")
                 .then()
+                .statusCode(201);
+        // 회원가입 시 CAREGIVER로 생성되므로 시니어 테스트를 위해 role 변경 후 재로그인
+        jdbcTemplate.update("UPDATE users SET role = 'SENIOR' WHERE login_id = ?", loginId);
+        return RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "loginId": "%s",
+                            "password": "%s"
+                        }
+                        """.formatted(loginId, password))
+                .when()
+                .post("/api/v1/auth/login")
+                .then()
                 .extract()
                 .path("accessToken");
-        // 회원가입 시 CAREGIVER로 생성되므로 시니어 테스트를 위해 role 변경
-        jdbcTemplate.update("UPDATE users SET role = 'SENIOR' WHERE login_id = ?", loginId);
-        return token;
     }
 
     @Test
