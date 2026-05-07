@@ -67,7 +67,7 @@ Table medicines {
 Table medication_schedules {
   id bigint [pk, increment, not null]
   medicine_id bigint [not null]
-  scheduled_time time
+  meal_slot varchar [not null, note: 'BREAKFAST/LUNCH/DINNER. 실제 시각은 시니어 mealTimes로 동적 계산']
   dosage varchar
   days_of_week varchar
   start_date date

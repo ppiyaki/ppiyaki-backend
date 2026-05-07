@@ -1,15 +1,19 @@
 ---
 feature: 시니어 식사 시간대 기본값
 slug: meal-time-defaults
-status: draft
+status: done
 owner: @goohong
 scope: user
 related_issues: [#221]
-related_prs: []
+related_prs: [#222]
 last_reviewed: 2026-05-07
 ---
 
 # 시니어 식사 시간대 기본값
+
+> **Phase 1 완료 (v0.8.1, PR #222)**.
+> Phase 2(복약 일정의 식사 슬롯 모델 전환): `docs/features/medication-schedule-meal-slot.md` (#225)
+> Phase 3(OCR → 슬롯 자동 매핑, 처방전 confirm 시 schedule 자동 생성): 별도 spec 미작성
 
 ## 1) 개요 (What / Why)
 시니어가 평소 아침/점심/저녁 식사 시간을 사전 설정해두고, 처방전 기반 복약 일정 등록 시 이 시간대를 활용한다. 매번 약마다 수기로 시각을 입력하는 마찰을 줄이고, 향후 처방전 confirm 시 자동 schedule 생성의 기반 데이터를 마련한다.
@@ -23,11 +27,11 @@ last_reviewed: 2026-05-07
 
 ## 3) 요구사항
 ### 기능 요구사항
-- [ ] `User` 엔티티에 `breakfastTime` / `lunchTime` / `dinnerTime` (LocalTime, nullable) 필드 추가
-- [ ] `PUT /api/v1/users/me/meal-times` — 시니어 본인이 3개 시각을 한 번에 갱신 (전체 PUT, 3개 모두 필수)
-- [ ] `GET /api/v1/users/me` 응답에 `mealTimes` 객체 추가. 모두 미설정이면 `null`, 일부만 설정 가능
-- [ ] 권한: 시니어 본인만 갱신 (보호자 대리 갱신 불가, Phase 2 이후 검토)
-- [ ] DB 마이그레이션 SQL 준비, `schema.sql` 동기화
+- [x] `User` 엔티티에 `breakfastTime` / `lunchTime` / `dinnerTime` (LocalTime, nullable) 필드 추가
+- [x] `PUT /api/v1/users/me/meal-times` — 시니어 본인이 3개 시각을 한 번에 갱신 (전체 PUT, 3개 모두 필수)
+- [x] `GET /api/v1/users/me` 응답에 `mealTimes` 객체 추가. 모두 미설정이면 `null` (전체 설정 또는 전체 미설정만)
+- [x] 권한: 시니어 본인만 갱신 (보호자 대리 갱신 불가, Phase 2 이후 검토)
+- [x] DB 마이그레이션 SQL 준비, `schema.sql` 동기화
 
 ### 비기능 요구사항
 - **성능**: 갱신/조회 모두 단일 user row 작업. 추가 인덱스 불필요.
@@ -168,3 +172,4 @@ ALTER TABLE users
 - 2026-05-07: **시각 순서 검증 미도입**. 사용자 자율 (야간 근무 등 비전형 패턴 허용).
 - 2026-05-07: **보호자 대리 갱신 미포함**. Phase 1은 본인만. Phase 2 슬롯 도입 시점에 재검토.
 - 2026-05-07: **`isOnboarded` 정의 유지**. mealTimes 미설정도 onboarded. 시간대 설정 강제는 프론트 UX로 유도.
+- 2026-05-07: PR #222로 Phase 1 머지·prod 배포 완료. status=done. **mealTimes는 전체 설정 또는 전체 미설정만 허용** (§3 "일부만 설정" 표현 정정). Phase 2는 #225 별도 spec.
