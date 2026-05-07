@@ -10,6 +10,7 @@ import org.springframework.validation.annotation.Validated;
 @ConditionalOnProperty(prefix = "openai", name = "api-key")
 public record OpenAiProperties(
         @NotBlank String apiKey,
-        String model
+        @NotBlank String textModel,
+        @NotBlank String visionModel
 ) {
 }

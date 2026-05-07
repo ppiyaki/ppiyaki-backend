@@ -77,8 +77,8 @@ last_reviewed: 2026-04-10
 
 | Method | Path | 설명 | 인증 | Req | Res |
 |---|---|---|---|---|---|
-| POST | /api/v1/chat/sessions | 세션 생성 | 없음 | 없음 | `ChatSessionResponse` |
-| POST | /api/v1/chat/sessions/{sessionId}/messages | 메시지 전송 | 없음 | `ChatMessageRequest` | `ChatMessageResponse` |
+| POST | /api/v1/chat/sessions | 세션 생성 | 필수 | 없음 | `ChatSessionResponse` (JSON, 201) |
+| POST | /api/v1/chat/sessions/{sessionId}/messages | 메시지 전송 | 필수 | `ChatMessageRequest` | SSE 스트림 (`text/event-stream`, 토큰 chunk + `[DONE]`). 형식은 `chat-streaming.md §5-1` |
 
 **ChatSessionResponse**
 ```json

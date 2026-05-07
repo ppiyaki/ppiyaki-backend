@@ -4,10 +4,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.medication.MealSlot;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -47,8 +50,7 @@ public class OpenAiClient {
         final long startTime = System.currentTimeMillis();
 
         try {
-            final String model = properties.model() != null ? properties.model() : "gpt-5.4-nano";
-            final String requestBody = buildRequest(model, maskedOcrText);
+            final String requestBody = buildRequest(properties.textModel(), maskedOcrText);
 
             final String responseBody = restClient.post()
                     .uri(API_URL)
@@ -97,7 +99,7 @@ public class OpenAiClient {
                     - 약물이 없으면 빈 배열 반환.
 
                     ## 출력 형식
-                    {"medicines": [{"name": "약물명", "manufacturer": "제약사명", "ingredientName": "성분명", "dosage": "용량", "schedule": "복약주기"}]}
+                    {"medicines": [{"name": "약물명", "manufacturer": "제약사명", "ingredientName": "성분명", "dosage": "용량", "schedule": "복약주기", "mealSlots": ["BREAKFAST","LUNCH","DINNER"]}]}
                     - name: 제품명+제형+용량. 제약사명과 괄호 안 내용은 **제외**.
                       예: "위더스세파클러캡슐250밀리그람" → name: "세파클러캡슐250밀리그람", manufacturer: "위더스"
                       예: "에빅사정(메만틴염산염)_(10mg/1정)" → name: "에빅사정10밀리그램"
@@ -109,6 +111,15 @@ public class OpenAiClient {
                       주의: "(10mg/1정)" 같은 용량 표기는 성분명이 아님. 성분명은 한글 화학명.
                     - dosage: 1회 투약량 (예: "1정", "0.5정", "2캡슐"). 모르면 null.
                     - schedule: 복약주기 (예: "1일 3회 식후 30분"). 모르면 null.
+                    - mealSlots: schedule을 식사 슬롯으로 매핑한 배열. 가능한 값은 "BREAKFAST", "LUNCH", "DINNER"만.
+                      매핑 규칙:
+                      * "1일 3회 식후/식전" → ["BREAKFAST","LUNCH","DINNER"]
+                      * "1일 2회 (아침/저녁 또는 식후)" → ["BREAKFAST","DINNER"]
+                      * "1일 1회 아침" → ["BREAKFAST"]
+                      * "1일 1회 점심/저녁" → ["LUNCH"] / ["DINNER"]
+                      * "취침 전", "공복", "필요시" 등 식사 무관/불명확 → 빈 배열 []
+                      * schedule이 null이거나 슬롯 판단 불가 → 빈 배열 []
+                      * 다른 enum 값(예: "BEDTIME") 추측 금지 — 빈 배열로.
                     - JSON만 반환. 다른 텍스트 없이.
                     """;
 
@@ -153,7 +164,8 @@ public class OpenAiClient {
                         item.path("manufacturer").asText(null),
                         item.path("ingredientName").asText(null),
                         item.path("dosage").asText(null),
-                        item.path("schedule").asText(null)
+                        item.path("schedule").asText(null),
+                        parseMealSlots(item.path("mealSlots"))
                 ));
             }
 
@@ -166,12 +178,120 @@ public class OpenAiClient {
         }
     }
 
+    /**
+     * LLM 응답의 mealSlots 배열을 MealSlot 리스트로 정규화.
+     * 누락/null/잘못된 enum 값은 빈 리스트로.
+     */
+    private static List<MealSlot> parseMealSlots(final JsonNode node) {
+        if (node == null || node.isMissingNode() || !node.isArray()) {
+            return List.of();
+        }
+        final List<MealSlot> slots = new ArrayList<>();
+        for (final JsonNode item : node) {
+            if (!item.isTextual()) {
+                continue;
+            }
+            try {
+                slots.add(MealSlot.valueOf(item.asText().trim()));
+            } catch (final IllegalArgumentException ignored) {
+                // 잘못된 enum 값은 무시
+            }
+        }
+        return slots;
+    }
+
+    /**
+     * 사진 속 알약 개수를 Vision LLM으로 추출.
+     * spec medication-log-phase2 §5-3.
+     *
+     * @param imageBytes 원본 이미지 바이트
+     * @param mediaType  예: "image/jpeg" / "image/png"
+     * @return 추출 개수. JSON 파싱 실패·API 실패 시 Optional.empty (1회 retry 후에도 실패).
+     */
+    public Optional<Integer> countPills(final byte[] imageBytes, final String mediaType) {
+        log.info("OpenAI countPills: imageSize={}bytes mediaType={}", imageBytes.length, mediaType);
+        for (int attempt = 1; attempt <= 2; attempt++) {
+            final long startTime = System.currentTimeMillis();
+            try {
+                final String requestBody = buildCountRequest(properties.visionModel(), imageBytes, mediaType);
+
+                final String responseBody = restClient.post()
+                        .uri(API_URL)
+                        .header("Authorization", "Bearer " + properties.apiKey())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(requestBody)
+                        .retrieve()
+                        .body(String.class);
+
+                final long elapsed = System.currentTimeMillis() - startTime;
+                log.info("OpenAI countPills attempt={} elapsed={}ms", attempt, elapsed);
+
+                return parseCountResponse(responseBody);
+            } catch (final Exception e) {
+                final long elapsed = System.currentTimeMillis() - startTime;
+                log.warn("OpenAI countPills attempt={} failed elapsed={}ms error={}",
+                        attempt, elapsed, e.getMessage());
+            }
+        }
+        return Optional.empty();
+    }
+
+    private String buildCountRequest(final String model, final byte[] imageBytes, final String mediaType) {
+        try {
+            final String dataUrl = "data:" + mediaType + ";base64,"
+                    + Base64.getEncoder().encodeToString(imageBytes);
+            final String systemPrompt = """
+                    Count the visible pills/capsules/tablets in the photo.
+                    Return JSON {"count": N} where N is a non-negative integer.
+                    If unsure or no pills visible, return {"count": 0}.
+                    Do not include any other text.
+                    """;
+
+            final Map<String, Object> textPart = Map.of("type", "text", "text", "How many pills are in this image?");
+            final Map<String, Object> imagePart = Map.of("type", "image_url", "image_url", Map.of("url", dataUrl));
+            final Map<String, Object> systemMessage = Map.of("role", "system", "content", systemPrompt);
+            final Map<String, Object> userMessage = Map.of("role", "user", "content", List.of(textPart, imagePart));
+
+            final Map<String, Object> request = Map.of(
+                    "model", model,
+                    "messages", List.of(systemMessage, userMessage),
+                    "temperature", 0.0,
+                    "response_format", Map.of("type", "json_object")
+            );
+            return objectMapper.writeValueAsString(request);
+        } catch (final Exception e) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
+                    "AI countPills request build failed: " + e.getMessage());
+        }
+    }
+
+    private Optional<Integer> parseCountResponse(final String responseBody) {
+        try {
+            final JsonNode root = objectMapper.readTree(responseBody);
+            final String content = root.path("choices").get(0)
+                    .path("message").path("content").asText();
+            final JsonNode parsed = objectMapper.readTree(content);
+            if (!parsed.has("count") || !parsed.path("count").isNumber()) {
+                return Optional.empty();
+            }
+            final int count = parsed.path("count").asInt();
+            if (count < 0) {
+                return Optional.empty();
+            }
+            return Optional.of(count);
+        } catch (final Exception e) {
+            log.warn("OpenAI countPills parse failed: {}", e.getMessage());
+            return Optional.empty();
+        }
+    }
+
     public record ExtractedMedicine(
             String name,
             String manufacturer,
             String ingredientName,
             String dosage,
-            String schedule
+            String schedule,
+            List<MealSlot> mealSlots
     ) {
     }
 }

@@ -2,6 +2,7 @@ package com.ppiyaki.medication.service;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.medication.MealSlot;
 import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.controller.dto.ScheduleCreateRequest;
 import com.ppiyaki.medication.controller.dto.ScheduleResponse;
@@ -9,7 +10,9 @@ import com.ppiyaki.medication.controller.dto.ScheduleUpdateRequest;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
+import com.ppiyaki.user.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
+import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -21,15 +24,18 @@ public class MedicationScheduleService {
     private final MedicationScheduleRepository medicationScheduleRepository;
     private final MedicineRepository medicineRepository;
     private final CareRelationRepository careRelationRepository;
+    private final UserRepository userRepository;
 
     public MedicationScheduleService(
             final MedicationScheduleRepository medicationScheduleRepository,
             final MedicineRepository medicineRepository,
-            final CareRelationRepository careRelationRepository
+            final CareRelationRepository careRelationRepository,
+            final UserRepository userRepository
     ) {
         this.medicationScheduleRepository = medicationScheduleRepository;
         this.medicineRepository = medicineRepository;
         this.careRelationRepository = careRelationRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -39,6 +45,8 @@ public class MedicationScheduleService {
             final ScheduleCreateRequest scheduleCreateRequest
     ) {
         final Medicine medicine = findMedicineAndValidateAccess(userId, medicineId);
+        final User owner = findOwner(medicine.getOwnerId());
+        validateMealTimeSet(owner, scheduleCreateRequest.mealSlot());
 
         final String daysOfWeek = scheduleCreateRequest.daysOfWeek() != null
                 ? scheduleCreateRequest.daysOfWeek() : "DAILY";
@@ -47,7 +55,7 @@ public class MedicationScheduleService {
 
         final MedicationSchedule schedule = new MedicationSchedule(
                 medicine.getId(),
-                scheduleCreateRequest.scheduledTime(),
+                scheduleCreateRequest.mealSlot(),
                 scheduleCreateRequest.dosage(),
                 daysOfWeek,
                 startDate,
@@ -55,16 +63,17 @@ public class MedicationScheduleService {
         );
 
         final MedicationSchedule savedSchedule = medicationScheduleRepository.save(schedule);
-        return ScheduleResponse.from(savedSchedule);
+        return ScheduleResponse.from(savedSchedule, owner);
     }
 
     @Transactional(readOnly = true)
     public List<ScheduleResponse> readAll(final Long userId, final Long medicineId) {
-        findMedicineAndValidateAccess(userId, medicineId);
+        final Medicine medicine = findMedicineAndValidateAccess(userId, medicineId);
+        final User owner = findOwner(medicine.getOwnerId());
 
         final List<MedicationSchedule> schedules = medicationScheduleRepository.findByMedicineId(medicineId);
         return schedules.stream()
-                .map(ScheduleResponse::from)
+                .map(schedule -> ScheduleResponse.from(schedule, owner))
                 .toList();
     }
 
@@ -74,10 +83,11 @@ public class MedicationScheduleService {
             final Long medicineId,
             final Long scheduleId
     ) {
-        findMedicineAndValidateAccess(userId, medicineId);
+        final Medicine medicine = findMedicineAndValidateAccess(userId, medicineId);
+        final User owner = findOwner(medicine.getOwnerId());
         final MedicationSchedule schedule = findScheduleAndValidateMedicine(scheduleId, medicineId);
 
-        return ScheduleResponse.from(schedule);
+        return ScheduleResponse.from(schedule, owner);
     }
 
     @Transactional
@@ -87,18 +97,23 @@ public class MedicationScheduleService {
             final Long scheduleId,
             final ScheduleUpdateRequest scheduleUpdateRequest
     ) {
-        findMedicineAndValidateAccess(userId, medicineId);
+        final Medicine medicine = findMedicineAndValidateAccess(userId, medicineId);
+        final User owner = findOwner(medicine.getOwnerId());
         final MedicationSchedule schedule = findScheduleAndValidateMedicine(scheduleId, medicineId);
 
+        if (scheduleUpdateRequest.mealSlot() != null) {
+            validateMealTimeSet(owner, scheduleUpdateRequest.mealSlot());
+        }
+
         schedule.update(
-                scheduleUpdateRequest.scheduledTime(),
+                scheduleUpdateRequest.mealSlot(),
                 scheduleUpdateRequest.dosage(),
                 scheduleUpdateRequest.daysOfWeek(),
                 scheduleUpdateRequest.startDate(),
                 scheduleUpdateRequest.endDate()
         );
 
-        return ScheduleResponse.from(schedule);
+        return ScheduleResponse.from(schedule, owner);
     }
 
     @Transactional
@@ -140,5 +155,17 @@ public class MedicationScheduleService {
         }
 
         return schedule;
+    }
+
+    private User findOwner(final Long ownerId) {
+        return userRepository.findById(ownerId)
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.USER_NOT_FOUND, "Owner not found: " + ownerId));
+    }
+
+    private void validateMealTimeSet(final User owner, final MealSlot mealSlot) {
+        if (mealSlot.resolveTime(owner) == null) {
+            throw new BusinessException(ErrorCode.MEAL_TIMES_NOT_SET);
+        }
     }
 }

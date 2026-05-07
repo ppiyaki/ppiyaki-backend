@@ -52,9 +52,10 @@ public class PrescriptionController {
     @GetMapping
     public ResponseEntity<PrescriptionListResponse> list(
             @AuthenticationPrincipal final Long userId,
+            @RequestParam(required = false) final Long seniorId,
             @RequestParam(required = false) final PrescriptionStatus status
     ) {
-        return ResponseEntity.ok(prescriptionService.listByOwner(userId, status));
+        return ResponseEntity.ok(prescriptionService.listByOwner(userId, seniorId, status));
     }
 
     @PatchMapping("/{prescriptionId}/medicines/{candidateId}")

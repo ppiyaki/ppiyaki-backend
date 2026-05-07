@@ -9,7 +9,8 @@ public enum ErrorCode {
     MALFORMED_REQUEST(HttpStatus.BAD_REQUEST, "COMMON_002", "Malformed request"),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_003", "Internal server error"),
     FORBIDDEN(HttpStatus.FORBIDDEN, "COMMON_004", "Access denied"),
-    RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "COMMON_005", "Too many requests"),
+    NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_005", "Resource not found"),
+    RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "COMMON_006", "Too many requests"),
 
     // Auth
     AUTH_INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_001", "Invalid token"),
@@ -19,6 +20,7 @@ public enum ErrorCode {
 
     // User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_001", "User not found"),
+    MEAL_TIMES_NOT_SET(HttpStatus.BAD_REQUEST, "USER_002", "Meal times are not set for the senior"),
 
     // Medicine
     MEDICINE_NOT_FOUND(HttpStatus.NOT_FOUND, "MEDICINE_001", "Medicine not found"),
