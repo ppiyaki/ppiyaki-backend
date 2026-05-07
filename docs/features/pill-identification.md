@@ -59,8 +59,15 @@ last_reviewed: 2026-05-07
 - **성능**:
   - 동기화 batch: 식약처 데이터 약 2~3만 건 추정. `numOfRows=100` × ~250 페이지 × 평균 400ms = ~100s. 야간 cron이라 운영 부하 낮음.
   - 런타임 검색: `WHERE print_front=? AND drug_shape=?` 인덱스 lookup 수십 ms 이내.
+- **API 호출 한도** (공공데이터포털 정책):
+  - 개발계정 = **일 10,000 호출 / `service-key + 활용신청 API` 조합**.
+  - 동기화 1회 = ~250 호출 (numOfRows=100 가정). 주 1회 cron → **일 평균 36 호출, 한도 여유 큼**.
+  - `MdcinGrnIdntfcInfoService03`는 기존 `MfdsApiClient`(DUR 등) 활용신청과 **별도 신청 필요** → 한도 분리. 같은 키로 두 API에 활용신청 등록.
+  - 한도 초과 fallback: 다음 cron까지 stale L1 데이터로 식별 계속. 사고 알림(slack 또는 로그 모니터링) 후속.
+  - prod 트래픽 증가 시 운영계정 승격 신청(활용사례 등록) — 본 spec 외.
 - **신뢰성**:
   - batch 부분 실패 허용 — item_seq 단위 idempotent upsert. 다음 cron 또는 수동 트리거로 복구.
+  - 페이지 단위 부분 재시도 가능(이미 upsert된 페이지는 다음 회차에 동일 결과).
   - 식약처 API 일시 장애 시: 마지막 성공 동기화 데이터로 식별 계속 가능 (24h~1주 stale 허용).
 - **보안**:
   - 식별 도구는 인증된 채팅 흐름에서만 호출. 직접 외부 노출 없음.
@@ -299,6 +306,8 @@ PR 2/3 분리 이유:
 | Q5 | 검색 결과 limit | (a) 10건 / (b) 5건 / (c) 무제한 | (a) — LLM 토큰 부담 + UX |
 | Q6 | 식약처 데이터 삭제 처리 | (a) DB 보존 (정책 미상) / (b) hard delete / (c) soft delete `deleted_at` | (a) — 본 spec 외, 정책 확인 후 follow-up |
 | Q7 | Vision 약명 추정도 병행할지 | (a) 추정 X, 외형 묘사만 (Recommended) / (b) 둘 다 시도 | (a) — 추정 의존 제거가 본 spec 동기 |
+| Q8 | `numOfRows` 최대값 | (a) 100 가정 / (b) 1000 가능 시 호출 25배 절감 | PR 2 PoC에서 식약처 응답 헤더·문서 확인 후 채택 |
+| Q9 | 운영계정 승격 신청 시점 | (a) 본 spec 외 (Recommended) / (b) 동시 진행 | (a) — prod 트래픽·식별 호출수 보고 결정. 개발계정 10,000/일로 본 사이클 충분 |
 
 ## 9) 결정 로그
 - 2026-05-07: 초안 작성. v0.9.3 chat photo 검증에서 vision 약명 추정 실패 케이스(흰색 긴 알약) 발견 → 외형 기반 식별 도입.
@@ -308,3 +317,4 @@ PR 2/3 분리 이유:
 - 2026-05-07: **Vision은 묘사만 추출, 약명 추정 X**. 추정 의존 제거가 핵심 가치.
 - 2026-05-07: **L1/L2/L3 캐시 계층 분리**. L1=자체 DB(영구, 주 1회 batch), L2=기존 MfdsApiClient·DrugInfoClient(24h), L3=Vision(캐시 X). 책임 분리로 충돌 없음.
 - 2026-05-07: **Phase A 한정**. Phase B(vision 재판정·embedding) 별도 spec.
+- 2026-05-07: **API 호출 한도 분석 추가**. 개발계정 일 10,000/`service-key+API`. 동기화 1회 ~250 호출, 주 1회 cron이라 한도 안전. `MdcinGrnIdntfcInfoService03`는 기존 `MfdsApiClient` 활용신청과 별도 신청해야 한도 분리. 한도 초과 fallback은 stale L1 데이터로 식별 계속.
