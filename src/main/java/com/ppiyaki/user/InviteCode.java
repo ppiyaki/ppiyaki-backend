@@ -7,14 +7,16 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.HexFormat;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Getter
 @Entity
@@ -26,7 +28,6 @@ public class InviteCode extends CreatedTimeEntity {
     private static final long EXPIRY_MINUTES = 5;
     private static final String CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final SecureRandom RANDOM = new SecureRandom();
-    private static final PasswordEncoder ENCODER = new BCryptPasswordEncoder();
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -54,14 +55,20 @@ public class InviteCode extends CreatedTimeEntity {
         Objects.requireNonNull(seniorId, "seniorId must not be null");
         Objects.requireNonNull(now, "now must not be null");
         final String rawCode = generateCode();
-        final String hash = ENCODER.encode(rawCode);
+        final String hash = sha256(rawCode);
         final InviteCode inviteCode = new InviteCode(seniorId, hash, now.plusMinutes(EXPIRY_MINUTES));
         return new InviteCodeWithRaw(inviteCode, rawCode);
     }
 
-    public boolean matches(final String rawCode) {
-        Objects.requireNonNull(rawCode, "rawCode must not be null");
-        return ENCODER.matches(rawCode, this.codeHash);
+    public static String sha256(final String input) {
+        Objects.requireNonNull(input, "input must not be null");
+        try {
+            final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            final byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (final NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not available", e);
+        }
     }
 
     public boolean isExpired(final LocalDateTime now) {
@@ -77,9 +84,6 @@ public class InviteCode extends CreatedTimeEntity {
         Objects.requireNonNull(now, "now must not be null");
         if (this.usedAt != null) {
             throw new IllegalStateException("Invite code already used");
-        }
-        if (isExpired(now)) {
-            throw new IllegalStateException("Invite code has expired");
         }
         this.usedAt = now;
     }

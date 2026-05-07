@@ -12,9 +12,9 @@ import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.InviteCodeRepository;
+import com.ppiyaki.user.repository.RefreshTokenRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
-import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +23,7 @@ public class CareRelationService {
 
     private final CareRelationRepository careRelationRepository;
     private final InviteCodeRepository inviteCodeRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
     private final JwtProvider jwtProvider;
     private final AuthService authService;
@@ -31,6 +32,7 @@ public class CareRelationService {
     public CareRelationService(
             final CareRelationRepository careRelationRepository,
             final InviteCodeRepository inviteCodeRepository,
+            final RefreshTokenRepository refreshTokenRepository,
             final UserRepository userRepository,
             final JwtProvider jwtProvider,
             final AuthService authService,
@@ -38,6 +40,7 @@ public class CareRelationService {
     ) {
         this.careRelationRepository = careRelationRepository;
         this.inviteCodeRepository = inviteCodeRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
         this.userRepository = userRepository;
         this.jwtProvider = jwtProvider;
         this.authService = authService;
@@ -63,43 +66,41 @@ public class CareRelationService {
         final String rateLimitKey = "code-login:" + clientIp;
         rateLimiter.checkAllowed(rateLimitKey);
 
-        final List<InviteCode> candidates = inviteCodeRepository
-                .findBySeniorIdAndUsedAtIsNullOrderByCreatedAtDesc(null);
+        final String codeHash = InviteCode.sha256(code);
+        final InviteCode inviteCode = inviteCodeRepository.findByCodeHashAndUsedAtIsNull(codeHash)
+                .orElse(null);
 
-        // 모든 미사용 초대 코드를 순회하며 hash 매칭
-        final InviteCode matched = findMatchingInviteCode(code);
-        if (matched == null) {
+        if (inviteCode == null) {
             rateLimiter.recordFailure(rateLimitKey);
             throw new BusinessException(ErrorCode.CARE_RELATION_INVITE_INVALID);
         }
 
-        if (matched.isExpired(LocalDateTime.now())) {
+        if (inviteCode.isExpired(LocalDateTime.now())) {
             rateLimiter.recordFailure(rateLimitKey);
             throw new BusinessException(ErrorCode.CARE_RELATION_INVITE_INVALID);
         }
 
-        matched.markUsed(LocalDateTime.now());
+        inviteCode.markUsed(LocalDateTime.now());
         rateLimiter.clearFailures(rateLimitKey);
 
-        final Long seniorId = matched.getSeniorId();
-        final String accessToken = jwtProvider.createAccessToken(seniorId);
+        final Long seniorId = inviteCode.getSeniorId();
+        final User senior = findUserById(seniorId);
+        final String accessToken = jwtProvider.createAccessToken(seniorId, senior.getRole().name());
         final String refreshToken = jwtProvider.createRefreshToken(seniorId);
         authService.saveRefreshTokenForUser(seniorId, refreshToken);
 
         return new LoginResponse(accessToken, refreshToken, true);
     }
 
-    private InviteCode findMatchingInviteCode(final String rawCode) {
-        final List<InviteCode> allUnused = inviteCodeRepository.findAll().stream()
-                .filter(ic -> !ic.isUsed())
-                .toList();
+    @Transactional
+    public void forceLogoutSenior(final Long caregiverId, final Long seniorId) {
+        final User caregiver = findUserById(caregiverId);
+        validateRole(caregiver, UserRole.CAREGIVER);
 
-        for (final InviteCode inviteCode : allUnused) {
-            if (inviteCode.matches(rawCode)) {
-                return inviteCode;
-            }
-        }
-        return null;
+        careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(caregiverId, seniorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
+
+        refreshTokenRepository.deleteByUserId(seniorId);
     }
 
     private User findUserById(final Long userId) {

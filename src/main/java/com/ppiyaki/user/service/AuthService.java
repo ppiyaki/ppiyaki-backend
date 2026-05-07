@@ -66,7 +66,8 @@ public class AuthService {
                         .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)))
                 .orElseGet(() -> createNewUser(payload, providerUserId));
 
-        final String accessToken = jwtProvider.createAccessToken(user.getId());
+        final String roleName = user.getRole() != null ? user.getRole().name() : null;
+        final String accessToken = jwtProvider.createAccessToken(user.getId(), roleName);
         final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
         saveRefreshToken(user.getId(), refreshTokenValue);
 
@@ -91,7 +92,7 @@ public class AuthService {
             throw new BusinessException(ErrorCode.AUTH_DUPLICATE_LOGIN_ID);
         }
 
-        final String accessToken = jwtProvider.createAccessToken(user.getId());
+        final String accessToken = jwtProvider.createAccessToken(user.getId(), user.getRole().name());
         final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
         saveRefreshToken(user.getId(), refreshTokenValue);
 
@@ -112,7 +113,8 @@ public class AuthService {
             throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
         }
 
-        final String accessToken = jwtProvider.createAccessToken(user.getId());
+        final String roleName = user.getRole() != null ? user.getRole().name() : null;
+        final String accessToken = jwtProvider.createAccessToken(user.getId(), roleName);
         final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
         saveRefreshToken(user.getId(), refreshTokenValue);
 
@@ -142,7 +144,9 @@ public class AuthService {
         }
 
         final Long userId = refreshToken.getUserId();
-        final String newAccessToken = jwtProvider.createAccessToken(userId);
+        final User user = userRepository.findById(userId).orElse(null);
+        final String roleName = (user != null && user.getRole() != null) ? user.getRole().name() : null;
+        final String newAccessToken = jwtProvider.createAccessToken(userId, roleName);
         final String newRefreshTokenValue = jwtProvider.createRefreshToken(userId);
 
         final LocalDateTime newExpiresAt = LocalDateTime.now().plusSeconds(jwtProperties.refreshTokenExpiry() / 1000);

@@ -108,40 +108,28 @@ last_reviewed: 2026-05-06
 | 2-4 | Rate Limit 인터페이스 추상화 (인메모리 → Redis 교체 가능) | 높음 | ✅ 완료 |
 | 2-5 | 만료된 초대 코드 배치/스케줄러 정리 (DB 누적 방지) | 낮음 | 미착수 |
 
-### Phase 3 — 기기 관리 및 토큰 폐기
+### Phase 3 — 토큰 폐기 및 인가
 
-| # | 내용 | 우선순위 |
-|---|---|---|
-| 3-1 | SeniorDevice 엔티티 (senior_devices 테이블, status ACTIVE/REVOKED) | 중간 |
-| 3-2 | 코드 로그인 시 deviceId/deviceName 수신 → SeniorDevice 생성 | 중간 |
-| 3-3 | Refresh token hash를 SeniorDevice에 저장 | 중간 |
-| 3-4 | Refresh token 갱신 시 device status == ACTIVE 확인 | 중간 |
-| 3-5 | Refresh token rotation (갱신 시 기존 토큰 무효화) | 중간 |
-| 3-6 | 보호자 시니어 기기 연동 해제 API (DELETE /api/v1/seniors/{id}/devices) | 중간 |
+| # | 내용 | 우선순위 | 상태 |
+|---|---|---|---|
+| 3-1 | JWT access token claim에 role 추가 (DB 조회 없이 인가) | 중간 | 구현 예정 |
+| 3-2 | InviteCode hash를 SHA-256/HMAC으로 변경 (O(1) lookup) | 중간 | 구현 예정 |
+| 3-3 | 미사용 코드 정리 (AuthorizationService, SeniorDevice, 미사용 Repository 메서드) | 중간 | 구현 예정 |
+| 3-4 | 보호자가 시니어 강제 로그아웃 API (refresh token 삭제) | 중간 | 구현 예정 |
 
-### Phase 4 — 인가 검증 강화
+### Phase 4 — 추가 보안 조치 (후순위)
 
-| # | 내용 | 우선순위 |
-|---|---|---|
-| 4-1 | 시니어: JWT userId == 요청 대상 seniorId 일치 확인 | 중간 |
-| 4-2 | 보호자: CareRelation 존재 확인 후 시니어 데이터 접근 허용 | 중간 |
-| 4-3 | 시니어 금지 작업: 약 등록/수정/삭제, 설정 변경, 타인 조회 | 중간 |
-
-### Phase 5 — 추가 보안 조치
-
-| # | 내용 | 우선순위 |
-|---|---|---|
-| 5-1 | Access token claim에 deviceId 포함 | 낮음 |
-| 5-2 | REVOKED 기기의 access token 차단 (또는 만료 10~15분으로 단축) | 낮음 |
-| 5-3 | 민감 정보 로그 마스킹 (token, 초대 코드, 약물명, 생년월일) | 낮음 |
+| # | 내용 | 우선순위 | 상태 |
+|---|---|---|---|
+| 4-1 | 민감 정보 로그 마스킹 (token, 초대 코드, 약물명, 생년월일) | 낮음 | 미착수 |
+| 4-2 | 만료된 초대 코드 배치/스케줄러 정리 (DB 누적 방지) | 낮음 | 미착수 |
+| 4-3 | Rate Limit Redis 교체 | 낮음 | 미착수 |
 
 ## 7) 작업 분할 (예상 PR 리스트)
-- [ ] PR 1: 회원가입 시 role=CAREGIVER + AuthProvider + 시니어 대리 생성 API + CareRelation/Pet 자동 생성
-- [ ] PR 2: 초대 코드 발급 수정 (seniorId 지정) + 코드 로그인 API + 에러 메시지 통일
-- [ ] PR 3: InviteCode 엔티티 분리 + hash 저장
-- [ ] PR 4: Rate Limit
-- [ ] PR 5: SeniorDevice + refresh token 검증/폐기 + 기기 해제 API
-- [ ] PR 6: 인가 검증 강화 (시니어/보호자 권한 분리)
+- [x] PR 1: 회원가입 시 role=CAREGIVER + AuthProvider + 시니어 대리 생성 API + CareRelation/Pet 자동 생성
+- [x] PR 2: 초대 코드 발급 수정 (seniorId 지정) + 코드 로그인 API + 에러 메시지 통일
+- [x] PR 3: InviteCode 엔티티 분리 + BCrypt hash 저장 + Rate Limit
+- [ ] PR 4: JWT claim role + InviteCode SHA-256 변경 + 강제 로그아웃 API + 미사용 코드 정리
 
 ## 8) 테스트 전략
 - AuthService 단위 테스트 (role 자동 부여, authProvider 검증)
@@ -150,7 +138,7 @@ last_reviewed: 2026-05-06
 - E2E 테스트 (전체 플로우: 가입 → 시니어 생성 → 코드 발급 → 코드 로그인)
 - 비밀번호 로그인 시 INVITE_ONLY 계정 거부 테스트
 - Rate Limit 초과 시 429 반환 테스트
-- 기기 해제 후 refresh token 무효화 테스트
+- 강제 로그아웃 후 refresh token 무효화 테스트
 
 ## 9) 오픈 질문
 없음 (모두 합의됨)
