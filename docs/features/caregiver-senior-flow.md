@@ -58,7 +58,7 @@ last_reviewed: 2026-05-06
 ### 5-1) 도메인 모델
 - `User` 엔티티: 회원가입 시 role=CAREGIVER 세팅. 시니어 계정은 보호자가 생성하므로 password=null, loginId=null 가능.
 - `CareRelation` 엔티티: 시니어 대리 생성 시 즉시 생성 (seniorId가 확정된 상태)
-- `InviteCode` 엔티티: 시니어 코드 로그인 용도. code_hash(BCrypt), expires_at, used_at 관리. 별도 invite_codes 테이블.
+- `InviteCode` 엔티티: 시니어 코드 로그인 용도. code_hash(SHA-256), expires_at, used_at 관리. 별도 invite_codes 테이블.
 
 ### 5-2) API 엔드포인트
 
@@ -67,6 +67,7 @@ last_reviewed: 2026-05-06
 | POST | /api/v1/seniors | 보호자가 시니어 계정 대리 생성 | 필수 (CAREGIVER) | `SeniorCreateRequest` | `SeniorCreateResponse` |
 | POST | /api/v1/care-relations/invite | 보호자가 특정 시니어의 초대 코드 발급 | 필수 (CAREGIVER) | `InviteCodeRequest` | `InviteCodeResponse` |
 | POST | /api/v1/auth/code-login | 시니어가 코드로 로그인 | 불필요 | `CodeLoginRequest` | `LoginResponse` |
+| DELETE | /api/v1/seniors/{seniorId}/logout | 보호자가 시니어 강제 로그아웃 | 필수 (CAREGIVER) | - | 204 No Content |
 
 ### 5-3) 외부 연동
 - 없음
@@ -80,7 +81,10 @@ last_reviewed: 2026-05-06
 보호자 인증 → seniorId 지정 → CareRelation 조회/검증 → inviteCode + expiresAt 세팅 → 코드 응답
 
 **코드 로그인:**
-시니어 기기에서 코드 입력 → IP Rate Limit 확인 → InviteCode에서 BCrypt 매칭 → 만료 검증 → usedAt 기록 → 해당 seniorId로 JWT 발급 → LoginResponse 반환
+시니어 기기에서 코드 입력 → IP Rate Limit 확인 → SHA-256 hash로 InviteCode O(1) lookup → 만료 검증 → usedAt 기록 → 해당 seniorId로 JWT(role 포함) 발급 → LoginResponse 반환
+
+**시니어 강제 로그아웃:**
+보호자 인증 → CareRelation 검증 → 시니어의 refresh token 삭제
 
 ### 5-5) DB 마이그레이션
 - `invite_codes` 테이블 신설 (senior_id, code_hash, expires_at, used_at, created_at)
@@ -128,7 +132,7 @@ last_reviewed: 2026-05-06
 ## 7) 작업 분할 (예상 PR 리스트)
 - [x] PR 1: 회원가입 시 role=CAREGIVER + AuthProvider + 시니어 대리 생성 API + CareRelation/Pet 자동 생성
 - [x] PR 2: 초대 코드 발급 수정 (seniorId 지정) + 코드 로그인 API + 에러 메시지 통일
-- [x] PR 3: InviteCode 엔티티 분리 + BCrypt hash 저장 + Rate Limit
+- [x] PR 3: InviteCode 엔티티 분리 + hash 저장 + Rate Limit (이후 SHA-256으로 변경)
 - [ ] PR 4: JWT claim role + InviteCode SHA-256 변경 + 강제 로그아웃 API + 미사용 코드 정리
 
 ## 8) 테스트 전략

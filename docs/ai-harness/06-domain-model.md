@@ -139,7 +139,7 @@
 |---|---|---|
 | id | bigint PK | |
 | senior_id | bigint NOT NULL | `users.id` 참조. 로그인 대상 시니어 |
-| code_hash | varchar NOT NULL | 초대 코드의 BCrypt hash (평문 저장 안 함) |
+| code_hash | varchar NOT NULL | 초대 코드의 SHA-256 hash (평문 저장 안 함, O(1) lookup) |
 | expires_at | datetime NOT NULL | 만료 시각 (발급 후 5분) |
 | used_at | datetime nullable | 사용 완료 시각. NULL이면 미사용 |
 | created_at | timestamp | `CreatedTimeEntity` |
