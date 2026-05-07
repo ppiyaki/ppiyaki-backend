@@ -4,6 +4,7 @@ import com.ppiyaki.common.mcp.DrugInfoMcpTools;
 import com.ppiyaki.common.mcp.DurMcpTools;
 import com.ppiyaki.common.mcp.MedicationMcpTools;
 import com.ppiyaki.common.mcp.MedicineMcpTools;
+import com.ppiyaki.common.mcp.PillIdentificationMcpTools;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.ai.support.ToolCallbacks;
@@ -20,7 +21,8 @@ public class ChatToolCallbackConfig {
             final ObjectProvider<MedicineMcpTools> medicineMcpTools,
             final ObjectProvider<DurMcpTools> durMcpTools,
             final ObjectProvider<MedicationMcpTools> medicationMcpTools,
-            final ObjectProvider<DrugInfoMcpTools> drugInfoMcpTools
+            final ObjectProvider<DrugInfoMcpTools> drugInfoMcpTools,
+            final ObjectProvider<PillIdentificationMcpTools> pillIdentificationMcpTools
     ) {
         final List<ToolCallback> callbacks = new ArrayList<>();
 
@@ -31,6 +33,8 @@ public class ChatToolCallbackConfig {
         medicationMcpTools.ifAvailable(
                 tools -> callbacks.addAll(List.of(ToolCallbacks.from(tools))));
         drugInfoMcpTools.ifAvailable(
+                tools -> callbacks.addAll(List.of(ToolCallbacks.from(tools))));
+        pillIdentificationMcpTools.ifAvailable(
                 tools -> callbacks.addAll(List.of(ToolCallbacks.from(tools))));
 
         return callbacks;
