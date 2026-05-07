@@ -112,6 +112,45 @@ class PillIdentificationSyncServiceTest {
         verify(client, times(1)).fetchPage(anyInt(), anyInt());
     }
 
+    @Test
+    @DisplayName("동시 호출 — 두 번째는 PILL_SYNC_IN_PROGRESS")
+    void syncAll_concurrent_secondCall_throws() throws Exception {
+        // 첫 호출이 끝나기 전에 두 번째가 들어오면 거절돼야.
+        // 첫 호출의 fetchPage가 latch로 막혀있는 동안 두 번째가 시도.
+        final java.util.concurrent.CountDownLatch firstStarted = new java.util.concurrent.CountDownLatch(1);
+        final java.util.concurrent.CountDownLatch firstHold = new java.util.concurrent.CountDownLatch(1);
+        when(client.fetchPage(eq(1), anyInt())).thenAnswer(inv -> {
+            firstStarted.countDown();
+            firstHold.await();
+            return new PillPage(0, List.of());
+        });
+
+        final java.util.concurrent.atomic.AtomicReference<Throwable> secondError = new java.util.concurrent.atomic.AtomicReference<>();
+        final Thread first = new Thread(service::syncAll);
+        first.start();
+        firstStarted.await();
+
+        final Thread second = new Thread(() -> {
+            try {
+                service.syncAll();
+            } catch (final Throwable e) {
+                secondError.set(e);
+            }
+        });
+        second.start();
+        second.join(2000);
+
+        // 첫 동기화 풀어줌
+        firstHold.countDown();
+        first.join(2000);
+
+        assertThat(secondError.get())
+                .isInstanceOf(com.ppiyaki.common.exception.BusinessException.class)
+                .extracting(e -> ((com.ppiyaki.common.exception.BusinessException) e).getErrorCode())
+                .isEqualTo(com.ppiyaki.common.exception.ErrorCode.PILL_SYNC_IN_PROGRESS);
+        assertThat(service.isInProgress()).isFalse();
+    }
+
     private PillItem item(final String seq, final String name) {
         return new PillItem(
                 seq, name, "업체", "T", null, "원형", "하양", null, null, null,
