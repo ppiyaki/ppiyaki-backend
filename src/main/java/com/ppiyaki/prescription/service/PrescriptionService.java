@@ -177,12 +177,22 @@ public class PrescriptionService {
     }
 
     @Transactional(readOnly = true)
-    public PrescriptionListResponse listByOwner(final Long userId, final PrescriptionStatus status) {
+    public PrescriptionListResponse listByOwner(
+            final Long userId,
+            final Long seniorIdParam,
+            final PrescriptionStatus status
+    ) {
+        final Long ownerId = seniorIdParam != null ? seniorIdParam : userId;
+        if (!userId.equals(ownerId)) {
+            careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(userId, ownerId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
+        }
+
         final List<Prescription> prescriptions;
         if (status != null) {
-            prescriptions = prescriptionRepository.findByOwnerIdAndStatusOrderByCreatedAtDesc(userId, status);
+            prescriptions = prescriptionRepository.findByOwnerIdAndStatusOrderByCreatedAtDesc(ownerId, status);
         } else {
-            prescriptions = prescriptionRepository.findByOwnerIdOrderByCreatedAtDesc(userId);
+            prescriptions = prescriptionRepository.findByOwnerIdOrderByCreatedAtDesc(ownerId);
         }
         return PrescriptionListResponse.from(prescriptions);
     }
