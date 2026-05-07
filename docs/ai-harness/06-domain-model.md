@@ -269,6 +269,31 @@ OCR + LLM 파싱으로 추출된 약물 후보. 처방전 1건당 N행. 보호�
 > **레벨/스테이지는 서버(도메인 로직)에서 `point`로부터 계산**한다. 예: `level = floor(sqrt(point / 10))`. 밸런스 변경 시 DB 마이그레이션 없이 재계산할 수 있어 기획 반복에 유리하다.
 > **코드 갭**: 현재 `Pet.java`는 `CreatedTimeEntity`/`BaseTimeEntity`를 상속하지 않아 `created_at`/`updated_at`이 없다. 추적: §7-18.
 
+### pill_identifications (target: `@Table(name = "pill_identifications")`, no time mixin)
+식약처 의약품 낱알식별 정보 마스터 (식약처 OpenAPI `MdcinGrnIdntfcInfoService03/getMdcinGrnIdntfcInfoList03`을 주 1회 batch로 동기화). 약명 추정 없이 외형(각인·색·모양·분할선)으로 약 후보를 검색하기 위한 자체 인덱스. 자세한 설계: `docs/features/pill-identification.md`.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| item_seq | varchar(20) PK | 식약처 품목일련번호 |
+| item_name | varchar(255) NOT NULL | 품목명 (예: "타이레놀정500밀리그람") |
+| entp_name | varchar nullable | 업체명 |
+| print_front / print_back | varchar(64) nullable | 앞면/뒷면 각인 |
+| drug_shape | varchar(32) nullable | 모양 (예: "원형", "장방형", "타원형") |
+| color_class1 / color_class2 | varchar(32) nullable | 1차/2차 색 (예: "하양") |
+| line_front / line_back | varchar(32) nullable | 분할선 ("(+)형", "(-)형", null) |
+| leng_long / leng_short / thick | varchar(16) nullable | 장축·단축·두께 (mm) |
+| chart | text nullable | 형태 설명 |
+| item_image | varchar(512) nullable | 식약처 호스팅 이미지 URL |
+| class_no / class_name | varchar nullable | 분류 번호/명 |
+| etc_otc_name | varchar(32) nullable | 전문/일반 구분 |
+| mark_code_front / mark_code_back | varchar(64) nullable | 표준 각인 코드 |
+| edi_code | varchar(32) nullable | 보험코드 |
+| bizrno | varchar(32) nullable | 사업자등록번호 |
+| change_date | varchar(20) nullable | 식약처 변경일자 (yyyymmdd) |
+| synced_at | datetime(6) NOT NULL | 우리 동기화 시각 |
+
+**인덱스**: `idx_pill_print_front`(print_front), `idx_pill_shape_color`(drug_shape, color_class1), `idx_pill_color_shape_line`(color_class1, drug_shape, line_front), `idx_pill_item_name`(item_name).
+
 ### dur_checks (target: `@Table(name = "dur_checks")`, extends `CreatedTimeEntity`)
 DUR 점검 결과의 immutable 로그. 약물 정보가 시간에 따라 변할 수 있으므로 **매 호출 시 새 레코드**로 기록한다(캐시 아님).
 
