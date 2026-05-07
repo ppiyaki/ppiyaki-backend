@@ -5,6 +5,8 @@ import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.user.CareMode;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.controller.dto.CareModeResponse;
+import com.ppiyaki.user.controller.dto.MealTimesUpdateRequest;
+import com.ppiyaki.user.controller.dto.UserMeResponse;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -38,5 +40,14 @@ public class UserService {
 
         senior.changeCareMode(careMode);
         return new CareModeResponse(senior.getId(), senior.getCareMode());
+    }
+
+    @Transactional
+    public UserMeResponse updateMealTimes(final Long userId, final MealTimesUpdateRequest request) {
+        final User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        user.updateMealTimes(request.breakfast(), request.lunch(), request.dinner());
+        return UserMeResponse.from(user);
     }
 }

@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -52,6 +53,15 @@ public class User extends BaseTimeEntity {
     @Column(name = "care_mode", nullable = false)
     private CareMode careMode;
 
+    @Column(name = "breakfast_time")
+    private LocalTime breakfastTime;
+
+    @Column(name = "lunch_time")
+    private LocalTime lunchTime;
+
+    @Column(name = "dinner_time")
+    private LocalTime dinnerTime;
+
     public User(
             final String loginId,
             final String password,
@@ -73,5 +83,15 @@ public class User extends BaseTimeEntity {
 
     public void changeCareMode(final CareMode careMode) {
         this.careMode = Objects.requireNonNull(careMode, "careMode must not be null");
+    }
+
+    public void updateMealTimes(
+            final LocalTime breakfastTime,
+            final LocalTime lunchTime,
+            final LocalTime dinnerTime
+    ) {
+        this.breakfastTime = Objects.requireNonNull(breakfastTime, "breakfastTime must not be null");
+        this.lunchTime = Objects.requireNonNull(lunchTime, "lunchTime must not be null");
+        this.dinnerTime = Objects.requireNonNull(dinnerTime, "dinnerTime must not be null");
     }
 }
