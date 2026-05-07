@@ -1,5 +1,7 @@
 package com.ppiyaki.medicine.service;
 
+import com.ppiyaki.common.exception.BusinessException;
+import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.common.mfds.MdcinGrnIdntfcInfoClient;
 import com.ppiyaki.common.mfds.MdcinGrnIdntfcInfoClient.PillItem;
 import com.ppiyaki.common.mfds.MdcinGrnIdntfcInfoClient.PillPage;
@@ -7,6 +9,7 @@ import com.ppiyaki.medicine.PillIdentification;
 import com.ppiyaki.medicine.repository.PillIdentificationRepository;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -29,6 +32,12 @@ public class PillIdentificationSyncService {
     private final MdcinGrnIdntfcInfoClient client;
     private final PillIdentificationRepository repository;
 
+    /**
+     * 동시 동기화 방지 lock. 첫 호출이 끝날 때까지 후속 호출은 SYNC_IN_PROGRESS 거절.
+     * curl/nginx retry로 인한 동시 PK 충돌 방지 (PoC에서 발견된 갭).
+     */
+    private final AtomicBoolean inProgress = new AtomicBoolean(false);
+
     public PillIdentificationSyncService(
             final MdcinGrnIdntfcInfoClient client,
             final PillIdentificationRepository repository
@@ -37,7 +46,22 @@ public class PillIdentificationSyncService {
         this.repository = repository;
     }
 
+    public boolean isInProgress() {
+        return inProgress.get();
+    }
+
     public SyncResult syncAll() {
+        if (!inProgress.compareAndSet(false, true)) {
+            throw new BusinessException(ErrorCode.PILL_SYNC_IN_PROGRESS);
+        }
+        try {
+            return doSyncAll();
+        } finally {
+            inProgress.set(false);
+        }
+    }
+
+    private SyncResult doSyncAll() {
         final long startTime = System.currentTimeMillis();
         int pageNo = 1;
         int upserted = 0;
