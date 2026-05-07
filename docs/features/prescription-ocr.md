@@ -197,7 +197,7 @@ function checkPrescriptionMutation(requesterId, prescription):
 - 인증: `OPENAI_API_KEY` 환경변수
 - 입력: 시스템 prompt(약물 추출 지시) + 마스킹된 OCR 텍스트
 - 출력: JSON Mode 활성화로 약물 후보 리스트 강제
-- 모델: **gpt-5.4-nano** (잠정 확정). 단가: 입력 $0.20/1M, 출력 $1.25/1M → 건당 약 0.4원
+- 모델: **gpt-5.4-nano** (`OpenAiProperties.textModel`로 주입, env `OPENAI_TEXT_MODEL`). vision 모델(`visionModel`, gpt-5.4-mini)과 분리 구성. 단가: 입력 $0.20/1M, 출력 $1.25/1M → 건당 약 0.4원
 - 타임아웃: 10s (LLM은 5s보다 여유)
 - 실패 처리: 동일
 
@@ -392,3 +392,4 @@ function checkPrescriptionMutation(requesterId, prescription):
 - 2026-04-16: **검색 전략 변경** — 약물명 검색 실패 시 prefix 축소 fallback 제거, `ingredientName` fallback 검색으로 대체. 성분명 동일 약물 후보군 반환 → `CANDIDATES` 결과로 처리.
 - 2026-04-30: **보호자 수동 약물 추가 정책 확정** (Q-CONF-3 해소) — (a) 후보에 추가만, confirm 시점에 Medicine 일괄 생성. itemSeq + itemName 둘 다 클라이언트 전송 (서버측 itemSeq → itemName 조회 인프라 부재). PR #188로 머지.
 - 2026-04-30: **보호자 승인 모드 도입** (Q-CONF-5 해소) — `User.careMode` enum 컬럼 (`MANAGED` default / `AUTONOMOUS`). 모드 변경은 `PUT /api/v1/users/{seniorId}/care-mode` — **보호자만 호출 가능**, 시니어 본인 셀프 변경 엔드포인트 두지 않음. 처방전 변경 엔드포인트 4건(`PATCH /medicines/{candidateId}`, `POST /medicines`, `POST /confirm`, `POST /reject`)에 모드 분기 적용. AUTONOMOUS는 시니어/보호자 모두 즉시 가능, MANAGED는 0~72h 보호자만 + 72h 후 시니어 fallback. 보호자 미연동 시니어는 spec 범위 외 (보호자 연동 전제 유지). 의도: spec의 "보호자 검증 강제"가 코드에서 사실상 동작하지 않던 상태를 명시적 권한 모델로 끌어올림.
+- 2026-05-06: **OpenAI 모델 분리 구성 도입** — `OpenAiProperties`를 `model` 단일 필드에서 `textModel` / `visionModel` 두 필드로 분리. 본 spec(텍스트 OCR)은 **gpt-5.4-nano 유지** (속도/비용 우선, 품질은 운영상 충분). vision(`medication-log-phase2` 약 개수 인식)은 정확도 검증 결과로 **gpt-5.4-mini 업그레이드**. env 변수: `OPENAI_TEXT_MODEL` (default nano) / `OPENAI_VISION_MODEL` (default mini). 본 spec의 텍스트 OCR은 별도 정확도 회귀 테스트 안 함 — 운영 모니터링으로 추적.
