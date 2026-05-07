@@ -97,7 +97,7 @@ class PrescriptionServicePermissionTest {
         final Prescription prescription = givenPrescription(LocalDateTime.now());
         when(prescriptionRepository.findById(PRESCRIPTION_ID)).thenReturn(Optional.of(prescription));
         when(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(CAREGIVER_ID, SENIOR_ID))
-                .thenReturn(Optional.of(new CareRelation(SENIOR_ID, CAREGIVER_ID, "INVITE")));
+                .thenReturn(Optional.of(CareRelation.createLinked(SENIOR_ID, CAREGIVER_ID)));
         when(candidateRepository.findByPrescriptionId(PRESCRIPTION_ID)).thenReturn(List.of());
 
         // when & then
@@ -141,7 +141,7 @@ class PrescriptionServicePermissionTest {
         final Prescription prescription = givenPrescription(LocalDateTime.now());
         when(prescriptionRepository.findById(PRESCRIPTION_ID)).thenReturn(Optional.of(prescription));
         when(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(CAREGIVER_ID, SENIOR_ID))
-                .thenReturn(Optional.of(new CareRelation(SENIOR_ID, CAREGIVER_ID, "INVITE")));
+                .thenReturn(Optional.of(CareRelation.createLinked(SENIOR_ID, CAREGIVER_ID)));
         when(candidateRepository.findByPrescriptionId(PRESCRIPTION_ID)).thenReturn(List.of());
 
         // when & then

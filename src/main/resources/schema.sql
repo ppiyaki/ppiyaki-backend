@@ -3,11 +3,9 @@
         caregiver_id bigint,
         created_at datetime(6),
         deleted_at datetime(6),
-        expires_at datetime(6),
         id bigint not null auto_increment,
         senior_id bigint,
         updated_at datetime(6),
-        invite_code varchar(255),
         primary key (id)
     ) engine=InnoDB;
 
@@ -181,9 +179,6 @@
 
     alter table reports 
        add constraint uk_reports_senior_period unique (senior_id, period_type, period_start);
-
-    alter table care_relations
-       add constraint uk_care_relations_invite_code unique (invite_code);
 
     alter table users
        add constraint UKi3xs7wmfu2i3jt079uuetycit unique (login_id);

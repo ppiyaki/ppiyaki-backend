@@ -215,7 +215,7 @@ class PrescriptionMutationControllerE2ETest {
     }
 
     private void seedCareRelation(final Long seniorId, final Long caregiverId) {
-        careRelationRepository.save(new CareRelation(seniorId, caregiverId, "INV-" + seniorId + "-" + caregiverId));
+        careRelationRepository.save(CareRelation.createLinked(seniorId, caregiverId));
     }
 
     private Long seedPrescription(final Long seniorId, final LocalDateTime createdAt) {
