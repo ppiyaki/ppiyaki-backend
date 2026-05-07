@@ -102,6 +102,9 @@
 | dob | date | 생년월일 |
 | pet | bigint | `pets.id` PK 참조 (FK 제약 선언 여부는 §7-12) |
 | care_mode | varchar | DB는 varchar, Java는 `CareMode` enum(`MANAGED` default / `AUTONOMOUS`). 시니어 회원에 적용. 보호자 회원도 컬럼은 갖지만 처방전 흐름에서는 `prescription.owner_id`로 참조하는 시니어 측 값만 사용 |
+| breakfast_time | time nullable | 시니어 식사 시간대(아침). Java는 `LocalTime`. 미설정 가능. Phase 1: 클라이언트가 schedule 등록 시 활용. Phase 2~3: 슬롯 매핑/자동 생성 (별도 spec) |
+| lunch_time | time nullable | 시니어 식사 시간대(점심). 동일 |
+| dinner_time | time nullable | 시니어 식사 시간대(저녁). 동일 |
 | created_at / updated_at | timestamp | `BaseTimeEntity` |
 
 > **코드 갭(현재 HEAD 기준)**: 코드의 `User.java`는 `nickname`, `gender`, `dob`가 없고 `pet` 대신 `ppiyaki bigint` 컬럼명을 사용하며 `password`가 non-null. 이 문서는 **타깃 스키마**를 기술하며, 코드 갱신은 별도 PR로 진행한다. 추적: §7-16.
@@ -373,6 +376,9 @@ erDiagram
         date dob
         bigint pet FK
         varchar care_mode "MANAGED default / AUTONOMOUS"
+        time breakfast_time "nullable"
+        time lunch_time "nullable"
+        time dinner_time "nullable"
         timestamp created_at
         timestamp updated_at
     }
@@ -568,7 +574,7 @@ erDiagram
 
 | # | 주제 | 현재 상태 |
 |---|---|---|
-| ~~7-9~~ | ~~약 개수 인식 세부~~ | ✅ **해소됨** (Phase 2, v0.8.0). gpt-5.4-nano Vision API 동기 검증으로 구현. 명세는 `docs/features/medication-log-phase2.md`. 알약 식별(Phase 3, #185)은 별도 spec에서 진행 |
+| ~~7-9~~ | ~~약 개수 인식 세부~~ | ✅ **해소됨** (Phase 2, v0.8.0). gpt-5.4-mini Vision API 동기 검증으로 구현 (2026-05-06 nano→mini 정확도 업그레이드). 명세는 `docs/features/medication-log-phase2.md`. 알약 식별(Phase 3, #185)은 별도 spec에서 진행 |
 | 7-23 | DB 마이그레이션 도구 도입 | **후순위.** 현재는 `src/main/resources/schema.sql`을 Hibernate metadata에서 추출해 운영 스키마를 관리. 운영 안정화 단계에서 Flyway/Liquibase 도입 검토. 도입 시 `application-prod.yml`의 `ddl-auto: validate` 정책과 부트스트랩 흐름(초기 schema.sql → migration baseline) 정리 필요 |
 
 ## 8) 외부 연동 인벤토리
