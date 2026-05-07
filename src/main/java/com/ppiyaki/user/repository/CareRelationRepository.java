@@ -14,5 +14,5 @@ public interface CareRelationRepository extends JpaRepository<CareRelation, Long
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    Optional<CareRelation> findByInviteCodeAndSeniorIdIsNullAndDeletedAtIsNull(final String inviteCode);
+    Optional<CareRelation> findByInviteCodeAndDeletedAtIsNull(final String inviteCode);
 }
