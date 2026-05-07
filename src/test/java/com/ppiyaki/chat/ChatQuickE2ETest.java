@@ -4,6 +4,7 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -43,6 +44,7 @@ class ChatQuickE2ETest {
             final ChatClient.StreamResponseSpec streamResponseSpec = mock(ChatClient.StreamResponseSpec.class);
 
             when(chatClient.prompt(any(Prompt.class))).thenReturn(requestSpec);
+            when(requestSpec.toolContext(anyMap())).thenReturn(requestSpec);
             when(requestSpec.stream()).thenReturn(streamResponseSpec);
             when(streamResponseSpec.content()).thenReturn(Flux.just("타이레놀은 ", "식후에 드세요."));
 

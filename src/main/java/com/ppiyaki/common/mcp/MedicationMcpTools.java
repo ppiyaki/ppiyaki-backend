@@ -1,5 +1,7 @@
 package com.ppiyaki.common.mcp;
 
+import com.ppiyaki.common.exception.BusinessException;
+import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
@@ -11,9 +13,9 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -34,8 +36,8 @@ public class MedicationMcpTools {
     }
 
     @Tool(description = "Get today's medication schedule for the user. Returns medicine names, scheduled times (resolved from the senior's meal times), and dosages for today.")
-    public List<ScheduleSummary> getTodaySchedules() {
-        final Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    public List<ScheduleSummary> getTodaySchedules(final ToolContext toolContext) {
+        final Long userId = resolveUserId(toolContext);
         final User user = userRepository.findById(userId).orElse(null);
         if (user == null) {
             return List.of();
@@ -64,9 +66,10 @@ public class MedicationMcpTools {
 
     @Tool(description = "Get remaining amount of medicines for the user. Returns medicine names with remaining and total amounts.")
     public List<MedicineRemainingInfo> getMedicineRemaining(
-            @ToolParam(description = "Optional medicine name filter. If null, returns all medicines.") final String medicineName
+            @ToolParam(description = "Optional medicine name filter. If null, returns all medicines.") final String medicineName,
+            final ToolContext toolContext
     ) {
-        final Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        final Long userId = resolveUserId(toolContext);
         final List<Medicine> medicines = medicineRepository.findByOwnerId(userId);
 
         return medicines.stream()
@@ -77,6 +80,22 @@ public class MedicationMcpTools {
                         m.getRemainingAmount(),
                         m.getTotalAmount()))
                 .toList();
+    }
+
+    /**
+     * Spring AI 도구 호출은 Reactor BoundedElastic 풀에서 실행되어 SecurityContextHolder의
+     * ThreadLocal 인증이 비어있다 (`spring.reactor.context-propagation: auto`로도 복원되지 않음).
+     * ChatSessionService가 prompt 빌드 시 .toolContext(Map.of("userId", userId))로 명시 전달하는 값을 사용한다.
+     */
+    private static Long resolveUserId(final ToolContext toolContext) {
+        if (toolContext == null) {
+            throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN, "ToolContext is missing userId");
+        }
+        final Object value = toolContext.getContext().get("userId");
+        if (!(value instanceof Long userId)) {
+            throw new BusinessException(ErrorCode.AUTH_INVALID_TOKEN, "ToolContext userId is missing or not a Long");
+        }
+        return userId;
     }
 
     private boolean isActiveToday(
