@@ -36,8 +36,6 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -58,7 +56,6 @@ public class DashboardService {
     private static final Logger log = LoggerFactory.getLogger(DashboardService.class);
 
     private static final long DELAY_THRESHOLD_MINUTES = 60;
-    private static final Pattern DOSAGE_INT_PATTERN = Pattern.compile("\\d+");
 
     private final UserRepository userRepository;
     private final CareRelationRepository careRelationRepository;
@@ -390,7 +387,7 @@ public class DashboardService {
                     .toList();
             int dailyConsumption = 0;
             for (final MedicationSchedule s : activeSchedules) {
-                dailyConsumption += parseDosageInt(s.getDosage());
+                dailyConsumption += MedicationSchedule.parseDosageInt(s.getDosage());
             }
             if (dailyConsumption == 0) {
                 continue;
@@ -401,21 +398,6 @@ public class DashboardService {
             }
         }
         return minDays;
-    }
-
-    private int parseDosageInt(final String dosage) {
-        if (dosage == null) {
-            return 0;
-        }
-        final Matcher matcher = DOSAGE_INT_PATTERN.matcher(dosage);
-        if (matcher.find()) {
-            try {
-                return Integer.parseInt(matcher.group());
-            } catch (final NumberFormatException e) {
-                return 0;
-            }
-        }
-        return 0;
     }
 
     private void validateAccess(final Long userId, final Long seniorId) {
