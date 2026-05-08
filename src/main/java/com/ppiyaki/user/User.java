@@ -101,6 +101,9 @@ public class User extends BaseTimeEntity {
             final Gender gender,
             final NotificationMode notificationMode
     ) {
+        Objects.requireNonNull(nickname, "nickname must not be null");
+        Objects.requireNonNull(gender, "gender must not be null");
+        Objects.requireNonNull(notificationMode, "notificationMode must not be null");
         final User user = new User(null, null, UserRole.SENIOR, AuthProvider.INVITE_ONLY,
                 nickname, gender, null, null);
         user.notificationMode = notificationMode;

@@ -4,7 +4,7 @@ import java.util.List;
 
 public record OnboardingResponse(
         String caregiverNickname,
-        List<SeniorResult> seniors
+        List<SeniorResult> responses
 ) {
 
     public record SeniorResult(

@@ -108,6 +108,7 @@
 | breakfast_time | time nullable | 시니어 식사 시간대(아침). Java는 `LocalTime`. 미설정 가능. Phase 1: 클라이언트가 schedule 등록 시 활용. Phase 2~3: 슬롯 매핑/자동 생성 (별도 spec) |
 | lunch_time | time nullable | 시니어 식사 시간대(점심). 동일 |
 | dinner_time | time nullable | 시니어 식사 시간대(저녁). 동일 |
+| notification_mode | varchar nullable | 알림 프리셋. Java는 `NotificationMode` enum(`BASIC_ALERT`/`INTENSIVE_CARE`). 시니어에만 적용. 온보딩 시 설정, 이후 개별 조정 가능 |
 | created_at / updated_at | timestamp | `BaseTimeEntity` |
 
 > **코드 갭(현재 HEAD 기준)**: 코드의 `User.java`는 `nickname`, `gender`, `dob`가 없고 `pet` 대신 `ppiyaki bigint` 컬럼명을 사용하며 `password`가 non-null. 이 문서는 **타깃 스키마**를 기술하며, 코드 갱신은 별도 PR로 진행한다. 추적: §7-16.
