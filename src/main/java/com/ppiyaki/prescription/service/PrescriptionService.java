@@ -24,6 +24,8 @@ import com.ppiyaki.prescription.Prescription;
 import com.ppiyaki.prescription.PrescriptionMedicineCandidate;
 import com.ppiyaki.prescription.PrescriptionStatus;
 import com.ppiyaki.prescription.controller.dto.CandidateDecisionRequest;
+import com.ppiyaki.prescription.controller.dto.PrescriptionConfirmRequest;
+import com.ppiyaki.prescription.controller.dto.PrescriptionConfirmRequest.MedicineAmountInput;
 import com.ppiyaki.prescription.controller.dto.PrescriptionDetailResponse;
 import com.ppiyaki.prescription.controller.dto.PrescriptionListResponse;
 import com.ppiyaki.prescription.controller.dto.PrescriptionMedicineAddRequest;
@@ -256,7 +258,11 @@ public class PrescriptionService {
     }
 
     @Transactional
-    public PrescriptionDetailResponse confirm(final Long userId, final Long prescriptionId) {
+    public PrescriptionDetailResponse confirm(
+            final Long userId,
+            final Long prescriptionId,
+            final PrescriptionConfirmRequest request
+    ) {
         final Prescription prescription = findPrescription(prescriptionId);
         validateMutationAccess(userId, prescription);
 
@@ -268,6 +274,12 @@ public class PrescriptionService {
             throw new BusinessException(ErrorCode.INVALID_INPUT,
                     "All candidates must be decided before confirming.");
         }
+
+        final java.util.Map<Long, MedicineAmountInput> amountByCandidate = (request == null
+                || request.medicineAmounts() == null)
+                        ? java.util.Collections.emptyMap()
+                        : request.medicineAmounts().stream()
+                                .collect(java.util.stream.Collectors.toMap(MedicineAmountInput::candidateId, m -> m));
 
         // 시니어 mealTimes 사전 검증: 슬롯 자동 생성 대상 candidate가 있는데
         // 해당 슬롯의 mealTime이 null이면 트랜잭션 변경 시작 전에 거절 (spec §3, USER_002).
@@ -301,9 +313,12 @@ public class PrescriptionService {
                     ? candidate.getMatchedItemName()
                     : candidate.getExtractedName();
 
+            final MedicineAmountInput amount = amountByCandidate.get(candidate.getId());
+            final int totalAmount = amount != null ? amount.totalAmount() : 0;
+            final int remainingAmount = amount != null ? amount.remainingAmount() : 0;
             final Medicine medicine = new Medicine(
                     prescription.getOwnerId(), prescription.getId(),
-                    name, 0, 0, itemSeq, null);
+                    name, totalAmount, remainingAmount, itemSeq, null);
             medicineRepository.save(medicine);
             candidate.linkMedicine(medicine.getId());
 

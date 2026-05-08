@@ -91,6 +91,8 @@ class PrescriptionConfirmAutoScheduleE2ETest {
         // when
         RestAssured.given()
                 .header("Authorization", "Bearer " + senior.accessToken())
+                .contentType(ContentType.JSON)
+                .body("{}")
                 .when()
                 .post("/api/v1/prescriptions/" + prescriptionId + "/confirm")
                 .then()
@@ -127,6 +129,8 @@ class PrescriptionConfirmAutoScheduleE2ETest {
         // when
         RestAssured.given()
                 .header("Authorization", "Bearer " + senior.accessToken())
+                .contentType(ContentType.JSON)
+                .body("{}")
                 .when()
                 .post("/api/v1/prescriptions/" + prescriptionId + "/confirm")
                 .then()
@@ -154,6 +158,8 @@ class PrescriptionConfirmAutoScheduleE2ETest {
         // when
         RestAssured.given()
                 .header("Authorization", "Bearer " + senior.accessToken())
+                .contentType(ContentType.JSON)
+                .body("{}")
                 .when()
                 .post("/api/v1/prescriptions/" + prescriptionId + "/confirm")
                 .then()
@@ -179,6 +185,8 @@ class PrescriptionConfirmAutoScheduleE2ETest {
         // when
         RestAssured.given()
                 .header("Authorization", "Bearer " + senior.accessToken())
+                .contentType(ContentType.JSON)
+                .body("{}")
                 .when()
                 .post("/api/v1/prescriptions/" + prescriptionId + "/confirm")
                 .then()
@@ -205,6 +213,8 @@ class PrescriptionConfirmAutoScheduleE2ETest {
         // when — 1차 confirm
         RestAssured.given()
                 .header("Authorization", "Bearer " + senior.accessToken())
+                .contentType(ContentType.JSON)
+                .body("{}")
                 .when()
                 .post("/api/v1/prescriptions/" + prescriptionId + "/confirm")
                 .then()
@@ -217,6 +227,8 @@ class PrescriptionConfirmAutoScheduleE2ETest {
         // when — 2차 confirm (이미 CONFIRMED라 동일 호출)
         RestAssured.given()
                 .header("Authorization", "Bearer " + senior.accessToken())
+                .contentType(ContentType.JSON)
+                .body("{}")
                 .when()
                 .post("/api/v1/prescriptions/" + prescriptionId + "/confirm")
                 .then()
