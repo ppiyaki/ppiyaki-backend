@@ -67,6 +67,8 @@ class PrescriptionServicePermissionTest {
     private NcpStorageProperties storageProperties;
     @Mock
     private S3Client s3Client;
+    @Mock
+    private com.ppiyaki.common.storage.PhotoUrlAssembler photoUrlAssembler;
 
     @InjectMocks
     private PrescriptionService prescriptionService;

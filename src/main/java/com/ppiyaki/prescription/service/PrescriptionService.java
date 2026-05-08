@@ -8,6 +8,7 @@ import com.ppiyaki.common.ocr.ClovaOcrClient;
 import com.ppiyaki.common.ocr.ClovaOcrClient.OcrResult;
 import com.ppiyaki.common.ocr.ClovaOcrClient.OcrToken;
 import com.ppiyaki.common.storage.NcpStorageProperties;
+import com.ppiyaki.common.storage.PhotoUrlAssembler;
 import com.ppiyaki.medication.MealSlot;
 import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
@@ -73,6 +74,7 @@ public class PrescriptionService {
     private final ImageOrientationCorrector orientationCorrector;
     private final NcpStorageProperties storageProperties;
     private final S3Client s3Client;
+    private final PhotoUrlAssembler photoUrlAssembler;
 
     public PrescriptionService(
             final PrescriptionRepository prescriptionRepository,
@@ -87,7 +89,8 @@ public class PrescriptionService {
             final PiiMaskingService piiMaskingService,
             final ImageOrientationCorrector orientationCorrector,
             final NcpStorageProperties storageProperties,
-            final S3Client s3Client
+            final S3Client s3Client,
+            final PhotoUrlAssembler photoUrlAssembler
     ) {
         this.prescriptionRepository = prescriptionRepository;
         this.candidateRepository = candidateRepository;
@@ -102,6 +105,7 @@ public class PrescriptionService {
         this.orientationCorrector = orientationCorrector;
         this.storageProperties = storageProperties;
         this.s3Client = s3Client;
+        this.photoUrlAssembler = photoUrlAssembler;
     }
 
     @Transactional
@@ -159,7 +163,8 @@ public class PrescriptionService {
 
             final List<PrescriptionMedicineCandidate> candidates = candidateRepository.findByPrescriptionId(prescription
                     .getId());
-            return PrescriptionDetailResponse.from(prescription, candidates);
+            return PrescriptionDetailResponse.from(prescription, candidates, photoUrlAssembler.toFullUrl(prescription
+                    .getMaskedImageObjectKey()));
 
         } catch (final Exception e) {
             log.error("Prescription processing failed: prescriptionId={}", prescription.getId(), e);
@@ -173,7 +178,8 @@ public class PrescriptionService {
         final Prescription prescription = findPrescription(prescriptionId);
         validateReadAccess(userId, prescription);
         final List<PrescriptionMedicineCandidate> candidates = candidateRepository.findByPrescriptionId(prescriptionId);
-        return PrescriptionDetailResponse.from(prescription, candidates);
+        return PrescriptionDetailResponse.from(prescription, candidates, photoUrlAssembler.toFullUrl(prescription
+                .getMaskedImageObjectKey()));
     }
 
     @Transactional(readOnly = true)
@@ -245,7 +251,8 @@ public class PrescriptionService {
         ));
 
         final List<PrescriptionMedicineCandidate> candidates = candidateRepository.findByPrescriptionId(prescriptionId);
-        return PrescriptionDetailResponse.from(prescription, candidates);
+        return PrescriptionDetailResponse.from(prescription, candidates, photoUrlAssembler.toFullUrl(prescription
+                .getMaskedImageObjectKey()));
     }
 
     @Transactional
@@ -313,7 +320,8 @@ public class PrescriptionService {
         }
 
         prescription.confirm();
-        return PrescriptionDetailResponse.from(prescription, candidates);
+        return PrescriptionDetailResponse.from(prescription, candidates, photoUrlAssembler.toFullUrl(prescription
+                .getMaskedImageObjectKey()));
     }
 
     private boolean isAcceptedOrCorrected(final PrescriptionMedicineCandidate candidate) {
