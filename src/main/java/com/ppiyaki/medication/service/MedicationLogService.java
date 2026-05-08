@@ -13,6 +13,7 @@ import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.controller.dto.MedicationLogListResponse;
 import com.ppiyaki.medication.controller.dto.MedicationLogResponse;
 import com.ppiyaki.medication.controller.dto.MedicationLogUpsertRequest;
+import com.ppiyaki.medication.event.MedicationTakenEvent;
 import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
@@ -26,6 +27,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,6 +56,7 @@ public class MedicationLogService {
     private final OpenAiClient openAiClient;
     private final NcpStorageProperties storageProperties;
     private final S3Client s3Client;
+    private final ApplicationEventPublisher eventPublisher;
 
     public MedicationLogService(
             final MedicationLogRepository medicationLogRepository,
@@ -63,7 +66,8 @@ public class MedicationLogService {
             final PhotoUrlAssembler photoUrlAssembler,
             final OpenAiClient openAiClient,
             final NcpStorageProperties storageProperties,
-            final S3Client s3Client
+            final S3Client s3Client,
+            final ApplicationEventPublisher eventPublisher
     ) {
         this.medicationLogRepository = medicationLogRepository;
         this.medicationScheduleRepository = medicationScheduleRepository;
@@ -73,6 +77,7 @@ public class MedicationLogService {
         this.openAiClient = openAiClient;
         this.storageProperties = storageProperties;
         this.s3Client = s3Client;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -118,6 +123,11 @@ public class MedicationLogService {
         if (request.status() == LogStatus.TAKEN && previousStatus != LogStatus.TAKEN) {
             final int dosageCount = MedicationSchedule.parseDosageInt(schedule.getDosage());
             medicine.decreaseRemainingAmount(dosageCount > 0 ? dosageCount : 1);
+        }
+
+        // 복약 성공 이벤트 발행 (TAKEN→TAKEN 중복 방지)
+        if (request.status() == LogStatus.TAKEN && previousStatus != LogStatus.TAKEN) {
+            eventPublisher.publishEvent(new MedicationTakenEvent(seniorId));
         }
 
         // Phase 2: 사진 + status=TAKEN일 때 약 개수 AI 검증 (spec medication-log-phase2 §5-4)

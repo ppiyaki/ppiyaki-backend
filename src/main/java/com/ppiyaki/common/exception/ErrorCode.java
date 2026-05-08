@@ -44,6 +44,9 @@ public enum ErrorCode {
     CARE_RELATION_ROLE_MISMATCH(HttpStatus.FORBIDDEN, "CARE_008", "Role does not match the required action"),
     CARE_RELATION_INVITE_INVALID(HttpStatus.UNAUTHORIZED, "CARE_009", "Invalid invite code"),
 
+    // Pet
+    PET_NOT_FOUND(HttpStatus.NOT_FOUND, "PET_001", "Pet not found"),
+
     // Chat
     CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_001", "Chat session not found"),
     CHAT_SESSION_EXPIRED(HttpStatus.GONE, "CHAT_002", "Chat session expired"),
