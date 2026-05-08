@@ -35,14 +35,19 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 보호자 대시보드 조회 서비스.
  * spec docs/features/caregiver-dashboard.md.
+ *
+ * <p>{@link com.ppiyaki.common.storage.PhotoUrlAssembler} 의존 — 기존 MedicationLogService 패턴과 동일하게
+ * ncp.storage.bucket-name 설정 시에만 빈 등록 (default 컨텍스트 contextLoads 보호).
  */
 @Service
+@ConditionalOnProperty(prefix = "ncp.storage", name = "bucket-name")
 public class DashboardService {
 
     private static final Logger log = LoggerFactory.getLogger(DashboardService.class);
