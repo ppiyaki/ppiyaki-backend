@@ -84,4 +84,14 @@ public class Medicine extends CreatedTimeEntity {
             this.durWarningText = durWarningText;
         }
     }
+
+    /**
+     * 복약 인증(TAKEN) 시점에 호출되어 잔여분을 1 차감한다.
+     * remainingAmount가 null이거나 0 이하면 변경 없음 (음수 방지).
+     */
+    public void decreaseRemainingAmount() {
+        if (remainingAmount != null && remainingAmount > 0) {
+            this.remainingAmount = remainingAmount - 1;
+        }
+    }
 }

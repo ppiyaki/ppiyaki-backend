@@ -282,6 +282,106 @@ class MedicationLogServiceTest {
         assertThat(resp.responses()).isEmpty();
     }
 
+    @Test
+    @DisplayName("신규 TAKEN 업서트 시 Medicine.remainingAmount 1 차감")
+    void 신규_TAKEN_시_잔여분_차감() throws Exception {
+        // given
+        final Medicine medicine = givenScheduleAndMedicineReturning(30, 30);
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
+                .thenReturn(Optional.empty());
+        when(medicationLogRepository.saveAndFlush(any(MedicationLog.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(photoUrlAssembler.toFullUrl(any())).thenReturn(null);
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, null);
+
+        // when
+        medicationLogService.upsert(SENIOR_ID, request);
+
+        // then
+        assertThat(medicine.getRemainingAmount()).isEqualTo(29);
+    }
+
+    @Test
+    @DisplayName("이미 TAKEN인 row 재호출 시 잔여분 중복 차감 없음 — 멱등")
+    void 이미_TAKEN인_경우_차감_없음() throws Exception {
+        // given
+        final Medicine medicine = givenScheduleAndMedicineReturning(30, 25);
+        final MedicationLog existing = new MedicationLog(
+                SENIOR_ID, SCHEDULE_ID, TARGET_DATE, LocalDateTime.of(2026, 4, 18, 8, 0),
+                LogStatus.TAKEN, null, false, SENIOR_ID);
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
+                .thenReturn(Optional.of(existing));
+        when(photoUrlAssembler.toFullUrl(any())).thenReturn(null);
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, null);
+
+        // when
+        medicationLogService.upsert(SENIOR_ID, request);
+
+        // then — 이미 TAKEN이었으니 변경 없음
+        assertThat(medicine.getRemainingAmount()).isEqualTo(25);
+    }
+
+    @Test
+    @DisplayName("MISSED 등 TAKEN 외 상태는 잔여분 차감 안 함")
+    void TAKEN_아닌_상태는_차감_안함() throws Exception {
+        // given
+        final Medicine medicine = givenScheduleAndMedicineReturning(30, 30);
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
+                .thenReturn(Optional.empty());
+        when(medicationLogRepository.saveAndFlush(any(MedicationLog.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(photoUrlAssembler.toFullUrl(any())).thenReturn(null);
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.MISSED, null);
+
+        // when
+        medicationLogService.upsert(SENIOR_ID, request);
+
+        // then
+        assertThat(medicine.getRemainingAmount()).isEqualTo(30);
+    }
+
+    @Test
+    @DisplayName("remainingAmount=0이면 차감하지 않아 음수 방지")
+    void 잔여분_0이면_차감_안함() throws Exception {
+        // given
+        final Medicine medicine = givenScheduleAndMedicineReturning(30, 0);
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
+                .thenReturn(Optional.empty());
+        when(medicationLogRepository.saveAndFlush(any(MedicationLog.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(photoUrlAssembler.toFullUrl(any())).thenReturn(null);
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, null);
+
+        // when
+        medicationLogService.upsert(SENIOR_ID, request);
+
+        // then
+        assertThat(medicine.getRemainingAmount()).isEqualTo(0);
+    }
+
+    private Medicine givenScheduleAndMedicineReturning(final int total, final int remaining) throws Exception {
+        final java.lang.reflect.Constructor<MedicationSchedule> ctor = MedicationSchedule.class
+                .getDeclaredConstructor();
+        ctor.setAccessible(true);
+        final MedicationSchedule schedule = ctor.newInstance();
+        setField(schedule, "id", SCHEDULE_ID);
+        setField(schedule, "medicineId", MEDICINE_ID);
+        when(medicationScheduleRepository.findById(SCHEDULE_ID)).thenReturn(Optional.of(schedule));
+
+        final Medicine medicine = new Medicine(SENIOR_ID, null, "테스트약", total, remaining, "ITEM-1", null);
+        setField(medicine, "id", MEDICINE_ID);
+        when(medicineRepository.findById(MEDICINE_ID)).thenReturn(Optional.of(medicine));
+        return medicine;
+    }
+
     private void givenScheduleAndMedicine() throws Exception {
         final java.lang.reflect.Constructor<MedicationSchedule> ctor = MedicationSchedule.class
                 .getDeclaredConstructor();

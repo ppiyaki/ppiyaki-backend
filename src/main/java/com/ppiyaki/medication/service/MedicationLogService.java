@@ -91,13 +91,16 @@ public class MedicationLogService {
 
         final LocalDateTime takenAt = request.takenAt() != null ? request.takenAt() : LocalDateTime.now();
 
+        final Optional<MedicationLog> existing = medicationLogRepository
+                .findByScheduleIdAndTargetDate(request.scheduleId(), request.targetDate());
+        final LogStatus previousStatus = existing.map(MedicationLog::getStatus).orElse(null);
+
         final MedicationLog log;
         try {
-            log = medicationLogRepository
-                    .findByScheduleIdAndTargetDate(request.scheduleId(), request.targetDate())
-                    .map(existing -> {
-                        existing.updateRecord(takenAt, request.status(), request.photoObjectKey(), isProxy, userId);
-                        return existing;
+            log = existing
+                    .map(found -> {
+                        found.updateRecord(takenAt, request.status(), request.photoObjectKey(), isProxy, userId);
+                        return found;
                     })
                     .orElseGet(() -> medicationLogRepository.saveAndFlush(new MedicationLog(
                             seniorId, request.scheduleId(), request.targetDate(),
@@ -108,6 +111,11 @@ public class MedicationLogService {
             // 클라이언트가 재시도하면 다음 트랜잭션에서 정상 update 경로로 진입한다 (spec §5-2 멱등 보장).
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
                     "Concurrent upsert conflict on (scheduleId, targetDate); please retry");
+        }
+
+        // 새로 TAKEN으로 전환되는 케이스에만 잔여분 차감 (멱등성: 이미 TAKEN이던 row 재호출 시 중복 차감 방지).
+        if (request.status() == LogStatus.TAKEN && previousStatus != LogStatus.TAKEN) {
+            medicine.decreaseRemainingAmount();
         }
 
         // Phase 2: 사진 + status=TAKEN일 때 약 개수 AI 검증 (spec medication-log-phase2 §5-4)
