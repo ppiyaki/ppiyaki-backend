@@ -40,8 +40,7 @@ class PillIdentificationMcpToolsTest {
         when(repository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(a, b), PageRequest.of(0, 10), 2));
 
-        final PillIdentifyResult result = tools.identifyPillByAppearance(
-                "T", null, "장방형", "하양", null);
+        final PillIdentifyResult result = tools.identifyPillByAppearance("T", null, "하양");
 
         assertThat(result.totalMatches()).isEqualTo(2);
         assertThat(result.candidates()).hasSize(2);
@@ -51,14 +50,13 @@ class PillIdentificationMcpToolsTest {
     @Test
     @DisplayName("totalMatches > candidates 수 (잘림) → totalMatches로 follow-up 신호 전달")
     void identify_truncated_signalsTotalMatches() {
-        final PillIdentification a = pill("ITEM-1", "장방형하양약A");
+        final PillIdentification a = pill("ITEM-1", "하양약A");
         when(repository.findAll(any(Specification.class), any(Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of(a), PageRequest.of(0, 10), 1866));
+                .thenReturn(new PageImpl<>(List.of(a), PageRequest.of(0, 10), 9485));
 
-        final PillIdentifyResult result = tools.identifyPillByAppearance(
-                null, null, "장방형", "하양", null);
+        final PillIdentifyResult result = tools.identifyPillByAppearance(null, null, "하양");
 
-        assertThat(result.totalMatches()).isEqualTo(1866);
+        assertThat(result.totalMatches()).isEqualTo(9485);
         assertThat(result.candidates()).hasSize(1);
         // LLM은 totalMatches > candidates.size()로 truncation 인지 → 사용자에게 follow-up
     }
@@ -69,7 +67,7 @@ class PillIdentificationMcpToolsTest {
         when(repository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(Page.empty());
 
-        tools.identifyPillByAppearance("T", null, "원형", "하양", null);
+        tools.identifyPillByAppearance("T", null, "하양");
 
         final ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
         org.mockito.Mockito.verify(repository).findAll(any(Specification.class), captor.capture());
@@ -83,8 +81,7 @@ class PillIdentificationMcpToolsTest {
         when(repository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(Page.empty());
 
-        final PillIdentifyResult result = tools.identifyPillByAppearance(
-                "ZZ", null, null, null, null);
+        final PillIdentifyResult result = tools.identifyPillByAppearance("ZZ", null, null);
 
         assertThat(result.totalMatches()).isEqualTo(0);
         assertThat(result.candidates()).isEmpty();

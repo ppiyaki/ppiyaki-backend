@@ -4,8 +4,10 @@ import com.ppiyaki.medicine.PillIdentification;
 import org.springframework.data.jpa.domain.Specification;
 
 /**
- * 외형(각인·색·모양·분할선) 동적 검색 Specification.
+ * 외형(각인·색) 동적 검색 Specification.
  * spec docs/features/pill-identification.md §5-2 — null 파라미터는 제외.
+ *
+ * <p>drugShape/lineFront는 vision 추출 정확도 한계로 도구 시그니처에서 제외(issue #251).
  */
 public final class PillIdentificationSpecifications {
 
@@ -15,16 +17,12 @@ public final class PillIdentificationSpecifications {
     public static Specification<PillIdentification> byAppearance(
             final String printFront,
             final String printBack,
-            final String drugShape,
-            final String colorClass1,
-            final String lineFront
+            final String colorClass1
     ) {
         return Specification.allOf(
                 fieldEquals("printFront", printFront),
                 fieldEquals("printBack", printBack),
-                fieldEquals("drugShape", drugShape),
-                fieldEquals("colorClass1", colorClass1),
-                fieldEquals("lineFront", lineFront)
+                fieldEquals("colorClass1", colorClass1)
         );
     }
 
