@@ -4,6 +4,8 @@ import com.ppiyaki.medicine.PillIdentification;
 import com.ppiyaki.medicine.repository.PillIdentificationRepository;
 import com.ppiyaki.medicine.repository.PillIdentificationSpecifications;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -22,6 +24,8 @@ import org.springframework.stereotype.Component;
 @Component
 @ConditionalOnProperty(prefix = "mfds.api", name = "service-key")
 public class PillIdentificationMcpTools {
+
+    private static final Logger log = LoggerFactory.getLogger(PillIdentificationMcpTools.class);
 
     private static final int LIMIT = 10;
 
@@ -46,6 +50,8 @@ public class PillIdentificationMcpTools {
             @ToolParam(description = "Primary color (예: '하양', '노랑', '빨강', '파랑', '초록', '주황', '분홍', '자주', '갈색', '검정'). null if uncertain.") final String colorClass1,
             @ToolParam(description = "Front split line ('+형', '-형'). null if none.") final String lineFront
     ) {
+        log.info("identifyPillByAppearance called: printFront={} printBack={} drugShape={} colorClass1={} lineFront={}",
+                printFront, printBack, drugShape, colorClass1, lineFront);
         final Page<PillIdentification> page = repository.findAll(
                 PillIdentificationSpecifications.byAppearance(
                         printFront, printBack, drugShape, colorClass1, lineFront),
@@ -53,6 +59,8 @@ public class PillIdentificationMcpTools {
         );
         final List<PillCandidate> candidates = page.getContent().stream()
                 .map(PillCandidate::from).toList();
+        log.info("identifyPillByAppearance result: totalMatches={} candidatesReturned={}",
+                page.getTotalElements(), candidates.size());
         return new PillIdentifyResult(page.getTotalElements(), candidates);
     }
 
