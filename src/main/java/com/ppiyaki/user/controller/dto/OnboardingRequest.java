@@ -10,7 +10,7 @@ import java.util.List;
 
 public record OnboardingRequest(
         @NotBlank String nickname,
-        @NotEmpty @Valid List<SeniorEntry> seniors
+        @Valid @NotEmpty List<SeniorEntry> seniors
 ) {
 
     public record SeniorEntry(

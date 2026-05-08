@@ -85,9 +85,9 @@ class OnboardingServiceTest {
 
         // then
         assertThat(response.caregiverNickname()).isEqualTo("보호자닉네임");
-        assertThat(response.seniors()).hasSize(2);
-        assertThat(response.seniors().get(0).nickname()).isEqualTo("할머니");
-        assertThat(response.seniors().get(1).nickname()).isEqualTo("할아버지");
+        assertThat(response.responses()).hasSize(2);
+        assertThat(response.responses().get(0).nickname()).isEqualTo("할머니");
+        assertThat(response.responses().get(1).nickname()).isEqualTo("할아버지");
     }
 
     @Test
@@ -107,8 +107,8 @@ class OnboardingServiceTest {
         assertThatThrownBy(() -> onboardingService.onboard(1L, onboardingRequest))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(exception -> {
-                    final BusinessException be = (BusinessException) exception;
-                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.CARE_RELATION_ROLE_MISMATCH);
+                    final BusinessException businessException = (BusinessException) exception;
+                    assertThat(businessException.getErrorCode()).isEqualTo(ErrorCode.CARE_RELATION_ROLE_MISMATCH);
                 });
     }
 }

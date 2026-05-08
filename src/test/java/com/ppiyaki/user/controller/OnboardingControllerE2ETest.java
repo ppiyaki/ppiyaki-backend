@@ -82,12 +82,12 @@ class OnboardingControllerE2ETest {
                 .then()
                 .statusCode(201)
                 .body("caregiverNickname", is("보호자온보딩"))
-                .body("seniors", hasSize(2))
-                .body("seniors[0].nickname", is("온보딩할머니"))
-                .body("seniors[0].seniorId", notNullValue())
-                .body("seniors[0].petId", notNullValue())
-                .body("seniors[1].nickname", is("온보딩할아버지"))
-                .body("seniors[1].seniorId", notNullValue())
-                .body("seniors[1].petId", notNullValue());
+                .body("responses", hasSize(2))
+                .body("responses[0].nickname", is("온보딩할머니"))
+                .body("responses[0].seniorId", notNullValue())
+                .body("responses[0].petId", notNullValue())
+                .body("responses[1].nickname", is("온보딩할아버지"))
+                .body("responses[1].seniorId", notNullValue())
+                .body("responses[1].petId", notNullValue());
     }
 }
