@@ -44,9 +44,9 @@ last_reviewed: 2026-05-07
   - null 파라미터는 검색 조건 제외
   - 결과 limit (예: 10건)
 - [ ] `PillIdentificationMcpTools.identifyPillByAppearance(...)` — 새 MCP 도구
-  - 입력: 각인·색·모양·분할선 (모두 optional)
-  - 출력: 후보 약 N건 (itemSeq, itemName, entpName, drugShape, colorClass1, printFront, itemImageUrl)
-  - 0건 / 1건 / 2건 이상 분기는 LLM이 자연어로 처리
+  - 입력: 각인(printFront/printBack)·색(colorClass1) (모두 optional). 모양(drugShape)·분할선(lineFront)은 issue #251로 제외 — vision 추출 정확도 한계(§9 결정 로그).
+  - 출력: `PillIdentifyResult { totalMatches, candidates[] }`. candidates는 최대 10건 (itemSeq, itemName, entpName, drugShape, colorClass1, printFront, printBack, lineFront, etcOtcName, itemImage). 응답엔 모양/분할선 포함되어 LLM 자연어 응답에 활용 가능.
+  - 0건 / 1건 / 2건 이상 / truncated(`totalMatches > candidates.size()`) 분기는 LLM이 자연어로 처리
 - [ ] `ChatSessionService.PHOTO_SYSTEM_PROMPT` 수정 — 약 사진이면 약명 추정 X, 외형 묘사 추출 후 즉시 `identifyPillByAppearance` 호출
 - [ ] 색·모양 enum 정규화 매핑
   - 첫 동기화 후 식약처 enum 분포 확인 → vision 출력값과 매칭하는 정규화 매핑(예: vision "흰색" → DB "하양")
@@ -147,21 +147,19 @@ last_reviewed: 2026-05-07
 | MCP Tool | `PillIdentificationMcpTools.identifyPillByAppearance` | 외형 기반 식별. ToolContext 패턴(PR #232) — 인증 컨텍스트 전달 |
 | 운영 endpoint | `POST /api/v1/admin/pill-identifications/sync` | 수동 동기화 트리거. 본 spec 한정 비공개 (개발자 직접 호출만, public route X) |
 
-**도구 시그니처 (의사 코드)**:
+**도구 시그니처 (의사 코드)** — issue #251 이후 색깔/각인만:
 ```java
-@Tool(description = "Identify a pill by its physical appearance — imprint, color, shape, line. Use this when the user sends a photo and you can extract the pill's visual features but cannot determine the drug name from the image alone.")
-public List<PillCandidate> identifyPillByAppearance(
+@Tool(description = "Identify a pill by its physical appearance — imprint and color. Use this when the user sends a photo and you can extract the pill's visual features but cannot determine the drug name from the image alone.")
+public PillIdentifyResult identifyPillByAppearance(
     @ToolParam(description = "Front imprint text/symbol (예: 'T', 'AT500'). null if not visible.") String printFront,
     @ToolParam(description = "Back imprint. null if not visible.") String printBack,
-    @ToolParam(description = "Shape (예: '원형', '장방형', '타원형', '삼각형'). null if uncertain.") String drugShape,
-    @ToolParam(description = "Primary color (예: '하양', '노랑', '빨강'). null if uncertain.") String colorClass1,
-    @ToolParam(description = "Front split line ('(+)형', '(-)형', null).") String lineFront,
-    ToolContext toolContext
+    @ToolParam(description = "Primary color (예: '하양', '노랑', '빨강'). null if uncertain.") String colorClass1
 )
 ```
-- 응답 record: `PillCandidate(itemSeq, itemName, entpName, drugShape, colorClass1, printFront, lineFront, itemImage)` 최대 10건
+- 응답 record: `PillIdentifyResult(totalMatches, candidates[])`. candidates 항목 = `PillCandidate(itemSeq, itemName, entpName, drugShape, colorClass1, printFront, printBack, lineFront, etcOtcName, itemImage)` 최대 10건. drugShape/lineFront는 응답엔 포함되어 LLM 자연어 응답에 활용 가능 (입력에서만 제외).
 - 0건이면 빈 리스트 — LLM이 follow-up 질의 자율 결정
-- ToolContext에 userId 포함 (PR #232 패턴 그대로)
+- truncation 신호: `totalMatches > candidates.size()`이면 시니어 친화 follow-up
+- (history) 초안에는 `drugShape`/`lineFront`도 입력 파라미터였으나, 운영 진단(issue #251) 결과 vision 추출 정확도 한계로 제외. 자세한 사유는 §9 결정 로그.
 
 #### 외부 식약처 API 호출 (동기화 batch)
 - URL: `https://apis.data.go.kr/1471000/MdcinGrnIdntfcInfoService03/getMdcinGrnIdntfcInfoList03`
@@ -318,3 +316,10 @@ PR 2/3 분리 이유:
 - 2026-05-07: **L1/L2/L3 캐시 계층 분리**. L1=자체 DB(영구, 주 1회 batch), L2=기존 MfdsApiClient·DrugInfoClient(24h), L3=Vision(캐시 X). 책임 분리로 충돌 없음.
 - 2026-05-07: **Phase A 한정**. Phase B(vision 재판정·embedding) 별도 spec.
 - 2026-05-07: **API 호출 한도 분석 추가**. 개발계정 일 10,000/`service-key+API`. 동기화 1회 ~250 호출, 주 1회 cron이라 한도 안전. `MdcinGrnIdntfcInfoService03`는 기존 `MfdsApiClient` 활용신청과 별도 신청해야 한도 분리. 한도 초과 fallback은 stale L1 데이터로 식별 계속.
+- 2026-05-08: **`identifyPillByAppearance` 도구 시그니처에서 `drugShape`/`lineFront` 제거** (issue #251). 운영 진단:
+  - **AND 검색 갭**: `Specification.allOf` 구조에서 부정확 필드 한 줄이 결과를 0건으로 무력화. 흰색+타원형 단독 2,176건 → +TYLENOL/500 추가 시 0건 (실제 타이레놀=장방형이라 모양 조건 충돌).
+  - **Vision 모양 추출 정확도 4/10 (실측)**: 식약처 reference 이미지 10개 모양 PoC. 정확=원형/타원형/삼각형/사각형. 부정확=장방형↔타원형, 마름모/오각/육각/팔각/반원→단순 모양으로 reduce. **사진 품질과 무관한 vision 본질 한계**(reference에서도 잘못).
+  - **Vision 각인 추출은 사진 품질이 거의 좌우**: reference에선 `TYLENOL` 5/5 정확, 사용자 흐릿 사진에선 `IYHT/181/I0917/101/IHT` 매번 hallucinate. 안전 규칙("자신 없으면 null") 100% 무시.
+  - **`lineFront`도 hallucinate 빈도 높음** (분할선 없는 reference 호출에서 "−형" 추가 빈번).
+  - **결정**: 도구 시그니처는 `printFront`/`printBack`/`colorClass1`만. drugShape/lineFront는 LLM 자연어 응답에는 사용 가능(사용자 묘사). 색깔(10가지) + 정확한 각인이 매칭 정확도 거의 결정.
+  - 후속 후보: vision 재판정(옵션 D, Phase B) — 단일 매칭 시 candidate ITEM_IMAGE를 vision으로 재대조해 false-match 자체 차단. 운영 데이터 보고 ROI 판단.
