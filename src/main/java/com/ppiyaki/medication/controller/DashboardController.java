@@ -3,6 +3,7 @@ package com.ppiyaki.medication.controller;
 import com.ppiyaki.medication.controller.dto.dashboard.DailyDashboardResponse;
 import com.ppiyaki.medication.service.DashboardService;
 import java.time.LocalDate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/v1/seniors/{seniorId}/dashboard")
+@ConditionalOnProperty(prefix = "ncp.storage", name = "bucket-name")
 public class DashboardController {
 
     private final DashboardService dashboardService;
