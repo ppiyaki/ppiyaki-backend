@@ -14,6 +14,7 @@ import com.ppiyaki.medication.LogStatus;
 import com.ppiyaki.medication.MedicationLog;
 import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.controller.dto.MedicationLogUpsertRequest;
+import com.ppiyaki.medication.event.MedicationTakenEvent;
 import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
@@ -32,6 +33,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MedicationLogService")
@@ -47,6 +49,8 @@ class MedicationLogServiceTest {
     private CareRelationRepository careRelationRepository;
     @Mock
     private PhotoUrlAssembler photoUrlAssembler;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private MedicationLogService medicationLogService;
@@ -82,6 +86,7 @@ class MedicationLogServiceTest {
         assertThat(saved.getConfirmedByUserId()).isEqualTo(SENIOR_ID);
         assertThat(saved.getStatus()).isEqualTo(LogStatus.TAKEN);
         assertThat(saved.getSeniorId()).isEqualTo(SENIOR_ID);
+        verify(eventPublisher).publishEvent(any(MedicationTakenEvent.class));
     }
 
     @Test
@@ -109,6 +114,7 @@ class MedicationLogServiceTest {
         final MedicationLog saved = captor.getValue();
         assertThat(saved.getIsProxy()).isTrue();
         assertThat(saved.getConfirmedByUserId()).isEqualTo(CAREGIVER_ID);
+        verify(eventPublisher).publishEvent(any(MedicationTakenEvent.class));
     }
 
     @Test
@@ -153,6 +159,29 @@ class MedicationLogServiceTest {
         verify(medicationLogRepository, never()).saveAndFlush(any()); // update via dirty checking
         assertThat(existing.getStatus()).isEqualTo(LogStatus.MISSED);
         assertThat(existing.getTakenAt()).isEqualTo(LocalDateTime.of(2026, 4, 18, 10, 0));
+        verify(eventPublisher, never()).publishEvent(any(MedicationTakenEvent.class));
+    }
+
+    @Test
+    @DisplayName("TAKEN→TAKEN 재업서트 시 이벤트를 중복 발행하지 않는다")
+    void TAKEN_to_TAKEN_이벤트_미발행() throws Exception {
+        // given
+        givenScheduleAndMedicine();
+        final MedicationLog existing = new MedicationLog(
+                SENIOR_ID, SCHEDULE_ID, TARGET_DATE, LocalDateTime.of(2026, 4, 18, 9, 0),
+                LogStatus.TAKEN, null, false, SENIOR_ID);
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
+                .thenReturn(Optional.of(existing));
+        when(photoUrlAssembler.toFullUrl(any())).thenReturn(null);
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, LocalDateTime.of(2026, 4, 18, 10, 0), LogStatus.TAKEN, null);
+
+        // when
+        medicationLogService.upsert(SENIOR_ID, request);
+
+        // then
+        verify(eventPublisher, never()).publishEvent(any(MedicationTakenEvent.class));
     }
 
     @Test
