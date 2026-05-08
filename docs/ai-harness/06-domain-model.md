@@ -64,9 +64,13 @@
 | OCR 원문 | Extracted Text | Clova OCR이 추출한 텍스트(구조화 전) |
 | 파싱 결과 | Parsed Result | LLM이 OCR 원문을 구조화한 약물 목록(JSON) |
 | 약물 | Medicine | 처방전에서 파생되거나 수동 등록된 복용 대상 |
-| 복약 일정 | Medication Schedule | 특정 약물을 언제 복용할지(`scheduled_time`, `dosage`) |
+| 복약 일정 | Medication Schedule | 특정 약물을 어떤 식사 슬롯에 복용할지(`meal_slot`, `dosage`). 실제 시각은 시니어 mealTimes로 동적 계산 |
+| 식사 슬롯 | Meal Slot | 복약 일정이 묶이는 식사 단위. `BREAKFAST`/`LUNCH`/`DINNER`. 실제 시각은 시니어의 `breakfast_time`/`lunch_time`/`dinner_time`을 매번 참조 |
+| 제안 슬롯 | Suggested Meal Slots | OCR 시점에 LLM이 처방전 복약주기 텍스트로부터 제안한 식사 슬롯 후보. `prescription_medicine_candidates.suggested_meal_slots`(CSV)에 저장. 보호자 검수의 출발점 (Phase 3) |
+| 확정 슬롯 | Confirmed Meal Slots | 보호자가 검수·확정한 식사 슬롯. `prescription_medicine_candidates.confirmed_meal_slots`(CSV). confirm 시 슬롯별 `medication_schedules` 자동 생성에 사용 (Phase 3) |
 | 복약 기록 | Medication Log | 실제 복용 이행 여부 기록 (`status`, `ai_status`) |
 | 복약 상태 | Log Status | 복약 기록의 사용자 확정 상태. `TAKEN` / `MISSED` / `PENDING`. `medication_logs.status`에 enum 매핑 |
+| AI 검증 상태 | Log AI Status | 복약 인증 사진 약 개수 AI 검증 결과. `COUNT_MATCH` / `COUNT_MISMATCH` / `COUNT_UNKNOWN` / `COUNT_FAILED`. `medication_logs.ai_status`에 enum 매핑 (Phase 2). 사진 + status=TAKEN일 때만 채워짐 |
 | 복약 이행률 | Adherence Rate | 기간 내 성공 복약 / 예정 복약 |
 | 대리 처리 | Proxy Confirmation | 보호자가 시니어 대신 복용 상태를 확정 (`is_proxy=true`, `confirmed_by_user_id != senior_id`) |
 | 보호자 승인 모드 | Care Mode | 시니어의 처방전 변경 권한 정책. `MANAGED`(보호자 검증 강제, 0~72h 보호자 전용 + 72h 후 시니어 fallback) / `AUTONOMOUS`(시니어 즉시 변경 허용). `users.care_mode`에 저장. 변경은 보호자만 가능 |
@@ -101,6 +105,9 @@
 | dob | date | 생년월일 |
 | pet | bigint | `pets.id` PK 참조 (FK 제약 선언 여부는 §7-12) |
 | care_mode | varchar | DB는 varchar, Java는 `CareMode` enum(`MANAGED` default / `AUTONOMOUS`). 시니어 회원에 적용. 보호자 회원도 컬럼은 갖지만 처방전 흐름에서는 `prescription.owner_id`로 참조하는 시니어 측 값만 사용 |
+| breakfast_time | time nullable | 시니어 식사 시간대(아침). Java는 `LocalTime`. 미설정 가능. Phase 1: 클라이언트가 schedule 등록 시 활용. Phase 2~3: 슬롯 매핑/자동 생성 (별도 spec) |
+| lunch_time | time nullable | 시니어 식사 시간대(점심). 동일 |
+| dinner_time | time nullable | 시니어 식사 시간대(저녁). 동일 |
 | created_at / updated_at | timestamp | `BaseTimeEntity` |
 
 > **코드 갭(현재 HEAD 기준)**: 코드의 `User.java`는 `nickname`, `gender`, `dob`가 없고 `pet` 대신 `ppiyaki bigint` 컬럼명을 사용하며 `password`가 non-null. 이 문서는 **타깃 스키마**를 기술하며, 코드 갱신은 별도 PR로 진행한다. 추적: §7-16.
@@ -125,13 +132,24 @@
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| senior_id | bigint | `users.id` 참조 |
-| caregiver_id | bigint | `users.id` 참조 |
-| invite_code | varchar | 시니어가 보호자에게 발급/공유 |
+| senior_id | bigint | `users.id` 참조. 보호자가 시니어 대리 생성 시 세팅 |
+| caregiver_id | bigint | `users.id` 참조. 보호자 ID |
 | deleted_at | timestamp nullable | soft delete. NULL이면 활성 관계 |
 | created_at / updated_at | timestamp | `BaseTimeEntity` |
 
-> **코드 갭**: 현재 코드는 `caregiver_senior_mappings` 이름으로 존재하며 `deleted_at`이 없다. 타깃 이름과 soft delete 도입은 별도 PR. 추적: §7-17.
+> 초대 코드는 `invite_codes` 테이블로 분리됨. `care_relations`의 `invite_code`/`expires_at` 컬럼은 레거시이며 추후 제거 예정.
+
+### invite_codes (`@Table(name = "invite_codes")`, extends `CreatedTimeEntity`)
+시니어 코드 로그인용 1회용 초대 코드. 평문이 아닌 hash로 저장.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | bigint PK | |
+| senior_id | bigint NOT NULL | `users.id` 참조. 로그인 대상 시니어 |
+| code_hash | varchar NOT NULL | 초대 코드의 SHA-256 hash (평문 저장 안 함, O(1) lookup) |
+| expires_at | datetime NOT NULL | 만료 시각 (발급 후 5분) |
+| used_at | datetime nullable | 사용 완료 시각. NULL이면 미사용 |
+| created_at | timestamp | `CreatedTimeEntity` |
 
 ### health_profiles (`@Table(name = "health_profiles")`, extends `CreatedTimeEntity`)
 시니어별 건강 배경 정보 (1:1).
@@ -179,6 +197,8 @@ OCR + LLM 파싱으로 추출된 약물 후보. 처방전 1건당 N행. 보호�
 | caregiver_chosen_item_seq | varchar nullable | 보호자가 직접 선택한 품목 일련번호 (MODIFIED 시) |
 | reviewed_at | datetime nullable | 보호자 검토 완료 시각 |
 | created_medicine_id | bigint nullable | 확정 후 생성된 `medicines.id` 참조 |
+| suggested_meal_slots | varchar(64) nullable | LLM이 제안한 식사 슬롯 CSV (예: `BREAKFAST,LUNCH,DINNER`). 식사 무관/불명확이면 null. Phase 3 |
+| confirmed_meal_slots | varchar(64) nullable | 보호자가 확정한 식사 슬롯 CSV. confirm 시 슬롯별 `medication_schedules` 자동 생성. Phase 3 |
 | created_at | timestamp | `CreatedTimeEntity` |
 
 > **코드 갭**: 신규 엔티티 — 엔티티 클래스 및 마이그레이션 미구현. 추적: §7-A 항목 추가.
@@ -202,20 +222,20 @@ OCR + LLM 파싱으로 추출된 약물 후보. 처방전 1건당 N행. 보호�
 > **코드 갭**: `item_seq` 컬럼 추가 필요. 추적: §7-A 항목 추가.
 
 ### medication_schedules (target: `@Table(name = "medication_schedules")`, extends `CreatedTimeEntity`)
-복약 일정. `medicine` 1건당 시간대별 N행.
+복약 일정. `medicine` 1건당 식사 슬롯별 N행.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
 | medicine_id | bigint | `medicines.id` 참조 |
-| scheduled_time | time (`LocalTime`) | 복용 시각 |
+| meal_slot | varchar | DB는 varchar, Java는 `MealSlot` enum(`BREAKFAST`/`LUNCH`/`DINNER`). NOT NULL. 실제 시각은 시니어 mealTimes로 동적 계산 |
 | dosage | varchar | 1회 복용량 (예: `1정`) |
 | days_of_week | varchar | 요일 패턴 (예: `MON,TUE,WED,THU,FRI` 또는 `DAILY`). 7비트 마스크 대신 가독성 우선 |
 | start_date | date | 복약 시작일 |
 | end_date | date nullable | 복약 종료일. NULL이면 무기한 |
 | created_at | timestamp | `CreatedTimeEntity` |
 
-> **코드 갭 해소됨**: `days_of_week`, `start_date`, `end_date` 추가 완료 (#16). 현재 코드와 타깃 스키마 일치.
+> 시각 컬럼(`scheduled_time`)은 v0.9.0에서 제거되고 `meal_slot`으로 대체. 시니어 식사 시간 변경이 자동 반영되어 cascade 불필요. 자세한 내용은 `docs/features/medication-schedule-meal-slot.md`.
 
 ### medication_logs (`@Table(name = "medication_logs")`, extends `CreatedTimeEntity`)
 복약 이행 기록. 일자별 × 스케줄별 1행.
@@ -229,7 +249,7 @@ OCR + LLM 파싱으로 추출된 약물 후보. 처방전 1건당 N행. 보호�
 | taken_at | datetime (`LocalDateTime`) nullable | 실제 확인 시각 |
 | status | varchar | 사용자 확정 상태. Java는 `LogStatus` enum(`TAKEN`/`MISSED`/`PENDING`) |
 | photo_url | varchar nullable | 복약 인증 사진. **값은 NCP Object Storage의 `objectKey`** (예: `medication-log/{userId}/{uuid}.jpg`) — 응답 시 서버가 endpoint·bucket을 조립해 full URL로 반환. 컬럼명 리네임은 별도 리팩터 이슈 |
-| ai_status | varchar nullable | 약 개수 인식 판정 결과 (세부 설계 보류, §7-9) |
+| ai_status | varchar nullable | Vision LLM 약 개수 검증 결과. Java `LogAiStatus` enum: `COUNT_MATCH` / `COUNT_MISMATCH` / `COUNT_UNKNOWN` / `COUNT_FAILED` (Phase 2). 사진 + status=TAKEN일 때만 채워짐. 컬럼명은 Phase 3(알약 식별) 추가 시 `pill_count_status`로 리네임 + `pill_identification_status` 분리 예정 |
 | is_proxy | boolean | 보호자 대리 처리 여부 (= `confirmed_by_user_id != senior_id`의 캐시) |
 | confirmed_by_user_id | bigint nullable | 실제로 상태를 확정한 사용자(`users.id` 참조). 시니어 본인일 수도, 보호자일 수도 있음 |
 | created_at | timestamp | `CreatedTimeEntity` |
@@ -248,6 +268,31 @@ OCR + LLM 파싱으로 추출된 약물 후보. 처방전 1건당 N행. 보호�
 
 > **레벨/스테이지는 서버(도메인 로직)에서 `point`로부터 계산**한다. 예: `level = floor(sqrt(point / 10))`. 밸런스 변경 시 DB 마이그레이션 없이 재계산할 수 있어 기획 반복에 유리하다.
 > **코드 갭**: 현재 `Pet.java`는 `CreatedTimeEntity`/`BaseTimeEntity`를 상속하지 않아 `created_at`/`updated_at`이 없다. 추적: §7-18.
+
+### pill_identifications (target: `@Table(name = "pill_identifications")`, no time mixin)
+식약처 의약품 낱알식별 정보 마스터 (식약처 OpenAPI `MdcinGrnIdntfcInfoService03/getMdcinGrnIdntfcInfoList03`을 주 1회 batch로 동기화). 약명 추정 없이 외형(각인·색·모양·분할선)으로 약 후보를 검색하기 위한 자체 인덱스. 자세한 설계: `docs/features/pill-identification.md`.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| item_seq | varchar(20) PK | 식약처 품목일련번호 |
+| item_name | varchar(255) NOT NULL | 품목명 (예: "타이레놀정500밀리그람") |
+| entp_name | varchar nullable | 업체명 |
+| print_front / print_back | varchar(64) nullable | 앞면/뒷면 각인 |
+| drug_shape | varchar(32) nullable | 모양 (예: "원형", "장방형", "타원형") |
+| color_class1 / color_class2 | varchar(32) nullable | 1차/2차 색 (예: "하양") |
+| line_front / line_back | varchar(32) nullable | 분할선 ("(+)형", "(-)형", null) |
+| leng_long / leng_short / thick | varchar(16) nullable | 장축·단축·두께 (mm) |
+| chart | text nullable | 형태 설명 |
+| item_image | varchar(512) nullable | 식약처 호스팅 이미지 URL |
+| class_no / class_name | varchar nullable | 분류 번호/명 |
+| etc_otc_name | varchar(32) nullable | 전문/일반 구분 |
+| mark_code_front / mark_code_back | varchar(64) nullable | 표준 각인 코드 |
+| edi_code | varchar(32) nullable | 보험코드 |
+| bizrno | varchar(32) nullable | 사업자등록번호 |
+| change_date | varchar(20) nullable | 식약처 변경일자 (yyyymmdd) |
+| synced_at | datetime(6) NOT NULL | 우리 동기화 시각 |
+
+**인덱스**: `idx_pill_print_front`(print_front), `idx_pill_shape_color`(drug_shape, color_class1), `idx_pill_color_shape_line`(color_class1, drug_shape, line_front), `idx_pill_item_name`(item_name).
 
 ### dur_checks (target: `@Table(name = "dur_checks")`, extends `CreatedTimeEntity`)
 DUR 점검 결과의 immutable 로그. 약물 정보가 시간에 따라 변할 수 있으므로 **매 호출 시 새 레코드**로 기록한다(캐시 아님).
@@ -344,6 +389,7 @@ erDiagram
     users ||--o{ oauth_identities : "links"
     users ||--o{ care_relations : "senior"
     users ||--o{ care_relations : "caregiver"
+    users ||--o{ invite_codes : "senior"
     users ||--|| health_profiles : "has"
     users ||--o{ prescriptions : "owner"
     users ||--o{ medicines : "owns"
@@ -372,6 +418,9 @@ erDiagram
         date dob
         bigint pet FK
         varchar care_mode "MANAGED default / AUTONOMOUS"
+        time breakfast_time "nullable"
+        time lunch_time "nullable"
+        time dinner_time "nullable"
         timestamp created_at
         timestamp updated_at
     }
@@ -386,10 +435,17 @@ erDiagram
         bigint id PK
         bigint senior_id FK
         bigint caregiver_id FK
-        varchar invite_code
         timestamp deleted_at
         timestamp created_at
         timestamp updated_at
+    }
+    invite_codes {
+        bigint id PK
+        bigint senior_id FK
+        varchar code_hash
+        datetime expires_at
+        datetime used_at "nullable"
+        timestamp created_at
     }
     health_profiles {
         bigint id PK
@@ -424,6 +480,8 @@ erDiagram
         varchar caregiver_chosen_item_seq "nullable"
         datetime reviewed_at "nullable"
         bigint created_medicine_id FK "nullable"
+        varchar suggested_meal_slots "nullable, CSV"
+        varchar confirmed_meal_slots "nullable, CSV"
         timestamp created_at
     }
     medicines {
@@ -440,7 +498,7 @@ erDiagram
     medication_schedules {
         bigint id PK
         bigint medicine_id FK
-        time scheduled_time
+        varchar meal_slot "BREAKFAST/LUNCH/DINNER"
         varchar dosage
         varchar days_of_week
         date start_date
@@ -567,7 +625,7 @@ erDiagram
 
 | # | 주제 | 현재 상태 |
 |---|---|---|
-| 7-9 | 약 개수 인식 세부 | MediaPipe 기반 행동 인식은 **제외**. 약 개수 인식으로 대체 예정이나 세부 기획 미완 → `medication_logs.photo_url`/`ai_status` 컬럼은 placeholder로 유지 |
+| ~~7-9~~ | ~~약 개수 인식 세부~~ | ✅ **해소됨** (Phase 2, v0.8.0). gpt-5.4-mini Vision API 동기 검증으로 구현 (2026-05-06 nano→mini 정확도 업그레이드). 명세는 `docs/features/medication-log-phase2.md`. 알약 식별(Phase 3, #185)은 별도 spec에서 진행 |
 | 7-23 | DB 마이그레이션 도구 도입 | **후순위.** 현재는 `src/main/resources/schema.sql`을 Hibernate metadata에서 추출해 운영 스키마를 관리. 운영 안정화 단계에서 Flyway/Liquibase 도입 검토. 도입 시 `application-prod.yml`의 `ddl-auto: validate` 정책과 부트스트랩 흐름(초기 schema.sql → migration baseline) 정리 필요 |
 
 ## 8) 외부 연동 인벤토리

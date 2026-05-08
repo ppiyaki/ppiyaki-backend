@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
+import com.ppiyaki.medication.MealSlot;
 import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
@@ -17,7 +18,6 @@ import io.restassured.http.ContentType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,9 @@ import org.springframework.boot.test.web.server.LocalServerPort;
         "ncp.storage.region=kr-standard",
         "ncp.storage.access-key=test-access-key",
         "ncp.storage.secret-key=test-secret-key",
-        "ncp.storage.bucket-name=ppiyaki-test"
+        "ncp.storage.bucket-name=ppiyaki-test",
+        "openai.api-key=sk-test-placeholder",
+        "openai.model=gpt-test"
 })
 @DisplayName("PUT/GET /api/v1/medication-logs E2E")
 class MedicationLogControllerE2ETest {
@@ -242,7 +244,7 @@ class MedicationLogControllerE2ETest {
     }
 
     private void seedCareRelation(final Long seniorId, final Long caregiverId) {
-        careRelationRepository.save(new CareRelation(seniorId, caregiverId, "INVITE-" + seniorId + "-" + caregiverId));
+        careRelationRepository.save(CareRelation.createLinked(seniorId, caregiverId));
     }
 
     private Long seedMedicine(final Long ownerId) {
@@ -254,7 +256,7 @@ class MedicationLogControllerE2ETest {
         ctor.setAccessible(true);
         final MedicationSchedule schedule = ctor.newInstance();
         setField(schedule, "medicineId", medicineId);
-        setField(schedule, "scheduledTime", LocalTime.of(9, 0));
+        setField(schedule, "mealSlot", MealSlot.BREAKFAST);
         setField(schedule, "dosage", "1정");
         setField(schedule, "daysOfWeek", "DAILY");
         setField(schedule, "startDate", LocalDate.of(2026, 4, 1));

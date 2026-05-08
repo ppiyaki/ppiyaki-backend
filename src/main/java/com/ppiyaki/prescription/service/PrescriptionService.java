@@ -8,6 +8,10 @@ import com.ppiyaki.common.ocr.ClovaOcrClient;
 import com.ppiyaki.common.ocr.ClovaOcrClient.OcrResult;
 import com.ppiyaki.common.ocr.ClovaOcrClient.OcrToken;
 import com.ppiyaki.common.storage.NcpStorageProperties;
+import com.ppiyaki.common.storage.PhotoUrlAssembler;
+import com.ppiyaki.medication.MealSlot;
+import com.ppiyaki.medication.MedicationSchedule;
+import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.controller.dto.MedicineCandidate;
 import com.ppiyaki.medicine.repository.MedicineRepository;
@@ -20,6 +24,8 @@ import com.ppiyaki.prescription.Prescription;
 import com.ppiyaki.prescription.PrescriptionMedicineCandidate;
 import com.ppiyaki.prescription.PrescriptionStatus;
 import com.ppiyaki.prescription.controller.dto.CandidateDecisionRequest;
+import com.ppiyaki.prescription.controller.dto.PrescriptionConfirmRequest;
+import com.ppiyaki.prescription.controller.dto.PrescriptionConfirmRequest.MedicineAmountInput;
 import com.ppiyaki.prescription.controller.dto.PrescriptionDetailResponse;
 import com.ppiyaki.prescription.controller.dto.PrescriptionListResponse;
 import com.ppiyaki.prescription.controller.dto.PrescriptionMedicineAddRequest;
@@ -33,6 +39,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -59,6 +66,7 @@ public class PrescriptionService {
     private final PrescriptionRepository prescriptionRepository;
     private final PrescriptionMedicineCandidateRepository candidateRepository;
     private final MedicineRepository medicineRepository;
+    private final MedicationScheduleRepository medicationScheduleRepository;
     private final CareRelationRepository careRelationRepository;
     private final UserRepository userRepository;
     private final ClovaOcrClient clovaOcrClient;
@@ -68,11 +76,13 @@ public class PrescriptionService {
     private final ImageOrientationCorrector orientationCorrector;
     private final NcpStorageProperties storageProperties;
     private final S3Client s3Client;
+    private final PhotoUrlAssembler photoUrlAssembler;
 
     public PrescriptionService(
             final PrescriptionRepository prescriptionRepository,
             final PrescriptionMedicineCandidateRepository candidateRepository,
             final MedicineRepository medicineRepository,
+            final MedicationScheduleRepository medicationScheduleRepository,
             final CareRelationRepository careRelationRepository,
             final UserRepository userRepository,
             final ClovaOcrClient clovaOcrClient,
@@ -81,11 +91,13 @@ public class PrescriptionService {
             final PiiMaskingService piiMaskingService,
             final ImageOrientationCorrector orientationCorrector,
             final NcpStorageProperties storageProperties,
-            final S3Client s3Client
+            final S3Client s3Client,
+            final PhotoUrlAssembler photoUrlAssembler
     ) {
         this.prescriptionRepository = prescriptionRepository;
         this.candidateRepository = candidateRepository;
         this.medicineRepository = medicineRepository;
+        this.medicationScheduleRepository = medicationScheduleRepository;
         this.careRelationRepository = careRelationRepository;
         this.userRepository = userRepository;
         this.clovaOcrClient = clovaOcrClient;
@@ -95,6 +107,7 @@ public class PrescriptionService {
         this.orientationCorrector = orientationCorrector;
         this.storageProperties = storageProperties;
         this.s3Client = s3Client;
+        this.photoUrlAssembler = photoUrlAssembler;
     }
 
     @Transactional
@@ -142,7 +155,8 @@ public class PrescriptionService {
                         matched != null ? matched.itemSeq() : null,
                         matched != null ? matched.itemName() : null,
                         matchResult.matchType(),
-                        matchResult.reason()
+                        matchResult.reason(),
+                        med.mealSlots()
                 ));
             }
 
@@ -151,7 +165,8 @@ public class PrescriptionService {
 
             final List<PrescriptionMedicineCandidate> candidates = candidateRepository.findByPrescriptionId(prescription
                     .getId());
-            return PrescriptionDetailResponse.from(prescription, candidates);
+            return PrescriptionDetailResponse.from(prescription, candidates, photoUrlAssembler.toFullUrl(prescription
+                    .getMaskedImageObjectKey()));
 
         } catch (final Exception e) {
             log.error("Prescription processing failed: prescriptionId={}", prescription.getId(), e);
@@ -165,16 +180,27 @@ public class PrescriptionService {
         final Prescription prescription = findPrescription(prescriptionId);
         validateReadAccess(userId, prescription);
         final List<PrescriptionMedicineCandidate> candidates = candidateRepository.findByPrescriptionId(prescriptionId);
-        return PrescriptionDetailResponse.from(prescription, candidates);
+        return PrescriptionDetailResponse.from(prescription, candidates, photoUrlAssembler.toFullUrl(prescription
+                .getMaskedImageObjectKey()));
     }
 
     @Transactional(readOnly = true)
-    public PrescriptionListResponse listByOwner(final Long userId, final PrescriptionStatus status) {
+    public PrescriptionListResponse listByOwner(
+            final Long userId,
+            final Long seniorIdParam,
+            final PrescriptionStatus status
+    ) {
+        final Long ownerId = seniorIdParam != null ? seniorIdParam : userId;
+        if (!userId.equals(ownerId)) {
+            careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(userId, ownerId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
+        }
+
         final List<Prescription> prescriptions;
         if (status != null) {
-            prescriptions = prescriptionRepository.findByOwnerIdAndStatusOrderByCreatedAtDesc(userId, status);
+            prescriptions = prescriptionRepository.findByOwnerIdAndStatusOrderByCreatedAtDesc(ownerId, status);
         } else {
-            prescriptions = prescriptionRepository.findByOwnerIdOrderByCreatedAtDesc(userId);
+            prescriptions = prescriptionRepository.findByOwnerIdOrderByCreatedAtDesc(ownerId);
         }
         return PrescriptionListResponse.from(prescriptions);
     }
@@ -197,6 +223,10 @@ public class PrescriptionService {
             case REJECTED -> candidate.reject();
             case MANUALLY_CORRECTED -> candidate.correctManually(request.chosenItemSeq());
             default -> throw new BusinessException(ErrorCode.INVALID_INPUT, "Invalid decision: " + request.decision());
+        }
+
+        if (request.confirmedMealSlots() != null) {
+            candidate.updateConfirmedMealSlots(request.confirmedMealSlots());
         }
     }
 
@@ -223,11 +253,16 @@ public class PrescriptionService {
         ));
 
         final List<PrescriptionMedicineCandidate> candidates = candidateRepository.findByPrescriptionId(prescriptionId);
-        return PrescriptionDetailResponse.from(prescription, candidates);
+        return PrescriptionDetailResponse.from(prescription, candidates, photoUrlAssembler.toFullUrl(prescription
+                .getMaskedImageObjectKey()));
     }
 
     @Transactional
-    public PrescriptionDetailResponse confirm(final Long userId, final Long prescriptionId) {
+    public PrescriptionDetailResponse confirm(
+            final Long userId,
+            final Long prescriptionId,
+            final PrescriptionConfirmRequest request
+    ) {
         final Prescription prescription = findPrescription(prescriptionId);
         validateMutationAccess(userId, prescription);
 
@@ -240,27 +275,73 @@ public class PrescriptionService {
                     "All candidates must be decided before confirming.");
         }
 
+        final java.util.Map<Long, MedicineAmountInput> amountByCandidate = (request == null
+                || request.medicineAmounts() == null)
+                        ? java.util.Collections.emptyMap()
+                        : request.medicineAmounts().stream()
+                                .collect(java.util.stream.Collectors.toMap(MedicineAmountInput::candidateId, m -> m));
+
+        // 시니어 mealTimes 사전 검증: 슬롯 자동 생성 대상 candidate가 있는데
+        // 해당 슬롯의 mealTime이 null이면 트랜잭션 변경 시작 전에 거절 (spec §3, USER_002).
+        final User owner = userRepository.findById(prescription.getOwnerId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         for (final PrescriptionMedicineCandidate candidate : candidates) {
-            if (candidate.getCaregiverDecision() == CaregiverDecision.ACCEPTED
-                    || candidate.getCaregiverDecision() == CaregiverDecision.MANUALLY_CORRECTED) {
+            if (!isAcceptedOrCorrected(candidate) || candidate.getCreatedMedicineId() != null) {
+                continue;
+            }
+            for (final MealSlot slot : candidate.getConfirmedMealSlotsList()) {
+                if (slot.resolveTime(owner) == null) {
+                    throw new BusinessException(ErrorCode.MEAL_TIMES_NOT_SET);
+                }
+            }
+        }
 
-                final String itemSeq = candidate.getCaregiverChosenItemSeq() != null
-                        ? candidate.getCaregiverChosenItemSeq()
-                        : candidate.getMatchedItemSeq();
-                final String name = candidate.getMatchedItemName() != null
-                        ? candidate.getMatchedItemName()
-                        : candidate.getExtractedName();
+        final LocalDate today = LocalDate.now();
+        for (final PrescriptionMedicineCandidate candidate : candidates) {
+            if (!isAcceptedOrCorrected(candidate)) {
+                continue;
+            }
+            // 멱등: 이미 Medicine이 생성된 candidate는 skip (재confirm 시 중복 생성 방지).
+            if (candidate.getCreatedMedicineId() != null) {
+                continue;
+            }
 
-                final Medicine medicine = new Medicine(
-                        prescription.getOwnerId(), prescription.getId(),
-                        name, 0, 0, itemSeq, null);
-                medicineRepository.save(medicine);
-                candidate.linkMedicine(medicine.getId());
+            final String itemSeq = candidate.getCaregiverChosenItemSeq() != null
+                    ? candidate.getCaregiverChosenItemSeq()
+                    : candidate.getMatchedItemSeq();
+            final String name = candidate.getMatchedItemName() != null
+                    ? candidate.getMatchedItemName()
+                    : candidate.getExtractedName();
+
+            final MedicineAmountInput amount = amountByCandidate.get(candidate.getId());
+            final int totalAmount = amount != null ? amount.totalAmount() : 0;
+            final int remainingAmount = amount != null ? amount.remainingAmount() : 0;
+            final Medicine medicine = new Medicine(
+                    prescription.getOwnerId(), prescription.getId(),
+                    name, totalAmount, remainingAmount, itemSeq, null);
+            medicineRepository.save(medicine);
+            candidate.linkMedicine(medicine.getId());
+
+            // dosage가 비어있으면 schedule 자동 생성 skip — Medicine만 등록.
+            // 보호자가 후속으로 schedule CRUD API로 보완 (spec §3 Q2).
+            final String dosage = candidate.getExtractedDosage();
+            if (dosage == null || dosage.isBlank()) {
+                continue;
+            }
+            for (final MealSlot slot : candidate.getConfirmedMealSlotsList()) {
+                medicationScheduleRepository.save(new MedicationSchedule(
+                        medicine.getId(), slot, dosage, "DAILY", today, null));
             }
         }
 
         prescription.confirm();
-        return PrescriptionDetailResponse.from(prescription, candidates);
+        return PrescriptionDetailResponse.from(prescription, candidates, photoUrlAssembler.toFullUrl(prescription
+                .getMaskedImageObjectKey()));
+    }
+
+    private boolean isAcceptedOrCorrected(final PrescriptionMedicineCandidate candidate) {
+        return candidate.getCaregiverDecision() == CaregiverDecision.ACCEPTED
+                || candidate.getCaregiverDecision() == CaregiverDecision.MANUALLY_CORRECTED;
     }
 
     @Transactional

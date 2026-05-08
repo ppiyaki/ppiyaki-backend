@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -49,13 +50,27 @@ public class User extends BaseTimeEntity {
     private Long pet;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", nullable = false)
+    private AuthProvider authProvider;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "care_mode", nullable = false)
     private CareMode careMode;
+
+    @Column(name = "breakfast_time")
+    private LocalTime breakfastTime;
+
+    @Column(name = "lunch_time")
+    private LocalTime lunchTime;
+
+    @Column(name = "dinner_time")
+    private LocalTime dinnerTime;
 
     public User(
             final String loginId,
             final String password,
             final UserRole role,
+            final AuthProvider authProvider,
             final String nickname,
             final Gender gender,
             final LocalDate dob,
@@ -64,6 +79,7 @@ public class User extends BaseTimeEntity {
         this.loginId = loginId;
         this.password = password;
         this.role = role;
+        this.authProvider = Objects.requireNonNull(authProvider, "authProvider must not be null");
         this.nickname = nickname;
         this.gender = gender;
         this.dob = dob;
@@ -71,7 +87,26 @@ public class User extends BaseTimeEntity {
         this.careMode = CareMode.MANAGED;
     }
 
+    public static User createSenior(final String nickname, final LocalDate dob) {
+        return new User(null, null, UserRole.SENIOR, AuthProvider.INVITE_ONLY,
+                nickname, null, dob, null);
+    }
+
+    public void assignPet(final Long petId) {
+        this.pet = Objects.requireNonNull(petId, "petId must not be null");
+    }
+
     public void changeCareMode(final CareMode careMode) {
         this.careMode = Objects.requireNonNull(careMode, "careMode must not be null");
+    }
+
+    public void updateMealTimes(
+            final LocalTime breakfastTime,
+            final LocalTime lunchTime,
+            final LocalTime dinnerTime
+    ) {
+        this.breakfastTime = Objects.requireNonNull(breakfastTime, "breakfastTime must not be null");
+        this.lunchTime = Objects.requireNonNull(lunchTime, "lunchTime must not be null");
+        this.dinnerTime = Objects.requireNonNull(dinnerTime, "dinnerTime must not be null");
     }
 }
