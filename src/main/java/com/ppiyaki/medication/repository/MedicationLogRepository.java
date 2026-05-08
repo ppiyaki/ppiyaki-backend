@@ -12,4 +12,6 @@ public interface MedicationLogRepository extends JpaRepository<MedicationLog, Lo
 
     List<MedicationLog> findBySeniorIdAndTargetDateBetweenOrderByTargetDateAscIdAsc(
             final Long seniorId, final LocalDate from, final LocalDate to);
+
+    List<MedicationLog> findBySeniorIdAndTargetDate(final Long seniorId, final LocalDate targetDate);
 }
