@@ -43,4 +43,19 @@ public interface MedicationScheduleRepository extends JpaRepository<MedicationSc
     List<MedicationSchedule> findActiveByOwnerAndDate(
             @Param("seniorId") final Long seniorId,
             @Param("date") final LocalDate date);
+
+    /**
+     * 같은 시니어의 [from, to] 기간과 겹치는 active schedule 전체.
+     * spec docs/features/caregiver-dashboard.md §5-5 weekly/monthly 흐름.
+     */
+    @Query("""
+            SELECT s FROM MedicationSchedule s
+            WHERE s.medicineId IN (SELECT m.id FROM Medicine m WHERE m.ownerId = :seniorId)
+              AND (s.startDate IS NULL OR s.startDate <= :to)
+              AND (s.endDate IS NULL OR s.endDate >= :from)
+            """)
+    List<MedicationSchedule> findActiveByOwnerAndDateRange(
+            @Param("seniorId") final Long seniorId,
+            @Param("from") final LocalDate from,
+            @Param("to") final LocalDate to);
 }

@@ -237,6 +237,80 @@ class DashboardServiceTest {
         assertThat(resp.medicines().get(0).slots()).containsExactly(MealSlot.BREAKFAST, MealSlot.DINNER);
     }
 
+    @Test
+    @DisplayName("weekly — 모든 일자 schedule 없음 → adherenceRate=null, days[7] 모두 PERFECT/NOT_SCHEDULED")
+    void weekly_emptySchedules() throws Exception {
+        givenSeniorAndCaregiver();
+        givenSeniorMealTimes(LocalTime.of(8, 0), LocalTime.of(12, 30), LocalTime.of(18, 30));
+        when(scheduleRepository.findActiveByOwnerAndDateRange(eq(SENIOR_ID), any(), any())).thenReturn(List.of());
+        when(logRepository.findBySeniorIdAndTargetDateBetweenOrderByTargetDateAscIdAsc(eq(SENIOR_ID), any(), any()))
+                .thenReturn(List.of());
+
+        final LocalDate weekStart = TODAY.minusDays(7);
+        final var resp = dashboardService.getWeekly(SENIOR_ID, SENIOR_ID, weekStart);
+
+        org.assertj.core.api.Assertions.assertThat(resp.weekStart()).isEqualTo(weekStart);
+        org.assertj.core.api.Assertions.assertThat(resp.weekEnd()).isEqualTo(weekStart.plusDays(6));
+        org.assertj.core.api.Assertions.assertThat(resp.adherenceRate()).isNull();
+        org.assertj.core.api.Assertions.assertThat(resp.days()).hasSize(7);
+        org.assertj.core.api.Assertions.assertThat(resp.days()).allMatch(d -> d.dayStatus()
+                == com.ppiyaki.medication.DayStatus.PERFECT
+                && d.slots().stream().allMatch(s -> s.status() == SlotStatus.NOT_SCHEDULED));
+    }
+
+    @Test
+    @DisplayName("weekly — 과거 6일 모두 PERFECT 인증, 오늘은 PENDING → adherenceRate=100")
+    void weekly_pastPerfect_todayPending() throws Exception {
+        givenSeniorAndCaregiver();
+        final LocalTime breakfastTime = LocalTime.of(8, 0);
+        givenSeniorMealTimes(breakfastTime, null, null);
+
+        final LocalDate weekStart = TODAY.minusDays(6);
+        final MedicationSchedule schedule = scheduleOf(1L, 100L, MealSlot.BREAKFAST, "1정");
+        when(scheduleRepository.findActiveByOwnerAndDateRange(eq(SENIOR_ID), any(), any()))
+                .thenReturn(List.of(schedule));
+
+        final List<MedicationLog> pastLogs = new java.util.ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            final LocalDate date = weekStart.plusDays(i);
+            pastLogs.add(logOnDate(schedule.getId(), date, breakfastTime, 10));
+        }
+        // 오늘은 미인증
+        when(logRepository.findBySeniorIdAndTargetDateBetweenOrderByTargetDateAscIdAsc(eq(SENIOR_ID), any(), any()))
+                .thenReturn(pastLogs);
+
+        final var resp = dashboardService.getWeekly(SENIOR_ID, SENIOR_ID, weekStart);
+
+        // 분모: 7일 모두 schedule된 BREAKFAST = 7. 분자: 과거 6 PERFECT = 6 (오늘 PENDING은 분자 제외).
+        org.assertj.core.api.Assertions.assertThat(resp.adherenceRate())
+                .isEqualTo(Math.round(6.0 / 7 * 10000) / 100.0);
+        org.assertj.core.api.Assertions.assertThat(resp.days().get(6).dayStatus())
+                .isEqualTo(com.ppiyaki.medication.DayStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("weekly — 미래 일자(weekStart=today+1)는 FUTURE, adherenceRate=null")
+    void weekly_futureWeek() throws Exception {
+        givenSeniorAndCaregiver();
+        givenSeniorMealTimes(LocalTime.of(8, 0), null, null);
+        when(scheduleRepository.findActiveByOwnerAndDateRange(eq(SENIOR_ID), any(), any())).thenReturn(List.of());
+        when(logRepository.findBySeniorIdAndTargetDateBetweenOrderByTargetDateAscIdAsc(eq(SENIOR_ID), any(), any()))
+                .thenReturn(List.of());
+
+        final LocalDate weekStart = TODAY.plusDays(1);
+        final var resp = dashboardService.getWeekly(SENIOR_ID, SENIOR_ID, weekStart);
+
+        org.assertj.core.api.Assertions.assertThat(resp.adherenceRate()).isNull();
+        org.assertj.core.api.Assertions.assertThat(resp.days()).allMatch(d -> d.dayStatus()
+                == com.ppiyaki.medication.DayStatus.FUTURE);
+    }
+
+    private MedicationLog logOnDate(final Long scheduleId, final LocalDate date,
+            final LocalTime mealTime, final int minutesAfter) {
+        return new MedicationLog(SENIOR_ID, scheduleId, date,
+                LocalDateTime.of(date, mealTime).plusMinutes(minutesAfter), LogStatus.TAKEN, null, false, SENIOR_ID);
+    }
+
     private void givenSeniorAndCaregiver() throws Exception {
         when(userRepository.findById(SENIOR_ID)).thenReturn(Optional.of(userOf(SENIOR_ID, "김장군")));
         // userId == seniorId 케이스 외에는 caregiver lookup 호출
