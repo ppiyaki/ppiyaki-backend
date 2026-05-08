@@ -11,6 +11,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,6 +22,8 @@ import lombok.NoArgsConstructor;
 @Table(name = "medication_schedules")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MedicationSchedule extends CreatedTimeEntity {
+
+    private static final Pattern DOSAGE_INT_PATTERN = Pattern.compile("\\d+");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -82,5 +86,24 @@ public class MedicationSchedule extends CreatedTimeEntity {
         if (endDate != null) {
             this.endDate = endDate;
         }
+    }
+
+    /**
+     * dosage 문자열에서 첫 정수를 추출. 예: "1정" → 1, "2정" → 2, "반정"/null → 0.
+     * spec docs/features/caregiver-dashboard.md §8 Q2 default 룰. 잔여분 차감 / 일일 소요량 계산 공용.
+     */
+    public static int parseDosageInt(final String dosage) {
+        if (dosage == null) {
+            return 0;
+        }
+        final Matcher matcher = DOSAGE_INT_PATTERN.matcher(dosage);
+        if (matcher.find()) {
+            try {
+                return Integer.parseInt(matcher.group());
+            } catch (final NumberFormatException e) {
+                return 0;
+            }
+        }
+        return 0;
     }
 }
