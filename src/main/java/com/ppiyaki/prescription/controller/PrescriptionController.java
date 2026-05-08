@@ -2,6 +2,7 @@ package com.ppiyaki.prescription.controller;
 
 import com.ppiyaki.prescription.PrescriptionStatus;
 import com.ppiyaki.prescription.controller.dto.CandidateDecisionRequest;
+import com.ppiyaki.prescription.controller.dto.PrescriptionConfirmRequest;
 import com.ppiyaki.prescription.controller.dto.PrescriptionCreateRequest;
 import com.ppiyaki.prescription.controller.dto.PrescriptionDetailResponse;
 import com.ppiyaki.prescription.controller.dto.PrescriptionListResponse;
@@ -52,9 +53,10 @@ public class PrescriptionController {
     @GetMapping
     public ResponseEntity<PrescriptionListResponse> list(
             @AuthenticationPrincipal final Long userId,
+            @RequestParam(required = false) final Long seniorId,
             @RequestParam(required = false) final PrescriptionStatus status
     ) {
-        return ResponseEntity.ok(prescriptionService.listByOwner(userId, status));
+        return ResponseEntity.ok(prescriptionService.listByOwner(userId, seniorId, status));
     }
 
     @PatchMapping("/{prescriptionId}/medicines/{candidateId}")
@@ -81,9 +83,10 @@ public class PrescriptionController {
     @PostMapping("/{prescriptionId}/confirm")
     public ResponseEntity<PrescriptionDetailResponse> confirm(
             @AuthenticationPrincipal final Long userId,
-            @PathVariable final Long prescriptionId
+            @PathVariable final Long prescriptionId,
+            @Valid @RequestBody(required = false) final PrescriptionConfirmRequest request
     ) {
-        return ResponseEntity.ok(prescriptionService.confirm(userId, prescriptionId));
+        return ResponseEntity.ok(prescriptionService.confirm(userId, prescriptionId, request));
     }
 
     @PostMapping("/{prescriptionId}/reject")

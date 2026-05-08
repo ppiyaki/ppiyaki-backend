@@ -61,6 +61,7 @@ jobs:
               --name ppiyaki-server \
               -p 8080:8080 \
               --restart always \
+              -e TZ='Asia/Seoul' \
               -e SPRING_PROFILES_ACTIVE=prod \
               -e DB_URL='${{ secrets.DB_URL }}' \
               -e DB_USERNAME='${{ secrets.DB_USERNAME }}' \
@@ -77,6 +78,8 @@ jobs:
               -e CLOVA_OCR_SECRET='${{ secrets.CLOVA_OCR_SECRET }}' \
               -e CLOVA_OCR_INVOKE_URL='${{ secrets.CLOVA_OCR_INVOKE_URL }}' \
               -e OPENAI_API_KEY='${{ secrets.OPENAI_API_KEY }}' \
+              -e OPENAI_TEXT_MODEL='gpt-5.4-nano' \
+              -e OPENAI_VISION_MODEL='gpt-5.4-mini' \
               ${{ secrets.NCP_REGISTRY }}/ppiyaki-server:latest
             
             echo "Cleaning up old images..."

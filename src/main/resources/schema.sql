@@ -6,7 +6,16 @@
         id bigint not null auto_increment,
         senior_id bigint,
         updated_at datetime(6),
-        invite_code varchar(255),
+        primary key (id)
+    ) engine=InnoDB;
+
+    create table invite_codes (
+        created_at datetime(6),
+        expires_at datetime(6) not null,
+        id bigint not null auto_increment,
+        senior_id bigint not null,
+        used_at datetime(6),
+        code_hash varchar(255) not null,
         primary key (id)
     ) engine=InnoDB;
 
@@ -79,13 +88,13 @@
 
     create table medication_schedules (
         end_date date,
-        scheduled_time time(6),
         start_date date,
         created_at datetime(6),
         id bigint not null auto_increment,
         medicine_id bigint,
         days_of_week varchar(255),
         dosage varchar(255),
+        meal_slot varchar(16) not null,
         primary key (id)
     ) engine=InnoDB;
 
@@ -118,6 +127,39 @@
         primary key (id)
     ) engine=InnoDB;
 
+    create table pill_identifications (
+        synced_at datetime(6) not null,
+        bizrno varchar(32),
+        change_date varchar(32),
+        class_no varchar(16),
+        color_class1 varchar(32),
+        color_class2 varchar(32),
+        drug_shape varchar(32),
+        edi_code varchar(255),
+        etc_otc_name varchar(32),
+        leng_long varchar(32),
+        leng_short varchar(32),
+        line_back varchar(32),
+        line_front varchar(32),
+        mark_code_back varchar(64),
+        mark_code_front varchar(64),
+        print_back varchar(64),
+        print_front varchar(64),
+        thick varchar(32),
+        class_name varchar(128),
+        item_seq varchar(20) not null,
+        item_image varchar(512),
+        item_name varchar(255) not null,
+        entp_name varchar(255),
+        chart TEXT,
+        primary key (item_seq)
+    ) engine=InnoDB;
+
+    create index idx_pill_print_front on pill_identifications (print_front);
+    create index idx_pill_shape_color on pill_identifications (drug_shape, color_class1);
+    create index idx_pill_color_shape_line on pill_identifications (color_class1, drug_shape, line_front);
+    create index idx_pill_item_name on pill_identifications (item_name);
+
     create table prescriptions (
         caregiver_id bigint,
         created_at datetime(6),
@@ -145,6 +187,9 @@
 
     create table users (
         dob date,
+        breakfast_time time(6),
+        lunch_time time(6),
+        dinner_time time(6),
         created_at datetime(6),
         id bigint not null auto_increment,
         pet bigint,
@@ -152,13 +197,18 @@
         login_id varchar(255),
         nickname varchar(255),
         password varchar(255),
+        auth_provider enum ('INVITE_ONLY','KAKAO','LOCAL') not null,
         care_mode enum ('AUTONOMOUS','MANAGED') not null,
         gender enum ('FEMALE','MALE','OTHER','UNKNOWN'),
         role enum ('CAREGIVER','SENIOR'),
         primary key (id)
     ) engine=InnoDB;
 
-    alter table device_tokens 
+    create index idx_invite_codes_codehash_used on invite_codes (code_hash, used_at);
+    create index idx_invite_codes_senior_used on invite_codes (senior_id, used_at);
+    create index idx_invite_codes_expires on invite_codes (expires_at);
+
+    alter table device_tokens
        add constraint UK8se1i37nto56x9252rmrit8ib unique (token);
 
     alter table oauth_identities 
@@ -167,5 +217,5 @@
     alter table reports 
        add constraint uk_reports_senior_period unique (senior_id, period_type, period_start);
 
-    alter table users 
+    alter table users
        add constraint UKi3xs7wmfu2i3jt079uuetycit unique (login_id);

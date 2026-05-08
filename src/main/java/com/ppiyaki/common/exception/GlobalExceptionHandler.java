@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -66,9 +67,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ErrorResponse> handleNoHandlerFound(final NoHandlerFoundException exception) {
         log.debug("No handler found: {}", exception.getMessage());
-        final ErrorResponse errorResponse = ErrorResponse.of(ErrorCode.MALFORMED_REQUEST,
+        final ErrorResponse errorResponse = ErrorResponse.of(ErrorCode.NOT_FOUND,
                 "No endpoint " + exception.getHttpMethod() + " " + exception.getRequestURL());
-        return ResponseEntity.status(ErrorCode.MALFORMED_REQUEST.getStatus()).body(errorResponse);
+        return ResponseEntity.status(ErrorCode.NOT_FOUND.getStatus()).body(errorResponse);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(final NoResourceFoundException exception) {
+        log.debug("No resource found: {} {}", exception.getHttpMethod(), exception.getResourcePath());
+        final ErrorResponse errorResponse = ErrorResponse.of(ErrorCode.NOT_FOUND,
+                "No endpoint " + exception.getHttpMethod() + " /" + exception.getResourcePath());
+        return ResponseEntity.status(ErrorCode.NOT_FOUND.getStatus()).body(errorResponse);
     }
 
     @ExceptionHandler(Exception.class)

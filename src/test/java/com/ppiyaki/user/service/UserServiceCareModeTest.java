@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.user.AuthProvider;
 import com.ppiyaki.user.CareMode;
 import com.ppiyaki.user.CareRelation;
 import com.ppiyaki.user.Gender;
@@ -46,7 +47,7 @@ class UserServiceCareModeTest {
         final User senior = givenSenior(seniorId);
         when(userRepository.findById(seniorId)).thenReturn(Optional.of(senior));
         when(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(caregiverId, seniorId))
-                .thenReturn(Optional.of(new CareRelation(seniorId, caregiverId, "INVITE")));
+                .thenReturn(Optional.of(CareRelation.createLinked(seniorId, caregiverId)));
 
         // when
         final CareModeResponse response = userService.updateCareMode(caregiverId, seniorId, CareMode.AUTONOMOUS);
@@ -111,6 +112,7 @@ class UserServiceCareModeTest {
                 "loginid",
                 "password",
                 UserRole.SENIOR,
+                AuthProvider.LOCAL,
                 "시니어",
                 Gender.UNKNOWN,
                 LocalDate.of(1950, 1, 1),

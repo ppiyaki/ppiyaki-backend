@@ -1,8 +1,12 @@
 package com.ppiyaki.medication.service;
 
+import com.ppiyaki.common.ai.OpenAiClient;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.common.storage.NcpStorageProperties;
 import com.ppiyaki.common.storage.PhotoUrlAssembler;
+import com.ppiyaki.medication.DosageParser;
+import com.ppiyaki.medication.LogAiStatus;
 import com.ppiyaki.medication.LogStatus;
 import com.ppiyaki.medication.MedicationLog;
 import com.ppiyaki.medication.MedicationSchedule;
@@ -19,6 +23,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -26,6 +31,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 
 @Service
 @ConditionalOnProperty(prefix = "ncp.storage", name = "bucket-name")
@@ -46,6 +53,9 @@ public class MedicationLogService {
     private final MedicineRepository medicineRepository;
     private final CareRelationRepository careRelationRepository;
     private final PhotoUrlAssembler photoUrlAssembler;
+    private final OpenAiClient openAiClient;
+    private final NcpStorageProperties storageProperties;
+    private final S3Client s3Client;
     private final ApplicationEventPublisher eventPublisher;
 
     public MedicationLogService(
@@ -54,6 +64,9 @@ public class MedicationLogService {
             final MedicineRepository medicineRepository,
             final CareRelationRepository careRelationRepository,
             final PhotoUrlAssembler photoUrlAssembler,
+            final OpenAiClient openAiClient,
+            final NcpStorageProperties storageProperties,
+            final S3Client s3Client,
             final ApplicationEventPublisher eventPublisher
     ) {
         this.medicationLogRepository = medicationLogRepository;
@@ -61,6 +74,9 @@ public class MedicationLogService {
         this.medicineRepository = medicineRepository;
         this.careRelationRepository = careRelationRepository;
         this.photoUrlAssembler = photoUrlAssembler;
+        this.openAiClient = openAiClient;
+        this.storageProperties = storageProperties;
+        this.s3Client = s3Client;
         this.eventPublisher = eventPublisher;
     }
 
@@ -80,16 +96,16 @@ public class MedicationLogService {
 
         final LocalDateTime takenAt = request.takenAt() != null ? request.takenAt() : LocalDateTime.now();
 
+        final Optional<MedicationLog> existing = medicationLogRepository
+                .findByScheduleIdAndTargetDate(request.scheduleId(), request.targetDate());
+        final LogStatus previousStatus = existing.map(MedicationLog::getStatus).orElse(null);
+
         final MedicationLog log;
-        final boolean wasAlreadyTaken;
         try {
-            final var existingOpt = medicationLogRepository
-                    .findByScheduleIdAndTargetDate(request.scheduleId(), request.targetDate());
-            wasAlreadyTaken = existingOpt.map(e -> e.getStatus() == LogStatus.TAKEN).orElse(false);
-            log = existingOpt
-                    .map(existing -> {
-                        existing.updateRecord(takenAt, request.status(), request.photoObjectKey(), isProxy, userId);
-                        return existing;
+            log = existing
+                    .map(found -> {
+                        found.updateRecord(takenAt, request.status(), request.photoObjectKey(), isProxy, userId);
+                        return found;
                     })
                     .orElseGet(() -> medicationLogRepository.saveAndFlush(new MedicationLog(
                             seniorId, request.scheduleId(), request.targetDate(),
@@ -102,11 +118,79 @@ public class MedicationLogService {
                     "Concurrent upsert conflict on (scheduleId, targetDate); please retry");
         }
 
-        if (!wasAlreadyTaken && log.getStatus() == LogStatus.TAKEN) {
+        // 새로 TAKEN으로 전환되는 케이스에만 잔여분 차감 (멱등성: 이미 TAKEN이던 row 재호출 시 중복 차감 방지).
+        // 차감 단위 = schedule.dosage 정수 파싱. 비정수("반정" 등)면 1 fallback (인증했으니 최소 1정 차감).
+        if (request.status() == LogStatus.TAKEN && previousStatus != LogStatus.TAKEN) {
+            final int dosageCount = MedicationSchedule.parseDosageInt(schedule.getDosage());
+            medicine.decreaseRemainingAmount(dosageCount > 0 ? dosageCount : 1);
+        }
+
+        // 복약 성공 이벤트 발행 (TAKEN→TAKEN 중복 방지)
+        if (request.status() == LogStatus.TAKEN && previousStatus != LogStatus.TAKEN) {
             eventPublisher.publishEvent(new MedicationTakenEvent(seniorId));
         }
 
+        // Phase 2: 사진 + status=TAKEN일 때 약 개수 AI 검증 (spec medication-log-phase2 §5-4)
+        if (request.status() == LogStatus.TAKEN
+                && request.photoObjectKey() != null && !request.photoObjectKey().isBlank()) {
+            final LogAiStatus aiStatus = verifyPillCount(seniorId, schedule, request);
+            log.updateAiStatus(aiStatus);
+        }
+
         return MedicationLogResponse.from(log, photoUrlAssembler.toFullUrl(log.getPhotoObjectKey()));
+    }
+
+    /**
+     * 동일 식사 슬롯 schedule들의 dosage 합 vs Vision 추출 개수 비교.
+     * spec medication-log-phase2 §5-4.
+     */
+    private LogAiStatus verifyPillCount(
+            final Long seniorId,
+            final MedicationSchedule triggerSchedule,
+            final MedicationLogUpsertRequest request
+    ) {
+        final List<MedicationSchedule> schedules = medicationScheduleRepository
+                .findActiveByOwnerAndMealSlot(
+                        seniorId, request.targetDate(), triggerSchedule.getMealSlot());
+
+        int expected = 0;
+        for (final MedicationSchedule s : schedules) {
+            final Optional<Integer> parsed = DosageParser.parsePillCount(s.getDosage());
+            if (parsed.isEmpty()) {
+                return LogAiStatus.COUNT_UNKNOWN;
+            }
+            expected += parsed.get();
+        }
+        if (schedules.isEmpty()) {
+            return LogAiStatus.COUNT_UNKNOWN;
+        }
+
+        final byte[] imageBytes;
+        try {
+            imageBytes = s3Client.getObjectAsBytes(GetObjectRequest.builder()
+                    .bucket(storageProperties.bucketName())
+                    .key(request.photoObjectKey())
+                    .build()).asByteArray();
+        } catch (final Exception e) {
+            return LogAiStatus.COUNT_FAILED;
+        }
+        final String mediaType = guessMediaType(request.photoObjectKey());
+        final Optional<Integer> actual = openAiClient.countPills(imageBytes, mediaType);
+        if (actual.isEmpty()) {
+            return LogAiStatus.COUNT_FAILED;
+        }
+        return actual.get() == expected ? LogAiStatus.COUNT_MATCH : LogAiStatus.COUNT_MISMATCH;
+    }
+
+    private String guessMediaType(final String objectKey) {
+        final String lower = objectKey.toLowerCase();
+        if (lower.endsWith(".png")) {
+            return "image/png";
+        }
+        if (lower.endsWith(".webp")) {
+            return "image/webp";
+        }
+        return "image/jpeg";
     }
 
     @Transactional(readOnly = true)

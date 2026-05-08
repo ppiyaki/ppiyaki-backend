@@ -6,10 +6,12 @@ import com.ppiyaki.common.auth.KakaoIdTokenVerifier;
 import com.ppiyaki.common.auth.KakaoIdTokenVerifier.KakaoIdTokenPayload;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.user.AuthProvider;
 import com.ppiyaki.user.OAuthIdentity;
 import com.ppiyaki.user.OAuthProvider;
 import com.ppiyaki.user.RefreshToken;
 import com.ppiyaki.user.User;
+import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.controller.dto.KakaoLoginRequest;
 import com.ppiyaki.user.controller.dto.LoginRequest;
 import com.ppiyaki.user.controller.dto.LoginResponse;
@@ -64,7 +66,8 @@ public class AuthService {
                         .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)))
                 .orElseGet(() -> createNewUser(payload, providerUserId));
 
-        final String accessToken = jwtProvider.createAccessToken(user.getId());
+        final String roleName = user.getRole() != null ? user.getRole().name() : null;
+        final String accessToken = jwtProvider.createAccessToken(user.getId(), roleName);
         final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
         saveRefreshToken(user.getId(), refreshTokenValue);
 
@@ -83,17 +86,17 @@ public class AuthService {
         final User user;
         try {
             user = userRepository.save(
-                    new User(signupRequest.loginId(), encodedPassword, null,
-                            signupRequest.nickname(), null, null, null));
+                    new User(signupRequest.loginId(), encodedPassword, UserRole.CAREGIVER,
+                            AuthProvider.LOCAL, signupRequest.nickname(), null, null, null));
         } catch (final DataIntegrityViolationException e) {
             throw new BusinessException(ErrorCode.AUTH_DUPLICATE_LOGIN_ID);
         }
 
-        final String accessToken = jwtProvider.createAccessToken(user.getId());
+        final String accessToken = jwtProvider.createAccessToken(user.getId(), user.getRole().name());
         final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
         saveRefreshToken(user.getId(), refreshTokenValue);
 
-        return new LoginResponse(accessToken, refreshTokenValue, false);
+        return new LoginResponse(accessToken, refreshTokenValue, true);
     }
 
     @Transactional
@@ -101,12 +104,17 @@ public class AuthService {
         final User user = userRepository.findByLoginId(loginRequest.loginId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS));
 
+        if (user.getAuthProvider() != AuthProvider.LOCAL) {
+            throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+        }
+
         if (user.getPassword() == null
                 || !passwordEncoder.matches(loginRequest.password(), user.getPassword())) {
             throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
         }
 
-        final String accessToken = jwtProvider.createAccessToken(user.getId());
+        final String roleName = user.getRole() != null ? user.getRole().name() : null;
+        final String accessToken = jwtProvider.createAccessToken(user.getId(), roleName);
         final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
         saveRefreshToken(user.getId(), refreshTokenValue);
 
@@ -117,7 +125,8 @@ public class AuthService {
 
     private User createNewUser(final KakaoIdTokenPayload payload, final String providerUserId) {
         final User user = userRepository.save(
-                new User(null, null, null, payload.nickname(), null, null, null));
+                new User(null, null, UserRole.CAREGIVER, AuthProvider.KAKAO,
+                        payload.nickname(), null, null, null));
 
         oAuthIdentityRepository.save(new OAuthIdentity(user.getId(), OAuthProvider.KAKAO, providerUserId));
 
@@ -135,7 +144,9 @@ public class AuthService {
         }
 
         final Long userId = refreshToken.getUserId();
-        final String newAccessToken = jwtProvider.createAccessToken(userId);
+        final User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        final String newAccessToken = jwtProvider.createAccessToken(userId, user.getRole().name());
         final String newRefreshTokenValue = jwtProvider.createRefreshToken(userId);
 
         final LocalDateTime newExpiresAt = LocalDateTime.now().plusSeconds(jwtProperties.refreshTokenExpiry() / 1000);
@@ -154,6 +165,11 @@ public class AuthService {
     public User findUserById(final Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    @Transactional
+    public void saveRefreshTokenForUser(final Long userId, final String tokenValue) {
+        saveRefreshToken(userId, tokenValue);
     }
 
     private void saveRefreshToken(final Long userId, final String tokenValue) {

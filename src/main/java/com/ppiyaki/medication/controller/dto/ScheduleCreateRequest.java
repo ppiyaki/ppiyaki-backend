@@ -1,13 +1,13 @@
 package com.ppiyaki.medication.controller.dto;
 
+import com.ppiyaki.medication.MealSlot;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.time.LocalDate;
-import java.time.LocalTime;
 
 public record ScheduleCreateRequest(
-        @NotNull LocalTime scheduledTime,
+        @NotNull MealSlot mealSlot,
         @NotBlank String dosage,
         @Pattern(
                 regexp = "^(DAILY|(MON|TUE|WED|THU|FRI|SAT|SUN)(,(MON|TUE|WED|THU|FRI|SAT|SUN))*)$", message = "daysOfWeek must be 'DAILY' or a comma-separated list of MON,TUE,WED,THU,FRI,SAT,SUN"

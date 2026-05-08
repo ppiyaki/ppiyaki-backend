@@ -33,6 +33,10 @@
   - `docs/features/tts.md`: OpenAI TTS 음성 합성
   - `docs/features/medication-log.md`: 복약 기록 API (인증 사진 첨부 포함, Phase 1)
   - `docs/features/medication-log-phase2.md`: 복약 사진 약 개수 AI 검증 (Phase 2, Vision LLM 동기 검증)
+  - `docs/features/caregiver-senior-flow.md`: 보호자 기반 시니어 계정 대리 생성 및 코드 로그인
+  - `docs/features/care-relation-invite.md`: 보호자 연동 초대 코드
+  - `docs/features/pet-gamification.md`: 펫(삐약이) 게이미피케이션 시스템
+  - `docs/features/chat-quick-messages.md`: 단발 채팅 API (텍스트/음성, 임시 세션 자동 생성)
 - `docs/decisions/`: Architecture Decision Records (ADR). 횡단 결정의 영속 이력
 - `docs/error-codes.md`: API 에러 코드 목록 (프론트엔드 참고용, ErrorCode enum과 동기화)
 - `CLAUDE.md`: Claude Code 세션 자동 로드 룰 요약

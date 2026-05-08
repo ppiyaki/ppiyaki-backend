@@ -9,7 +9,7 @@ public record PrescriptionDetailResponse(
         Long id,
         Long ownerId,
         String status,
-        String maskedImageObjectKey,
+        String maskedImageUrl,
         String failureReason,
         List<PrescriptionMedicineCandidateResponse> candidates,
         LocalDateTime createdAt
@@ -17,13 +17,14 @@ public record PrescriptionDetailResponse(
 
     public static PrescriptionDetailResponse from(
             final Prescription prescription,
-            final List<PrescriptionMedicineCandidate> candidates
+            final List<PrescriptionMedicineCandidate> candidates,
+            final String maskedImageUrl
     ) {
         return new PrescriptionDetailResponse(
                 prescription.getId(),
                 prescription.getOwnerId(),
                 prescription.getStatus().name(),
-                prescription.getMaskedImageObjectKey(),
+                maskedImageUrl,
                 prescription.getFailureReason(),
                 candidates.stream()
                         .map(PrescriptionMedicineCandidateResponse::from)

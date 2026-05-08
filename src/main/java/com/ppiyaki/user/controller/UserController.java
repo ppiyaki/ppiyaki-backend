@@ -2,6 +2,8 @@ package com.ppiyaki.user.controller;
 
 import com.ppiyaki.user.controller.dto.CareModeResponse;
 import com.ppiyaki.user.controller.dto.CareModeUpdateRequest;
+import com.ppiyaki.user.controller.dto.MealTimesUpdateRequest;
+import com.ppiyaki.user.controller.dto.UserMeResponse;
 import com.ppiyaki.user.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -29,5 +31,13 @@ public class UserController {
             @Valid @RequestBody final CareModeUpdateRequest request
     ) {
         return ResponseEntity.ok(userService.updateCareMode(requesterId, seniorId, request.careMode()));
+    }
+
+    @PutMapping("/me/meal-times")
+    public ResponseEntity<UserMeResponse> updateMealTimes(
+            @AuthenticationPrincipal final Long userId,
+            @Valid @RequestBody final MealTimesUpdateRequest request
+    ) {
+        return ResponseEntity.ok(userService.updateMealTimes(userId, request));
     }
 }

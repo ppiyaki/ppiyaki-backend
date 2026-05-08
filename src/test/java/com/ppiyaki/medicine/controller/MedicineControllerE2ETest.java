@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
+import com.ppiyaki.medication.MealSlot;
 import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.user.CareRelation;
@@ -11,7 +12,6 @@ import com.ppiyaki.user.repository.CareRelationRepository;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -44,17 +44,32 @@ class MedicineControllerE2ETest {
 
     private String loginAsNewUser(final String nickname) {
         final String loginId = "testuser" + userSequence++;
+        final String password = "password1234!";
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "loginId": "%s",
+                            "password": "%s",
+                            "nickname": "%s"
+                        }
+                        """.formatted(loginId, password, nickname))
+                .when()
+                .post("/api/v1/auth/signup")
+                .then()
+                .statusCode(201);
+        // 회원가입 시 CAREGIVER로 생성되므로 시니어 테스트를 위해 role 변경 후 재로그인
+        jdbcTemplate.update("UPDATE users SET role = 'SENIOR' WHERE login_id = ?", loginId);
         return RestAssured.given()
                 .contentType(ContentType.JSON)
                 .body("""
                         {
                             "loginId": "%s",
-                            "password": "password1234!",
-                            "nickname": "%s"
+                            "password": "%s"
                         }
-                        """.formatted(loginId, nickname))
+                        """.formatted(loginId, password))
                 .when()
-                .post("/api/v1/auth/signup")
+                .post("/api/v1/auth/login")
                 .then()
                 .extract()
                 .path("accessToken");
@@ -175,10 +190,10 @@ class MedicineControllerE2ETest {
         final Integer medicineId = createMedicine(token, "캐스케이드약", 30, 20);
 
         medicationScheduleRepository.save(
-                new MedicationSchedule(Long.valueOf(medicineId), LocalTime.of(8, 0),
+                new MedicationSchedule(Long.valueOf(medicineId), MealSlot.BREAKFAST,
                         "1정", "DAILY", LocalDate.now(), null));
         medicationScheduleRepository.save(
-                new MedicationSchedule(Long.valueOf(medicineId), LocalTime.of(20, 0),
+                new MedicationSchedule(Long.valueOf(medicineId), MealSlot.DINNER,
                         "1정", "DAILY", LocalDate.now(), null));
 
         // when & then
@@ -214,7 +229,7 @@ class MedicineControllerE2ETest {
         final Long caregiverUserId = readUserId(caregiverToken);
         setUserRoleToCaregiver(caregiverUserId);
 
-        careRelationRepository.save(new CareRelation(seniorUserId, caregiverUserId, "INVITE-OK"));
+        careRelationRepository.save(CareRelation.createLinked(seniorUserId, caregiverUserId));
 
         // when & then: caregiver creates medicine for senior
         RestAssured.given()
