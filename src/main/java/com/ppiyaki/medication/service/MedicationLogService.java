@@ -114,8 +114,10 @@ public class MedicationLogService {
         }
 
         // 새로 TAKEN으로 전환되는 케이스에만 잔여분 차감 (멱등성: 이미 TAKEN이던 row 재호출 시 중복 차감 방지).
+        // 차감 단위 = schedule.dosage 정수 파싱. 비정수("반정" 등)면 1 fallback (인증했으니 최소 1정 차감).
         if (request.status() == LogStatus.TAKEN && previousStatus != LogStatus.TAKEN) {
-            medicine.decreaseRemainingAmount();
+            final int dosageCount = MedicationSchedule.parseDosageInt(schedule.getDosage());
+            medicine.decreaseRemainingAmount(dosageCount > 0 ? dosageCount : 1);
         }
 
         // Phase 2: 사진 + status=TAKEN일 때 약 개수 AI 검증 (spec medication-log-phase2 §5-4)

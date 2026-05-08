@@ -347,6 +347,69 @@ class MedicationLogServiceTest {
     }
 
     @Test
+    @DisplayName("dosage=\"2정\"이면 잔여분 2 차감")
+    void TAKEN_시_dosage_정수_단위로_차감() throws Exception {
+        // given
+        final Medicine medicine = givenScheduleAndMedicineReturning(30, 30, "2정");
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
+                .thenReturn(Optional.empty());
+        when(medicationLogRepository.saveAndFlush(any(MedicationLog.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(photoUrlAssembler.toFullUrl(any())).thenReturn(null);
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, null);
+
+        // when
+        medicationLogService.upsert(SENIOR_ID, request);
+
+        // then
+        assertThat(medicine.getRemainingAmount()).isEqualTo(28);
+    }
+
+    @Test
+    @DisplayName("dosage 정수 추출 불가(\"반정\")이면 1 fallback 차감")
+    void TAKEN_시_dosage_비정수면_1_fallback() throws Exception {
+        // given
+        final Medicine medicine = givenScheduleAndMedicineReturning(30, 30, "반정");
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
+                .thenReturn(Optional.empty());
+        when(medicationLogRepository.saveAndFlush(any(MedicationLog.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(photoUrlAssembler.toFullUrl(any())).thenReturn(null);
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, null);
+
+        // when
+        medicationLogService.upsert(SENIOR_ID, request);
+
+        // then
+        assertThat(medicine.getRemainingAmount()).isEqualTo(29);
+    }
+
+    @Test
+    @DisplayName("dosage=\"3정\"이고 잔여분이 2면 0으로 clamp (음수 방지)")
+    void TAKEN_시_차감_clamp() throws Exception {
+        // given
+        final Medicine medicine = givenScheduleAndMedicineReturning(30, 2, "3정");
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
+                .thenReturn(Optional.empty());
+        when(medicationLogRepository.saveAndFlush(any(MedicationLog.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(photoUrlAssembler.toFullUrl(any())).thenReturn(null);
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, null);
+
+        // when
+        medicationLogService.upsert(SENIOR_ID, request);
+
+        // then
+        assertThat(medicine.getRemainingAmount()).isEqualTo(0);
+    }
+
+    @Test
     @DisplayName("remainingAmount=0이면 차감하지 않아 음수 방지")
     void 잔여분_0이면_차감_안함() throws Exception {
         // given
@@ -368,12 +431,20 @@ class MedicationLogServiceTest {
     }
 
     private Medicine givenScheduleAndMedicineReturning(final int total, final int remaining) throws Exception {
+        return givenScheduleAndMedicineReturning(total, remaining, null);
+    }
+
+    private Medicine givenScheduleAndMedicineReturning(final int total, final int remaining,
+            final String dosage) throws Exception {
         final java.lang.reflect.Constructor<MedicationSchedule> ctor = MedicationSchedule.class
                 .getDeclaredConstructor();
         ctor.setAccessible(true);
         final MedicationSchedule schedule = ctor.newInstance();
         setField(schedule, "id", SCHEDULE_ID);
         setField(schedule, "medicineId", MEDICINE_ID);
+        if (dosage != null) {
+            setField(schedule, "dosage", dosage);
+        }
         when(medicationScheduleRepository.findById(SCHEDULE_ID)).thenReturn(Optional.of(schedule));
 
         final Medicine medicine = new Medicine(SENIOR_ID, null, "테스트약", total, remaining, "ITEM-1", null);
