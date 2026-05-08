@@ -14,6 +14,9 @@ import com.ppiyaki.medication.controller.dto.dashboard.DailyDashboardResponse.He
 import com.ppiyaki.medication.controller.dto.dashboard.DailyDashboardResponse.MedicineSummary;
 import com.ppiyaki.medication.controller.dto.dashboard.DailyDashboardResponse.SlotInfo;
 import com.ppiyaki.medication.controller.dto.dashboard.DailyDashboardResponse.SlotMedicine;
+import com.ppiyaki.medication.controller.dto.dashboard.WeeklyDashboardResponse;
+import com.ppiyaki.medication.controller.dto.dashboard.WeeklyDashboardResponse.DayEntry;
+import com.ppiyaki.medication.controller.dto.dashboard.WeeklyDashboardResponse.SlotMarker;
 import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
@@ -120,6 +123,112 @@ public class DashboardService {
 
         final HeaderInfo header = new HeaderInfo(senior.getNickname(), caregiver.getNickname(), remainingDays);
         return new DailyDashboardResponse(seniorId, date, dayStatus, header, slots, medicineSummaries);
+    }
+
+    @Transactional(readOnly = true)
+    public WeeklyDashboardResponse getWeekly(final Long userId, final Long seniorId, final LocalDate weekStart) {
+        log.info("/dashboard/weekly seniorId={} weekStart={}", seniorId, weekStart);
+        validateAccess(userId, seniorId);
+
+        final User senior = userRepository.findById(seniorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        final LocalDate weekEnd = weekStart.plusDays(6);
+        final List<MedicationSchedule> schedules = scheduleRepository.findActiveByOwnerAndDateRange(
+                seniorId, weekStart, weekEnd);
+        final List<MedicationLog> logs = logRepository.findBySeniorIdAndTargetDateBetweenOrderByTargetDateAscIdAsc(
+                seniorId, weekStart, weekEnd);
+
+        final Map<LocalDate, Map<Long, MedicationLog>> logsByDateAndSchedule = new HashMap<>();
+        for (final MedicationLog l : logs) {
+            logsByDateAndSchedule
+                    .computeIfAbsent(l.getTargetDate(), k -> new HashMap<>())
+                    .put(l.getScheduleId(), l);
+        }
+
+        final LocalDate today = LocalDate.now();
+        final List<DayEntry> dayEntries = new ArrayList<>();
+        int adherenceNumerator = 0;
+        int adherenceDenominator = 0;
+        for (int i = 0; i < 7; i++) {
+            final LocalDate date = weekStart.plusDays(i);
+            final List<SlotMarker> slotMarkers = new ArrayList<>();
+            final Map<Long, MedicationLog> logBySchedule = logsByDateAndSchedule.getOrDefault(date, Map.of());
+            for (final MealSlot slot : MealSlot.values()) {
+                final SlotStatus status = deriveSlotStatusForDate(slot, senior, schedules, logBySchedule, date, today);
+                slotMarkers.add(new SlotMarker(slot, status));
+                if (date.isAfter(today) || status == SlotStatus.NOT_SCHEDULED) {
+                    continue;
+                }
+                adherenceDenominator++;
+                if (status == SlotStatus.PERFECT || status == SlotStatus.DELAYED) {
+                    adherenceNumerator++;
+                }
+            }
+            final DayStatus dayStatus = deriveDayStatusFromMarkers(slotMarkers, date, today);
+            dayEntries.add(new DayEntry(date, dayStatus, slotMarkers));
+        }
+
+        final Double adherenceRate = adherenceDenominator == 0
+                ? null
+                : Math.round(((double) adherenceNumerator / adherenceDenominator) * 10000.0) / 100.0;
+
+        return new WeeklyDashboardResponse(seniorId, weekStart, weekEnd, adherenceRate, dayEntries);
+    }
+
+    private SlotStatus deriveSlotStatusForDate(
+            final MealSlot slot,
+            final User senior,
+            final List<MedicationSchedule> allSchedules,
+            final Map<Long, MedicationLog> logBySchedule,
+            final LocalDate date,
+            final LocalDate today
+    ) {
+        final LocalTime mealTime = slot.resolveTime(senior);
+        final List<MedicationSchedule> slotSchedules = allSchedules.stream()
+                .filter(s -> s.getMealSlot() == slot)
+                .filter(s -> (s.getStartDate() == null || !s.getStartDate().isAfter(date))
+                        && (s.getEndDate() == null || !s.getEndDate().isBefore(date)))
+                .toList();
+        if (slotSchedules.isEmpty() || mealTime == null) {
+            return SlotStatus.NOT_SCHEDULED;
+        }
+        MedicationLog representativeLog = null;
+        for (final MedicationSchedule s : slotSchedules) {
+            final MedicationLog l = logBySchedule.get(s.getId());
+            if (l != null) {
+                representativeLog = l;
+                break;
+            }
+        }
+        return deriveSlotStatus(representativeLog, mealTime, date, today);
+    }
+
+    private DayStatus deriveDayStatusFromMarkers(
+            final List<SlotMarker> markers, final LocalDate date, final LocalDate today
+    ) {
+        if (date.isAfter(today)) {
+            return DayStatus.FUTURE;
+        }
+        final EnumSet<SlotStatus> present = EnumSet.noneOf(SlotStatus.class);
+        for (final SlotMarker m : markers) {
+            if (m.status() != SlotStatus.NOT_SCHEDULED) {
+                present.add(m.status());
+            }
+        }
+        if (present.isEmpty()) {
+            return DayStatus.PERFECT;
+        }
+        if (present.contains(SlotStatus.MISSED)) {
+            return DayStatus.MISSED;
+        }
+        if (present.contains(SlotStatus.DELAYED)) {
+            return DayStatus.DELAYED;
+        }
+        if (present.contains(SlotStatus.PENDING)) {
+            return DayStatus.PENDING;
+        }
+        return DayStatus.PERFECT;
     }
 
     private SlotInfo buildSlotInfo(

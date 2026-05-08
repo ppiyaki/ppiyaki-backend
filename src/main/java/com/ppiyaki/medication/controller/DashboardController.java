@@ -1,6 +1,7 @@
 package com.ppiyaki.medication.controller;
 
 import com.ppiyaki.medication.controller.dto.dashboard.DailyDashboardResponse;
+import com.ppiyaki.medication.controller.dto.dashboard.WeeklyDashboardResponse;
 import com.ppiyaki.medication.service.DashboardService;
 import java.time.LocalDate;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -35,5 +36,14 @@ public class DashboardController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate date
     ) {
         return ResponseEntity.ok(dashboardService.getDaily(userId, seniorId, date));
+    }
+
+    @GetMapping("/weekly")
+    public ResponseEntity<WeeklyDashboardResponse> getWeekly(
+            @AuthenticationPrincipal final Long userId,
+            @PathVariable final Long seniorId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate weekStart
+    ) {
+        return ResponseEntity.ok(dashboardService.getWeekly(userId, seniorId, weekStart));
     }
 }
