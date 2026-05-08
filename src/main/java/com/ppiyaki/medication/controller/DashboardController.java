@@ -1,9 +1,11 @@
 package com.ppiyaki.medication.controller;
 
 import com.ppiyaki.medication.controller.dto.dashboard.DailyDashboardResponse;
+import com.ppiyaki.medication.controller.dto.dashboard.MonthlyDashboardResponse;
 import com.ppiyaki.medication.controller.dto.dashboard.WeeklyDashboardResponse;
 import com.ppiyaki.medication.service.DashboardService;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -45,5 +47,14 @@ public class DashboardController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) final LocalDate weekStart
     ) {
         return ResponseEntity.ok(dashboardService.getWeekly(userId, seniorId, weekStart));
+    }
+
+    @GetMapping("/monthly")
+    public ResponseEntity<MonthlyDashboardResponse> getMonthly(
+            @AuthenticationPrincipal final Long userId,
+            @PathVariable final Long seniorId,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM") final YearMonth yearMonth
+    ) {
+        return ResponseEntity.ok(dashboardService.getMonthly(userId, seniorId, yearMonth));
     }
 }

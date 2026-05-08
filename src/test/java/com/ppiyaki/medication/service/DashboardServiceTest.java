@@ -289,6 +289,39 @@ class DashboardServiceTest {
     }
 
     @Test
+    @DisplayName("monthly — schedule 없으면 days 모두 PERFECT (분모 0 케이스)")
+    void monthly_emptySchedules() throws Exception {
+        givenSeniorAndCaregiver();
+        givenSeniorMealTimes(LocalTime.of(8, 0), LocalTime.of(12, 30), LocalTime.of(18, 30));
+        when(scheduleRepository.findActiveByOwnerAndDateRange(eq(SENIOR_ID), any(), any())).thenReturn(List.of());
+        when(logRepository.findBySeniorIdAndTargetDateBetweenOrderByTargetDateAscIdAsc(eq(SENIOR_ID), any(), any()))
+                .thenReturn(List.of());
+
+        final java.time.YearMonth ym = java.time.YearMonth.of(2026, 1);
+        final var resp = dashboardService.getMonthly(SENIOR_ID, SENIOR_ID, ym);
+
+        org.assertj.core.api.Assertions.assertThat(resp.yearMonth()).isEqualTo(ym);
+        org.assertj.core.api.Assertions.assertThat(resp.days()).hasSize(31);
+        org.assertj.core.api.Assertions.assertThat(resp.days())
+                .allMatch(d -> d.dayStatus() == com.ppiyaki.medication.DayStatus.PERFECT);
+    }
+
+    @Test
+    @DisplayName("monthly — 2월(28일)은 days.size=28")
+    void monthly_february28() throws Exception {
+        givenSeniorAndCaregiver();
+        givenSeniorMealTimes(LocalTime.of(8, 0), null, null);
+        when(scheduleRepository.findActiveByOwnerAndDateRange(eq(SENIOR_ID), any(), any())).thenReturn(List.of());
+        when(logRepository.findBySeniorIdAndTargetDateBetweenOrderByTargetDateAscIdAsc(eq(SENIOR_ID), any(), any()))
+                .thenReturn(List.of());
+
+        final java.time.YearMonth ym = java.time.YearMonth.of(2025, 2);
+        final var resp = dashboardService.getMonthly(SENIOR_ID, SENIOR_ID, ym);
+
+        org.assertj.core.api.Assertions.assertThat(resp.days()).hasSize(28);
+    }
+
+    @Test
     @DisplayName("weekly — 미래 일자(weekStart=today+1)는 FUTURE, adherenceRate=null")
     void weekly_futureWeek() throws Exception {
         givenSeniorAndCaregiver();

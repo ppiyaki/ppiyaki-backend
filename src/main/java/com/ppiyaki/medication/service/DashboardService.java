@@ -14,6 +14,7 @@ import com.ppiyaki.medication.controller.dto.dashboard.DailyDashboardResponse.He
 import com.ppiyaki.medication.controller.dto.dashboard.DailyDashboardResponse.MedicineSummary;
 import com.ppiyaki.medication.controller.dto.dashboard.DailyDashboardResponse.SlotInfo;
 import com.ppiyaki.medication.controller.dto.dashboard.DailyDashboardResponse.SlotMedicine;
+import com.ppiyaki.medication.controller.dto.dashboard.MonthlyDashboardResponse;
 import com.ppiyaki.medication.controller.dto.dashboard.WeeklyDashboardResponse;
 import com.ppiyaki.medication.controller.dto.dashboard.WeeklyDashboardResponse.DayEntry;
 import com.ppiyaki.medication.controller.dto.dashboard.WeeklyDashboardResponse.SlotMarker;
@@ -28,6 +29,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -174,6 +176,45 @@ public class DashboardService {
                 : Math.round(((double) adherenceNumerator / adherenceDenominator) * 10000.0) / 100.0;
 
         return new WeeklyDashboardResponse(seniorId, weekStart, weekEnd, adherenceRate, dayEntries);
+    }
+
+    @Transactional(readOnly = true)
+    public MonthlyDashboardResponse getMonthly(final Long userId, final Long seniorId, final YearMonth yearMonth) {
+        log.info("/dashboard/monthly seniorId={} yearMonth={}", seniorId, yearMonth);
+        validateAccess(userId, seniorId);
+
+        final User senior = userRepository.findById(seniorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        final LocalDate monthStart = yearMonth.atDay(1);
+        final LocalDate monthEnd = yearMonth.atEndOfMonth();
+        final List<MedicationSchedule> schedules = scheduleRepository.findActiveByOwnerAndDateRange(
+                seniorId, monthStart, monthEnd);
+        final List<MedicationLog> logs = logRepository.findBySeniorIdAndTargetDateBetweenOrderByTargetDateAscIdAsc(
+                seniorId, monthStart, monthEnd);
+
+        final Map<LocalDate, Map<Long, MedicationLog>> logsByDateAndSchedule = new HashMap<>();
+        for (final MedicationLog l : logs) {
+            logsByDateAndSchedule
+                    .computeIfAbsent(l.getTargetDate(), k -> new HashMap<>())
+                    .put(l.getScheduleId(), l);
+        }
+
+        final LocalDate today = LocalDate.now();
+        final List<MonthlyDashboardResponse.DayEntry> dayEntries = new ArrayList<>();
+        for (int day = 1; day <= yearMonth.lengthOfMonth(); day++) {
+            final LocalDate date = yearMonth.atDay(day);
+            final List<SlotMarker> markers = new ArrayList<>();
+            final Map<Long, MedicationLog> logBySchedule = logsByDateAndSchedule.getOrDefault(date, Map.of());
+            for (final MealSlot slot : MealSlot.values()) {
+                final SlotStatus status = deriveSlotStatusForDate(slot, senior, schedules, logBySchedule, date, today);
+                markers.add(new SlotMarker(slot, status));
+            }
+            final DayStatus dayStatus = deriveDayStatusFromMarkers(markers, date, today);
+            dayEntries.add(new MonthlyDashboardResponse.DayEntry(date, dayStatus));
+        }
+
+        return new MonthlyDashboardResponse(seniorId, yearMonth, dayEntries);
     }
 
     private SlotStatus deriveSlotStatusForDate(
