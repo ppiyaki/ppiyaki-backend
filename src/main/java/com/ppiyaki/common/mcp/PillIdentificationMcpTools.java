@@ -53,8 +53,8 @@ public class PillIdentificationMcpTools {
             @ToolParam(description = "Back imprint. null if not visible.") final String printBack,
             @ToolParam(description = "Primary color (예: '하양', '노랑', '빨강', '파랑', '초록', '주황', '분홍', '자주', '갈색', '검정'). null if uncertain.") final String colorClass1
     ) {
-        log.info("identifyPillByAppearance called: printFront={} printBack={} drugShape={} colorClass1={} lineFront={}",
-                printFront, printBack, drugShape, colorClass1, lineFront);
+        log.info("identifyPillByAppearance called: printFront={} printBack={} colorClass1={}",
+                printFront, printBack, colorClass1);
         final Page<PillIdentification> page = repository.findAll(
                 PillIdentificationSpecifications.byAppearance(printFront, printBack, colorClass1),
                 PageRequest.of(0, LIMIT)
