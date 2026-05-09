@@ -122,8 +122,11 @@
     create table pets (
         created_at datetime(6),
         id bigint not null auto_increment,
-        point bigint,
+        last_taken_date date,
+        point bigint not null,
+        streak int not null default 0,
         updated_at datetime(6),
+        highest_stage enum ('BABY','CRACKED_EGG','EGG','EMPEROR','GUARDIAN','HEALTHY') not null default 'EGG',
         primary key (id)
     ) engine=InnoDB;
 
