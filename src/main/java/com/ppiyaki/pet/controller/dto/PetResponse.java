@@ -1,22 +1,29 @@
 package com.ppiyaki.pet.controller.dto;
 
+import com.ppiyaki.pet.Badge;
 import com.ppiyaki.pet.Pet;
+import java.util.List;
 
 public record PetResponse(
         Long id,
         long point,
         int level,
         String stage,
-        int streak
+        int streak,
+        List<BadgeResponse> badges
 ) {
 
-    public static PetResponse from(final Pet pet) {
+    public static PetResponse from(final Pet pet, final List<Badge> badges) {
+        final List<BadgeResponse> badgeResponses = badges.stream()
+                .map(BadgeResponse::from)
+                .toList();
         return new PetResponse(
                 pet.getId(),
                 pet.getPoint(),
                 pet.getLevel(),
                 pet.getStage().name(),
-                pet.getCurrentStreak()
+                pet.getCurrentStreak(),
+                badgeResponses
         );
     }
 }
