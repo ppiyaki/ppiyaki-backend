@@ -27,11 +27,19 @@ class PetPointListenerTest {
     @Mock
     private PetRepository petRepository;
 
+    @Mock
+    private com.ppiyaki.medication.repository.MedicationScheduleRepository medicationScheduleRepository;
+
+    @Mock
+    private com.ppiyaki.medication.repository.MedicationLogRepository medicationLogRepository;
+
     private PetPointListener petPointListener;
 
     @BeforeEach
     void setUp() {
-        petPointListener = new PetPointListener(userRepository, petRepository, 10L);
+        petPointListener = new PetPointListener(
+                userRepository, petRepository, medicationScheduleRepository,
+                medicationLogRepository, 10L);
     }
 
     @Test
