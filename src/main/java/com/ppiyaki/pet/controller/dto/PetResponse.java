@@ -21,8 +21,8 @@ public record PetResponse(
                 pet.getId(),
                 pet.getPoint(),
                 pet.getLevel(),
-                pet.getStage().name(),
-                pet.getCurrentStreak(),
+                pet.getHighestStage().name(),
+                pet.getStreak(),
                 badgeResponses
         );
     }

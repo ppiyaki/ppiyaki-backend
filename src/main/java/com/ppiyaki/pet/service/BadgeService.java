@@ -31,7 +31,7 @@ public class BadgeService {
     }
 
     private void checkHealthGuardian(final Pet pet) {
-        if (pet.getCurrentStreak() >= HEALTH_GUARDIAN_STREAK
+        if (pet.getStreak() >= HEALTH_GUARDIAN_STREAK
                 && !hasBadge(pet.getId(), BadgeType.HEALTH_GUARDIAN)) {
             badgeRepository.save(new Badge(pet.getId(), BadgeType.HEALTH_GUARDIAN));
         }

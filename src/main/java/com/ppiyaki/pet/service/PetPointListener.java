@@ -86,6 +86,6 @@ public class PetPointListener {
                 .filter(medicationLog -> medicationLog.getStatus() == LogStatus.TAKEN)
                 .count();
 
-        return takenCount >= totalSchedules;
+        return takenCount == totalSchedules;
     }
 }

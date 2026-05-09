@@ -9,6 +9,7 @@ import com.ppiyaki.pet.repository.BadgeRepository;
 import com.ppiyaki.pet.repository.PetRepository;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.repository.UserRepository;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +31,7 @@ public class PetService {
         this.userRepository = userRepository;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PetResponse readMyPet(final Long userId) {
         final User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -41,6 +42,8 @@ public class PetService {
 
         final Pet pet = petRepository.findById(user.getPet())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PET_NOT_FOUND));
+
+        pet.checkAndResetIfInactive(LocalDate.now());
 
         final List<Badge> badges = badgeRepository.findByPetId(pet.getId());
 

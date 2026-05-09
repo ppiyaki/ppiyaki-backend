@@ -7,7 +7,7 @@ public record BadgeResponse(
         String badgeType,
         String displayName,
         String description,
-        LocalDateTime earnedAt
+        LocalDateTime createdAt
 ) {
 
     public static BadgeResponse from(final Badge badge) {
@@ -15,7 +15,7 @@ public record BadgeResponse(
                 badge.getBadgeType().name(),
                 badge.getBadgeType().getDisplayName(),
                 badge.getBadgeType().getDescription(),
-                badge.getEarnedAt()
+                badge.getCreatedAt()
         );
     }
 }
