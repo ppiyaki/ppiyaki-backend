@@ -10,7 +10,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import java.time.LocalDateTime;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -35,12 +34,8 @@ public class Badge extends CreatedTimeEntity {
     @Column(name = "badge_type", nullable = false)
     private BadgeType badgeType;
 
-    @Column(name = "earned_at", nullable = false)
-    private LocalDateTime earnedAt;
-
     public Badge(final Long petId, final BadgeType badgeType) {
         this.petId = Objects.requireNonNull(petId, "petId must not be null");
         this.badgeType = Objects.requireNonNull(badgeType, "badgeType must not be null");
-        this.earnedAt = LocalDateTime.now();
     }
 }

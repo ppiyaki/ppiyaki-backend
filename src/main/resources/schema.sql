@@ -1,7 +1,6 @@
 
     create table badges (
         created_at datetime(6),
-        earned_at datetime(6) not null,
         id bigint not null auto_increment,
         pet_id bigint not null,
         badge_type enum ('BUDDY','FAMILY_LINK','FIRST_STEP','HEALTH_GUARDIAN','MIRACLE_MORNING') not null,
