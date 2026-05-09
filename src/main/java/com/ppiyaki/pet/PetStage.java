@@ -20,6 +20,9 @@ public enum PetStage {
     }
 
     public static PetStage fromStreak(final int streak) {
+        if (streak < 0) {
+            throw new IllegalArgumentException("streak must be >= 0");
+        }
         PetStage result = EGG;
         for (final PetStage stage : values()) {
             if (streak >= stage.requiredStreak) {

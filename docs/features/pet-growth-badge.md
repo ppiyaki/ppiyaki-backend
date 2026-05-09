@@ -81,7 +81,7 @@ last_reviewed: 2026-05-09
 ### 5-1) 도메인 모델
 
 **PetStage enum:**
-```
+```java
 EGG(0), CRACKED_EGG(3), BABY(7), HEALTHY(14), GUARDIAN(30), EMPEROR(100)
 ```
 
@@ -94,7 +94,7 @@ EGG(0), CRACKED_EGG(3), BABY(7), HEALTHY(14), GUARDIAN(30), EMPEROR(100)
 - `id`, `petId`, `badgeType`, `earnedAt`, `createdAt`
 
 **BadgeType enum:**
-```
+```java
 FIRST_STEP, MIRACLE_MORNING, FAMILY_LINK, HEALTH_GUARDIAN, BUDDY
 ```
 
