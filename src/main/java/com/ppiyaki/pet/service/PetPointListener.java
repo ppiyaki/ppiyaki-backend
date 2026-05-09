@@ -29,6 +29,7 @@ public class PetPointListener {
     private final PetRepository petRepository;
     private final MedicationScheduleRepository medicationScheduleRepository;
     private final MedicationLogRepository medicationLogRepository;
+    private final BadgeService badgeService;
     private final long pointPerTaken;
 
     public PetPointListener(
@@ -36,12 +37,14 @@ public class PetPointListener {
             final PetRepository petRepository,
             final MedicationScheduleRepository medicationScheduleRepository,
             final MedicationLogRepository medicationLogRepository,
+            final BadgeService badgeService,
             @Value("${pet.points.per-taken:10}") final long pointPerTaken
     ) {
         this.userRepository = userRepository;
         this.petRepository = petRepository;
         this.medicationScheduleRepository = medicationScheduleRepository;
         this.medicationLogRepository = medicationLogRepository;
+        this.badgeService = badgeService;
         this.pointPerTaken = pointPerTaken;
     }
 
@@ -66,6 +69,8 @@ public class PetPointListener {
         if (isDayFullyTaken(event.seniorId(), today)) {
             pet.incrementStreak(today);
         }
+
+        badgeService.checkAndAwardBadges(pet);
     }
 
     private boolean isDayFullyTaken(final Long seniorId, final LocalDate date) {
