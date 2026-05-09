@@ -62,8 +62,13 @@ public class Pet extends BaseTimeEntity {
     }
 
     public void incrementStreak(final LocalDate date) {
+        java.util.Objects.requireNonNull(date, "date must not be null");
         if (this.lastTakenDate != null && this.lastTakenDate.equals(date)) {
             return;
+        }
+        if (this.lastTakenDate != null
+                && ChronoUnit.DAYS.between(this.lastTakenDate, date) >= RESET_DAYS) {
+            resetStreak();
         }
         this.streak++;
         this.lastTakenDate = date;
