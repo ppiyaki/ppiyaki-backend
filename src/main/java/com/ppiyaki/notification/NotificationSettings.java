@@ -126,4 +126,21 @@ public class NotificationSettings extends BaseTimeEntity {
         this.familySafetyThresholdHours = 12;
         this.medicationCompleteEnabled = true;
     }
+
+    public void updateAllFields(
+            final boolean durWarningEnabled,
+            final boolean medicationDelayEnabled,
+            final int medicationDelayThresholdMinutes,
+            final boolean familySafetyEnabled,
+            final int familySafetyThresholdHours,
+            final boolean medicationCompleteEnabled
+    ) {
+        this.mode = NotificationMode.CUSTOM;
+        this.durWarningEnabled = durWarningEnabled;
+        this.medicationDelayEnabled = medicationDelayEnabled;
+        this.medicationDelayThresholdMinutes = medicationDelayThresholdMinutes;
+        this.familySafetyEnabled = familySafetyEnabled;
+        this.familySafetyThresholdHours = familySafetyThresholdHours;
+        this.medicationCompleteEnabled = medicationCompleteEnabled;
+    }
 }
