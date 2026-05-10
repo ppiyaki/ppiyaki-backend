@@ -242,7 +242,7 @@ weekly/monthly는 4~6 단계를 기간으로 확장, status만 도출.
 | Q2 | dosage 파싱 — "반정"(0.5정) / "2정 반"(2.5정) 같은 소수 표기 | (a) 정수만 — 비정수면 0으로 (단순) / (b) BigDecimal로 정밀 / (c) 파싱 실패 시 fallback dailyConsumption=1 | @goohong / 구현 시 |
 | Q3 | weekly의 weekStart 요일 | (a) 일요일 (한국 캘린더 기본) / (b) 월요일 (ISO 8601) — 디자인 image2 "일/월/화/수…" 순이라 (a)로 보임 | 디자인 측 / 구현 시 |
 | Q4 | monthly 응답에 통합 status 외 추가 정보(예: 슬롯별 마커) | (a) 통합 status enum만(권장) / (b) 슬롯별 마커도 — 응답 크기 증가 | @frontend / 구현 시 |
-| Q5 | "지연" 임계값 1시간 — 시니어/보호자별 설정 가능? | (a) 시스템 상수 1h(단순) / (b) 사용자별 설정 — 후속 spec | @goohong / 후순위 |
+| ~~Q5~~ | ~~"지연" 임계값 1시간~~ | **해소 — 보호자별 `notification_settings.medication_delay_threshold_minutes` 참조 (default 60분, 시니어 본인 caller일 때만 60 fallback)** ✅ |
 
 ## 9) 결정 로그
 - 2026-05-08: spec 초안 작성 (status=draft).
@@ -252,4 +252,5 @@ weekly/monthly는 4~6 단계를 기간으로 확장, status만 도출.
 - 2026-05-08: 오늘 일자 처리 = 기존 룰 그대로(PENDING). "오늘 강조"는 frontend isToday 플래그. 사용자 결정.
 - 2026-05-08: remainingDays = MIN(remainingAmount / dailyConsumption). 잔여분 자동 차감(v0.9.8) + confirm amount 입력(PR #263)에 의존.
 - 2026-05-08: MISSED 자동 전환 cron은 본 spec scope 외 — dashboard 응답 시 동적 계산.
+- 2026-05-10 (#294): **Q5 해소** — DELAYED 임계 = 보호자별 `notification_settings.medication_delay_threshold_minutes` 참조. `DashboardService.DELAY_THRESHOLD_MINUTES = 60` 하드코딩 제거 → caller 보호자의 settings 조회. 시니어 본인 caller(userId == seniorId)일 때는 default 60 fallback. medication-notification.md PR 7과 동시 머지.
 - 2026-05-08: 통합 endpoint 신규(daily/weekly/monthly) — 기존 logs/medicines/schedules 합성보다 N+1 호출 부담 감소 + status 룰 일관성.

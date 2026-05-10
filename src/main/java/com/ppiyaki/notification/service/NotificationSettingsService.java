@@ -2,11 +2,11 @@ package com.ppiyaki.notification.service;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.notification.NotificationMode;
 import com.ppiyaki.notification.NotificationSettings;
 import com.ppiyaki.notification.controller.dto.NotificationSettingsResponse;
 import com.ppiyaki.notification.controller.dto.NotificationSettingsUpdateRequest;
 import com.ppiyaki.notification.repository.NotificationSettingsRepository;
+import com.ppiyaki.user.CareMode;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,11 +55,11 @@ public class NotificationSettingsService {
     public NotificationSettingsResponse applyPreset(
             final Long caregiverId,
             final Long seniorId,
-            final NotificationMode mode
+            final CareMode mode
     ) {
         validateCaregiverAccess(caregiverId, seniorId);
         final NotificationSettings settings = findOrCreate(caregiverId, seniorId);
-        if (mode == NotificationMode.INTENSIVE) {
+        if (mode == CareMode.MANAGED) {
             settings.applyIntensivePreset();
         } else {
             settings.applyStandardPreset();

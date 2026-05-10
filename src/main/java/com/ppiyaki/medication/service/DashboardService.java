@@ -22,6 +22,8 @@ import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
+import com.ppiyaki.notification.NotificationSettings;
+import com.ppiyaki.notification.repository.NotificationSettingsRepository;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
@@ -55,13 +57,14 @@ public class DashboardService {
 
     private static final Logger log = LoggerFactory.getLogger(DashboardService.class);
 
-    private static final long DELAY_THRESHOLD_MINUTES = 60;
+    private static final long DEFAULT_DELAY_THRESHOLD_MINUTES = 60;
 
     private final UserRepository userRepository;
     private final CareRelationRepository careRelationRepository;
     private final MedicationScheduleRepository scheduleRepository;
     private final MedicationLogRepository logRepository;
     private final MedicineRepository medicineRepository;
+    private final NotificationSettingsRepository notificationSettingsRepository;
     private final PhotoUrlAssembler photoUrlAssembler;
 
     public DashboardService(
@@ -70,6 +73,7 @@ public class DashboardService {
             final MedicationScheduleRepository scheduleRepository,
             final MedicationLogRepository logRepository,
             final MedicineRepository medicineRepository,
+            final NotificationSettingsRepository notificationSettingsRepository,
             final PhotoUrlAssembler photoUrlAssembler
     ) {
         this.userRepository = userRepository;
@@ -77,7 +81,18 @@ public class DashboardService {
         this.scheduleRepository = scheduleRepository;
         this.logRepository = logRepository;
         this.medicineRepository = medicineRepository;
+        this.notificationSettingsRepository = notificationSettingsRepository;
         this.photoUrlAssembler = photoUrlAssembler;
+    }
+
+    private long resolveDelayThresholdMinutes(final Long callerId, final Long seniorId) {
+        if (callerId.equals(seniorId)) {
+            return DEFAULT_DELAY_THRESHOLD_MINUTES;
+        }
+        return notificationSettingsRepository.findByCaregiverIdAndSeniorId(callerId, seniorId)
+                .map(NotificationSettings::getMedicationDelayThresholdMinutes)
+                .map(Integer::longValue)
+                .orElse(DEFAULT_DELAY_THRESHOLD_MINUTES);
     }
 
     @Transactional(readOnly = true)
@@ -110,10 +125,11 @@ public class DashboardService {
         }
 
         final LocalDate today = LocalDate.now();
+        final long delayThresholdMinutes = resolveDelayThresholdMinutes(userId, seniorId);
         final List<SlotInfo> slots = new ArrayList<>();
         for (final MealSlot slot : MealSlot.values()) {
             slots.add(buildSlotInfo(slot, senior, schedulesBySlot.get(slot), logByScheduleId, medicineById, date,
-                    today));
+                    today, delayThresholdMinutes));
         }
 
         final DayStatus dayStatus = deriveDayStatus(slots, date, today);
@@ -146,6 +162,7 @@ public class DashboardService {
         }
 
         final LocalDate today = LocalDate.now();
+        final long delayThresholdMinutes = resolveDelayThresholdMinutes(userId, seniorId);
         final List<DayEntry> dayEntries = new ArrayList<>();
         int adherenceNumerator = 0;
         int adherenceDenominator = 0;
@@ -154,7 +171,8 @@ public class DashboardService {
             final List<SlotMarker> slotMarkers = new ArrayList<>();
             final Map<Long, MedicationLog> logBySchedule = logsByDateAndSchedule.getOrDefault(date, Map.of());
             for (final MealSlot slot : MealSlot.values()) {
-                final SlotStatus status = deriveSlotStatusForDate(slot, senior, schedules, logBySchedule, date, today);
+                final SlotStatus status = deriveSlotStatusForDate(
+                        slot, senior, schedules, logBySchedule, date, today, delayThresholdMinutes);
                 slotMarkers.add(new SlotMarker(slot, status));
                 if (date.isAfter(today) || status == SlotStatus.NOT_SCHEDULED) {
                     continue;
@@ -198,13 +216,15 @@ public class DashboardService {
         }
 
         final LocalDate today = LocalDate.now();
+        final long delayThresholdMinutes = resolveDelayThresholdMinutes(userId, seniorId);
         final List<MonthlyDashboardResponse.DayEntry> dayEntries = new ArrayList<>();
         for (int day = 1; day <= yearMonth.lengthOfMonth(); day++) {
             final LocalDate date = yearMonth.atDay(day);
             final List<SlotMarker> markers = new ArrayList<>();
             final Map<Long, MedicationLog> logBySchedule = logsByDateAndSchedule.getOrDefault(date, Map.of());
             for (final MealSlot slot : MealSlot.values()) {
-                final SlotStatus status = deriveSlotStatusForDate(slot, senior, schedules, logBySchedule, date, today);
+                final SlotStatus status = deriveSlotStatusForDate(
+                        slot, senior, schedules, logBySchedule, date, today, delayThresholdMinutes);
                 markers.add(new SlotMarker(slot, status));
             }
             final DayStatus dayStatus = deriveDayStatusFromMarkers(markers, date, today);
@@ -220,7 +240,8 @@ public class DashboardService {
             final List<MedicationSchedule> allSchedules,
             final Map<Long, MedicationLog> logBySchedule,
             final LocalDate date,
-            final LocalDate today
+            final LocalDate today,
+            final long delayThresholdMinutes
     ) {
         final LocalTime mealTime = slot.resolveTime(senior);
         final List<MedicationSchedule> slotSchedules = allSchedules.stream()
@@ -239,7 +260,7 @@ public class DashboardService {
                 break;
             }
         }
-        return deriveSlotStatus(representativeLog, mealTime, date, today);
+        return deriveSlotStatus(representativeLog, mealTime, date, today, delayThresholdMinutes);
     }
 
     private DayStatus deriveDayStatusFromMarkers(
@@ -276,7 +297,8 @@ public class DashboardService {
             final Map<Long, MedicationLog> logByScheduleId,
             final Map<Long, Medicine> medicineById,
             final LocalDate date,
-            final LocalDate today
+            final LocalDate today,
+            final long delayThresholdMinutes
     ) {
         final LocalTime mealTime = slot.resolveTime(senior);
         if (slotSchedules == null || slotSchedules.isEmpty() || mealTime == null) {
@@ -293,7 +315,7 @@ public class DashboardService {
             }
         }
 
-        final SlotStatus status = deriveSlotStatus(representativeLog, mealTime, date, today);
+        final SlotStatus status = deriveSlotStatus(representativeLog, mealTime, date, today, delayThresholdMinutes);
         final LocalDateTime takenAt = representativeLog != null ? representativeLog.getTakenAt() : null;
         final String photoUrl = representativeLog != null
                 ? photoUrlAssembler.toFullUrl(representativeLog.getPhotoObjectKey()) : null;
@@ -312,7 +334,8 @@ public class DashboardService {
             final MedicationLog logRow,
             final LocalTime mealTime,
             final LocalDate date,
-            final LocalDate today
+            final LocalDate today,
+            final long delayThresholdMinutes
     ) {
         final boolean pastDate = date.isBefore(today);
         if (logRow == null || logRow.getStatus() != LogStatus.TAKEN) {
@@ -320,7 +343,7 @@ public class DashboardService {
         }
         final LocalDateTime mealDateTime = LocalDateTime.of(date, mealTime);
         final long minutesLate = Duration.between(mealDateTime, logRow.getTakenAt()).toMinutes();
-        if (minutesLate <= DELAY_THRESHOLD_MINUTES) {
+        if (minutesLate <= delayThresholdMinutes) {
             return SlotStatus.PERFECT;
         }
         return SlotStatus.DELAYED;
