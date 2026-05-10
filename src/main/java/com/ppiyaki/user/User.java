@@ -66,6 +66,9 @@ public class User extends BaseTimeEntity {
     @Column(name = "dinner_time")
     private LocalTime dinnerTime;
 
+    @Column(name = "last_active_at")
+    private java.time.LocalDateTime lastActiveAt;
+
     public User(
             final String loginId,
             final String password,
@@ -119,5 +122,9 @@ public class User extends BaseTimeEntity {
         this.breakfastTime = Objects.requireNonNull(breakfastTime, "breakfastTime must not be null");
         this.lunchTime = Objects.requireNonNull(lunchTime, "lunchTime must not be null");
         this.dinnerTime = Objects.requireNonNull(dinnerTime, "dinnerTime must not be null");
+    }
+
+    public void touchActiveAt(final java.time.LocalDateTime now) {
+        this.lastActiveAt = Objects.requireNonNull(now, "now must not be null");
     }
 }

@@ -148,6 +148,26 @@ public class Notification extends BaseTimeEntity {
         );
     }
 
+    public static Notification createForFamilySafety(
+            final Long caregiverId,
+            final Long seniorId,
+            final String title,
+            final String body,
+            final LocalDate targetDate
+    ) {
+        return new Notification(
+                caregiverId,
+                seniorId,
+                NotificationCategory.FAMILY_SAFETY,
+                title,
+                body,
+                null,
+                targetDate,
+                null,
+                null
+        );
+    }
+
     public boolean isRead() {
         return this.readAt != null;
     }
