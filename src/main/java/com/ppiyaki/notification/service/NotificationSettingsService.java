@@ -57,9 +57,6 @@ public class NotificationSettingsService {
             final Long seniorId,
             final NotificationMode mode
     ) {
-        if (mode == NotificationMode.CUSTOM) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT);
-        }
         validateCaregiverAccess(caregiverId, seniorId);
         final NotificationSettings settings = findOrCreate(caregiverId, seniorId);
         if (mode == NotificationMode.INTENSIVE) {

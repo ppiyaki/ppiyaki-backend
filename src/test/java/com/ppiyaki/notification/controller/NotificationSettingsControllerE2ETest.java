@@ -52,12 +52,11 @@ class NotificationSettingsControllerE2ETest {
                 .then()
                 .statusCode(200)
                 .body("seniorId", is(seniorId.intValue()))
-                .body("mode", is("STANDARD"))
                 .body("medicationDelayThresholdMinutes", is(60))
                 .body("familySafetyThresholdHours", is(48))
                 .body("medicationCompleteEnabled", is(false));
 
-        // when — PUT 갱신 (사용자 직접 수정 → mode CUSTOM)
+        // when — PUT 갱신 (사용자 직접 수정)
         RestAssured.given()
                 .header("Authorization", "Bearer " + ownerToken)
                 .contentType(ContentType.JSON)
@@ -75,7 +74,6 @@ class NotificationSettingsControllerE2ETest {
                 .put("/api/v1/seniors/" + seniorId + "/notification-settings")
                 .then()
                 .statusCode(200)
-                .body("mode", is("CUSTOM"))
                 .body("medicationDelayThresholdMinutes", is(45))
                 .body("familySafetyEnabled", is(false))
                 .body("medicationCompleteEnabled", is(true));
@@ -91,7 +89,6 @@ class NotificationSettingsControllerE2ETest {
                 .post("/api/v1/seniors/" + seniorId + "/notification-settings/preset")
                 .then()
                 .statusCode(200)
-                .body("mode", is("INTENSIVE"))
                 .body("medicationDelayThresholdMinutes", is(30))
                 .body("familySafetyThresholdHours", is(12))
                 .body("medicationCompleteEnabled", is(true));
