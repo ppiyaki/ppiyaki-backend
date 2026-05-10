@@ -80,6 +80,8 @@ jobs:
               -e OPENAI_API_KEY='${{ secrets.OPENAI_API_KEY }}' \
               -e OPENAI_TEXT_MODEL='gpt-5.4-nano' \
               -e OPENAI_VISION_MODEL='gpt-5.4-mini' \
+              -e FCM_PROJECT_ID='${{ secrets.FCM_PROJECT_ID }}' \
+              -e FCM_CREDENTIALS_JSON_BASE64='${{ secrets.FCM_CREDENTIALS_JSON_BASE64 }}' \
               ${{ secrets.NCP_REGISTRY }}/ppiyaki-server:latest
             
             echo "Cleaning up old images..."

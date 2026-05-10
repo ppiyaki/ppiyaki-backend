@@ -91,7 +91,7 @@ public enum LogAiStatus {
 - 입력: `messages` 배열에 image_url(base64 data URL) + system prompt
 - 출력: JSON Mode로 `{"count": <integer>}` 강제. 파싱 실패 시 retry 1회.
 - System prompt 초안:
-  ```
+  ```text
   Count the visible pills in the photo. Return JSON {"count": N} where N is a non-negative integer.
   If unsure or no pills visible, return {"count": 0}.
   ```
@@ -160,6 +160,7 @@ public enum LogAiStatus {
 - Vision 실패: mock throws → ai_status=COUNT_FAILED
 
 ## 8) 오픈 질문
+
 | # | 질문 | 선택지 | 담당/기한 |
 |---|---|---|---|
 | Q1 | 동일 시각 정렬 허용 오차 | 동일 `mealSlot` 정확 일치만 합산. 슬롯 간 인접 합산은 후속 (v0.9.0 #225 모델 전환 반영) | ✅ 결정 |
