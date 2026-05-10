@@ -1,5 +1,7 @@
 package com.ppiyaki.pet;
 
+import java.util.Objects;
+
 public enum BadgeType {
 
     FIRST_STEP("천리길도 한 걸음부터", "첫 복약 완료"),
@@ -12,8 +14,8 @@ public enum BadgeType {
     private final String description;
 
     BadgeType(final String displayName, final String description) {
-        this.displayName = displayName;
-        this.description = description;
+        this.displayName = Objects.requireNonNull(displayName, "displayName must not be null");
+        this.description = Objects.requireNonNull(description, "description must not be null");
     }
 
     public String getDisplayName() {

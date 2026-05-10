@@ -67,11 +67,17 @@ public class Pet extends BaseTimeEntity {
         if (this.lastTakenDate != null && this.lastTakenDate.equals(date)) {
             return;
         }
-        if (this.lastTakenDate != null
-                && ChronoUnit.DAYS.between(this.lastTakenDate, date) >= RESET_DAYS) {
-            resetStreak();
+        if (this.lastTakenDate != null) {
+            final long daysBetween = ChronoUnit.DAYS.between(this.lastTakenDate, date);
+            if (daysBetween == 1) {
+                this.streak++;
+            } else {
+                resetStreak();
+                this.streak = 1;
+            }
+        } else {
+            this.streak++;
         }
-        this.streak++;
         this.lastTakenDate = date;
 
         final PetStage currentStage = PetStage.fromStreak(this.streak);

@@ -12,15 +12,17 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.util.Objects;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
 @Table(name = "badges", uniqueConstraints = {
         @UniqueConstraint(name = "uk_badges_pet_type", columnNames = {"pet_id", "badge_type"})
 })
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Badge extends CreatedTimeEntity {
 
     @Id

@@ -1,6 +1,7 @@
 package com.ppiyaki.pet.controller;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -69,6 +70,8 @@ class PetControllerE2ETest {
                 .body("point", is(40))
                 .body("level", is(2))
                 .body("stage", is("EGG"))
-                .body("streak", is(0));
+                .body("streak", is(0))
+                .body("badges", is(notNullValue()))
+                .body("badges.size()", is(0));
     }
 }
