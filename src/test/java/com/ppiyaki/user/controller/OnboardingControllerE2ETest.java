@@ -68,11 +68,13 @@ class OnboardingControllerE2ETest {
                             "seniors": [
                                 {
                                     "nickname": "온보딩할머니",
-                                    "gender": "FEMALE"
+                                    "gender": "FEMALE",
+                                    "notificationMode": "STANDARD"
                                 },
                                 {
                                     "nickname": "온보딩할아버지",
-                                    "gender": "MALE"
+                                    "gender": "MALE",
+                                    "notificationMode": "INTENSIVE"
                                 }
                             ]
                         }
@@ -89,5 +91,13 @@ class OnboardingControllerE2ETest {
                 .body("responses[1].nickname", is("온보딩할아버지"))
                 .body("responses[1].seniorId", notNullValue())
                 .body("responses[1].petId", notNullValue());
+
+        // then — careMode 매핑 검증: STANDARD → AUTONOMOUS, INTENSIVE → MANAGED
+        final String standardCareMode = jdbcTemplate.queryForObject(
+                "SELECT care_mode FROM users WHERE nickname = '온보딩할머니'", String.class);
+        final String intensiveCareMode = jdbcTemplate.queryForObject(
+                "SELECT care_mode FROM users WHERE nickname = '온보딩할아버지'", String.class);
+        assert "AUTONOMOUS".equals(standardCareMode) : "STANDARD → AUTONOMOUS, got: " + standardCareMode;
+        assert "MANAGED".equals(intensiveCareMode) : "INTENSIVE → MANAGED, got: " + intensiveCareMode;
     }
 }

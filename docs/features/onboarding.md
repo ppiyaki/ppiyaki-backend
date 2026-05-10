@@ -20,7 +20,8 @@ last_reviewed: 2026-05-10
 1. 보호자가 카카오 또는 로컬 로그인으로 회원가입한다.
 2. 온보딩 화면에서 닉네임을 입력한다.
 3. 관리할 시니어의 이름과 성별(남/여/비공개)을 입력한다. 여러 명 추가 가능.
-4. 완료 버튼을 누르면 온보딩이 끝나고 메인 화면으로 이동한다. (알림 설정은 default `STANDARD` 프리셋이 자동 적용됨 — 보호자가 추후 알림 설정 페이지에서 시니어별 조정 가능)
+4. 각 시니어에 대해 알림 프리셋(`STANDARD` = 기본 건강 알림 모드 / `INTENSIVE` = 집중 안심 모드)을 선택한다. 화면에 "세부 알림은 가입 후 내 정보 > 알림 설정에서 변경할 수 있어요" 안내.
+5. 완료 버튼을 누르면 온보딩이 끝나고 메인 화면으로 이동한다.
 
 ## 3) 요구사항
 ### 기능 요구사항
@@ -28,7 +29,9 @@ last_reviewed: 2026-05-10
 - [x] 시니어를 1명 이상 등록할 수 있다 (이름, 성별 필수)
 - [x] 성별은 MALE / FEMALE / UNKNOWN(비공개) 중 선택
 - [x] 시니어 등록 시 User(SENIOR) + CareRelation + Pet이 자동 생성된다
-- [x] 시니어 등록 시 default `STANDARD` 프리셋의 `notification_settings` row가 자동 생성된다 (보호자 ↔ 시니어 1:1 row)
+- [x] 각 시니어마다 알림 프리셋(`STANDARD` / `INTENSIVE`)을 선택할 수 있다
+- [x] 시니어 등록 시 선택한 프리셋 값으로 `notification_settings` row가 자동 생성된다 (보호자 ↔ 시니어 1:1 row)
+- [x] 시니어의 `careMode`도 프리셋에 매핑되어 자동 설정된다: `STANDARD` → `AUTONOMOUS`, `INTENSIVE` → `MANAGED`
 - [x] 온보딩은 단일 API(`POST /api/v1/onboarding`)로 처리된다
 
 ### 비기능 요구사항
@@ -38,11 +41,10 @@ last_reviewed: 2026-05-10
 ### 포함
 - `POST /api/v1/onboarding` API
 - `User.createSenior(nickname, gender)` 팩토리
-- 시니어 생성 시 default `STANDARD` 프리셋 `notification_settings` row 자동 생성
+- 시니어 생성 시 선택된 프리셋(`STANDARD` / `INTENSIVE`) 값으로 `notification_settings` row 자동 생성
 - 단위 테스트 + E2E 테스트
 
 ### 제외 (Out of Scope)
-- 알림 모드 직접 입력 (default `STANDARD`로 자동 적용. 보호자가 알림 설정 페이지에서 추후 조정. `docs/features/medication-notification.md` 책임)
 - 알림 모드에 따른 실제 알림 발송 로직 (`docs/features/medication-notification.md` 책임)
 - 알림 설정 개별 조정 API (`docs/features/medication-notification.md` 책임)
 - 온보딩 완료 여부 추적 (isOnboarded 플래그)
@@ -68,11 +70,13 @@ last_reviewed: 2026-05-10
   "seniors": [
     {
       "nickname": "할머니",
-      "gender": "FEMALE"
+      "gender": "FEMALE",
+      "notificationMode": "STANDARD"
     },
     {
       "nickname": "할아버지",
-      "gender": "MALE"
+      "gender": "MALE",
+      "notificationMode": "INTENSIVE"
     }
   ]
 }
@@ -102,9 +106,10 @@ last_reviewed: 2026-05-10
 2. 보호자 닉네임 업데이트
 3. 각 시니어에 대해:
    - User(role=SENIOR, gender) 생성
+   - 선택된 `notificationMode`에 따라 `careMode` 매핑: `STANDARD` → `AUTONOMOUS`, `INTENSIVE` → `MANAGED`
    - CareRelation 생성
    - Pet 생성 + User에 연결
-   - `notification_settings` row 생성 (caregiver_id × senior_id, default `STANDARD` 프리셋)
+   - `notification_settings` row 생성 (caregiver_id × senior_id, 선택된 프리셋 — `STANDARD` 또는 `INTENSIVE`)
 4. 전체 결과 응답
 
 ### 5-5) DB 마이그레이션
@@ -122,4 +127,5 @@ last_reviewed: 2026-05-10
 
 ## 9) 결정 로그
 - 2026-05-08: 초안 작성. 단일 API, 알림 모드는 프리셋(나중에 개별 조정 가능), 성별 비공개=UNKNOWN.
-- 2026-05-10: **알림 모드 책임 이전** — `docs/features/medication-notification.md` spec(보호자 ↔ 시니어 N:M `notification_settings` 모델 채택)에 따라 onboarding 측에서 알림 모드를 받지 않음. `OnboardingRequest.SeniorEntry.notificationMode` 필드 제거 + `User.notificationMode` 필드 + `users.notification_mode` 컬럼 + `com.ppiyaki.user.NotificationMode` enum 제거 (enum은 `com.ppiyaki.notification`으로 이전 + `STANDARD`/`INTENSIVE`/`CUSTOM`로 리네임). 시니어 생성 시 default `STANDARD` 프리셋의 `notification_settings` row 자동 생성. 호환성 깨짐 — 프론트엔드 cut-over 필요.
+- 2026-05-10: **알림 모드 책임 이전** — `docs/features/medication-notification.md` spec(보호자 ↔ 시니어 N:M `notification_settings` 모델 채택)에 따라 `users.notification_mode` 컬럼 + `User.notificationMode` 필드 제거. enum은 `com.ppiyaki.user` → `com.ppiyaki.notification`으로 이전 + `BASIC_ALERT`/`INTENSIVE_CARE` → `STANDARD`/`INTENSIVE`/`CUSTOM`로 리네임. 시니어 생성 시 default `STANDARD` 프리셋의 `notification_settings` row 자동 생성. 호환성 깨짐 — 프론트엔드 cut-over 필요.
+- 2026-05-10 (#286): **알림 모드 입력 다시 받음 + careMode 매핑** — 디자인 화면("시니어를 어떻게 돌볼까요?") 확인 후 정정. 디자인 의도는 보호자가 시니어별로 STANDARD vs INTENSIVE 명시 선택. `OnboardingRequest.SeniorEntry.notificationMode` 필드 다시 추가 (`STANDARD` / `INTENSIVE`, required). 받은 모드에 따라 ① `notification_settings` 프리셋 적용 (`STANDARD` → standard preset / `INTENSIVE` → intensive preset), ② `senior.careMode` 매핑 (`STANDARD` → `AUTONOMOUS` / `INTENSIVE` → `MANAGED`). 모델은 N:M `notification_settings` 그대로 유지.
