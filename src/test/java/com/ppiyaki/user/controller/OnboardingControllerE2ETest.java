@@ -26,6 +26,8 @@ class OnboardingControllerE2ETest {
     @BeforeEach
     void setUp() {
         RestAssured.port = port;
+        jdbcTemplate.update("DELETE FROM notification_settings WHERE caregiver_id IN "
+                + "(SELECT id FROM users WHERE login_id = 'onboard_e2e')");
         jdbcTemplate.update("DELETE FROM care_relations WHERE caregiver_id IN "
                 + "(SELECT id FROM users WHERE login_id = 'onboard_e2e')");
         jdbcTemplate.update("DELETE FROM pets WHERE id IN "
@@ -66,13 +68,11 @@ class OnboardingControllerE2ETest {
                             "seniors": [
                                 {
                                     "nickname": "온보딩할머니",
-                                    "gender": "FEMALE",
-                                    "notificationMode": "BASIC_ALERT"
+                                    "gender": "FEMALE"
                                 },
                                 {
                                     "nickname": "온보딩할아버지",
-                                    "gender": "MALE",
-                                    "notificationMode": "INTENSIVE_CARE"
+                                    "gender": "MALE"
                                 }
                             ]
                         }

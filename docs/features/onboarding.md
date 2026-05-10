@@ -6,7 +6,7 @@ owner: @qkrehgus02
 scope: user
 related_issues: [248]
 related_prs: []
-last_reviewed: 2026-05-08
+last_reviewed: 2026-05-10
 ---
 
 # 보호자 온보딩 API
@@ -20,20 +20,16 @@ last_reviewed: 2026-05-08
 1. 보호자가 카카오 또는 로컬 로그인으로 회원가입한다.
 2. 온보딩 화면에서 닉네임을 입력한다.
 3. 관리할 시니어의 이름과 성별(남/여/비공개)을 입력한다. 여러 명 추가 가능.
-4. 각 시니어에 대한 돌봄 모드를 선택한다.
-   - 기본 건강 알림: 복약 확인 알림 + 일간/월간 리포트
-   - 집중 안심: 복약 완료 즉시 알림 + 30분 지연 경고 + 일간/주간/월간 리포트
-5. 완료 버튼을 누르면 온보딩이 끝나고 메인 화면으로 이동한다.
+4. 완료 버튼을 누르면 온보딩이 끝나고 메인 화면으로 이동한다. (알림 설정은 default `STANDARD` 프리셋이 자동 적용됨 — 보호자가 추후 알림 설정 페이지에서 시니어별 조정 가능)
 
 ## 3) 요구사항
 ### 기능 요구사항
-- [ ] 보호자 닉네임을 변경할 수 있다
-- [ ] 시니어를 1명 이상 등록할 수 있다 (이름, 성별 필수)
-- [ ] 성별은 MALE / FEMALE / UNKNOWN(비공개) 중 선택
-- [ ] 각 시니어마다 알림 모드(BASIC_ALERT / INTENSIVE_CARE)를 선택할 수 있다
-- [ ] 시니어 등록 시 User(SENIOR) + CareRelation + Pet이 자동 생성된다
-- [ ] 알림 모드는 시니어 엔티티에 저장된다 (이후 알림 설정에서 개별 조정 가능)
-- [ ] 온보딩은 단일 API(`POST /api/v1/onboarding`)로 처리된다
+- [x] 보호자 닉네임을 변경할 수 있다
+- [x] 시니어를 1명 이상 등록할 수 있다 (이름, 성별 필수)
+- [x] 성별은 MALE / FEMALE / UNKNOWN(비공개) 중 선택
+- [x] 시니어 등록 시 User(SENIOR) + CareRelation + Pet이 자동 생성된다
+- [x] 시니어 등록 시 default `STANDARD` 프리셋의 `notification_settings` row가 자동 생성된다 (보호자 ↔ 시니어 1:1 row)
+- [x] 온보딩은 단일 API(`POST /api/v1/onboarding`)로 처리된다
 
 ### 비기능 요구사항
 - 시니어 등록 실패 시 전체 롤백 (트랜잭션 보장)
@@ -41,21 +37,21 @@ last_reviewed: 2026-05-08
 ## 4) 범위 / 비범위 (중요)
 ### 포함
 - `POST /api/v1/onboarding` API
-- `NotificationMode` enum 신설
-- User 엔티티에 `notificationMode` 필드 추가
-- `User.createSenior()` 팩토리에 gender, notificationMode 반영
+- `User.createSenior(nickname, gender)` 팩토리
+- 시니어 생성 시 default `STANDARD` 프리셋 `notification_settings` row 자동 생성
 - 단위 테스트 + E2E 테스트
 
 ### 제외 (Out of Scope)
-- 알림 모드에 따른 실제 알림 발송 로직 (알림 기능 구현 시 연동)
-- 알림 설정 개별 조정 API
+- 알림 모드 직접 입력 (default `STANDARD`로 자동 적용. 보호자가 알림 설정 페이지에서 추후 조정. `docs/features/medication-notification.md` 책임)
+- 알림 모드에 따른 실제 알림 발송 로직 (`docs/features/medication-notification.md` 책임)
+- 알림 설정 개별 조정 API (`docs/features/medication-notification.md` 책임)
 - 온보딩 완료 여부 추적 (isOnboarded 플래그)
 
 ## 5) 설계
 ### 5-1) 도메인 모델
-- `NotificationMode` enum: `BASIC_ALERT` / `INTENSIVE_CARE`
-- `User` 엔티티에 `notificationMode` 필드 추가 (시니어에만 적용)
-- `User.createSenior()` 팩토리에 gender, notificationMode 파라미터 추가
+- `User.createSenior(nickname, gender)` 팩토리
+- `NotificationSettings` 엔티티(`com.ppiyaki.notification`)에 caregiver ↔ senior 1:1 row 자동 생성 (default `STANDARD` 프리셋)
+- ~~`NotificationMode` enum (com.ppiyaki.user)~~, ~~`User.notificationMode` 필드~~ — 2026-05-10 refactor로 제거 (알림 도메인으로 이전, §9 참조)
 
 ### 5-2) API 엔드포인트
 
@@ -72,13 +68,11 @@ last_reviewed: 2026-05-08
   "seniors": [
     {
       "nickname": "할머니",
-      "gender": "FEMALE",
-      "notificationMode": "BASIC_ALERT"
+      "gender": "FEMALE"
     },
     {
       "nickname": "할아버지",
-      "gender": "MALE",
-      "notificationMode": "INTENSIVE_CARE"
+      "gender": "MALE"
     }
   ]
 }
@@ -107,13 +101,14 @@ last_reviewed: 2026-05-08
 1. 보호자 인증 확인 (CAREGIVER role)
 2. 보호자 닉네임 업데이트
 3. 각 시니어에 대해:
-   - User(role=SENIOR, gender, notificationMode) 생성
+   - User(role=SENIOR, gender) 생성
    - CareRelation 생성
    - Pet 생성 + User에 연결
+   - `notification_settings` row 생성 (caregiver_id × senior_id, default `STANDARD` 프리셋)
 4. 전체 결과 응답
 
 ### 5-5) DB 마이그레이션
-- `users` 테이블에 `notification_mode` enum 컬럼 추가 (nullable, 시니어에만 사용)
+- ~~`users.notification_mode` 컬럼~~ — 2026-05-10 DROP (알림 모델이 N:M `notification_settings`로 이전)
 
 ## 6) 작업 분할 (예상 PR 리스트)
 - [ ] PR 1: NotificationMode + 온보딩 API + 테스트
@@ -127,3 +122,4 @@ last_reviewed: 2026-05-08
 
 ## 9) 결정 로그
 - 2026-05-08: 초안 작성. 단일 API, 알림 모드는 프리셋(나중에 개별 조정 가능), 성별 비공개=UNKNOWN.
+- 2026-05-10: **알림 모드 책임 이전** — `docs/features/medication-notification.md` spec(보호자 ↔ 시니어 N:M `notification_settings` 모델 채택)에 따라 onboarding 측에서 알림 모드를 받지 않음. `OnboardingRequest.SeniorEntry.notificationMode` 필드 제거 + `User.notificationMode` 필드 + `users.notification_mode` 컬럼 + `com.ppiyaki.user.NotificationMode` enum 제거 (enum은 `com.ppiyaki.notification`으로 이전 + `STANDARD`/`INTENSIVE`/`CUSTOM`로 리네임). 시니어 생성 시 default `STANDARD` 프리셋의 `notification_settings` row 자동 생성. 호환성 깨짐 — 프론트엔드 cut-over 필요.

@@ -188,9 +188,9 @@ CREATE TABLE notification_settings (
     mode VARCHAR(16) NOT NULL DEFAULT 'STANDARD',  -- 'STANDARD' | 'INTENSIVE' | 'CUSTOM'. 항목 직접 수정 시 자동 'CUSTOM'으로 전환
     dur_warning_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     medication_delay_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    medication_delay_threshold_minutes INT NOT NULL DEFAULT 30,
+    medication_delay_threshold_minutes INT NOT NULL DEFAULT 60,  -- STANDARD 프리셋 default와 일치
     family_safety_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-    family_safety_threshold_hours INT NOT NULL DEFAULT 24,
+    family_safety_threshold_hours INT NOT NULL DEFAULT 48,        -- STANDARD 프리셋 default와 일치
     medication_complete_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     created_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL,
