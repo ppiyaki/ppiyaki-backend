@@ -65,9 +65,9 @@ public class PetPointListener {
 
         pet.addPoint(pointPerTaken);
 
-        final LocalDate today = LocalDate.now();
-        if (isDayFullyTaken(event.seniorId(), today)) {
-            pet.incrementStreak(today);
+        final LocalDate targetDate = event.targetDate();
+        if (isDayFullyTaken(event.seniorId(), targetDate)) {
+            pet.incrementStreak(targetDate);
         }
 
         badgeService.checkAndAwardBadges(pet);

@@ -121,7 +121,7 @@ class PetPointListenerTest {
                 .willReturn(List.of(log1, log2));
 
         // when
-        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L));
+        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L, java.time.LocalDate.now()));
 
         // then
         assertThat(pet.getStreak()).isEqualTo(1);
@@ -155,7 +155,7 @@ class PetPointListenerTest {
                 .willReturn(List.of(log1, log2, log3));
 
         // when
-        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L));
+        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L, java.time.LocalDate.now()));
 
         // then — takenCount(3) != totalSchedules(2) → streak 미증가
         assertThat(pet.getStreak()).isEqualTo(0);
@@ -187,7 +187,7 @@ class PetPointListenerTest {
                 .willReturn(List.of(log1, log2));
 
         // when
-        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L));
+        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L, java.time.LocalDate.now()));
 
         // then
         assertThat(pet.getStreak()).isEqualTo(0);
