@@ -60,3 +60,7 @@ mfds:
 openai:
   text-model: ${OPENAI_TEXT_MODEL:gpt-5.4-nano}
   vision-model: ${OPENAI_VISION_MODEL:gpt-5.4-mini}
+
+fcm:
+  project-id: ${FCM_PROJECT_ID:}
+  credentials-json-base64: ${FCM_CREDENTIALS_JSON_BASE64:}

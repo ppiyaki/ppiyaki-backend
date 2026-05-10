@@ -63,7 +63,7 @@ class PetPointListenerTest {
         given(petRepository.findById(1L)).willReturn(Optional.of(pet));
 
         // when
-        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L));
+        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L, java.time.LocalDate.now()));
 
         // then
         assertThat(pet.getPoint()).isEqualTo(10L);
@@ -78,7 +78,7 @@ class PetPointListenerTest {
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
 
         // when
-        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L));
+        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L, java.time.LocalDate.now()));
 
         // then — 예외 없이 정상 종료
     }
@@ -90,7 +90,7 @@ class PetPointListenerTest {
         given(userRepository.findById(999L)).willReturn(Optional.empty());
 
         // when
-        petPointListener.onMedicationTaken(new MedicationTakenEvent(999L));
+        petPointListener.onMedicationTaken(new MedicationTakenEvent(999L, java.time.LocalDate.now()));
 
         // then — 예외 없이 정상 종료
     }

@@ -5,14 +5,18 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.notification.NotificationSettings;
+import com.ppiyaki.notification.repository.NotificationSettingsRepository;
 import com.ppiyaki.pet.Pet;
 import com.ppiyaki.pet.repository.PetRepository;
+import com.ppiyaki.user.CareMode;
 import com.ppiyaki.user.CareRelation;
 import com.ppiyaki.user.Gender;
-import com.ppiyaki.user.NotificationMode;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.controller.dto.OnboardingRequest;
@@ -40,6 +44,9 @@ class OnboardingServiceTest {
 
     @Mock
     private PetRepository petRepository;
+
+    @Mock
+    private NotificationSettingsRepository notificationSettingsRepository;
 
     @InjectMocks
     private OnboardingService onboardingService;
@@ -75,8 +82,8 @@ class OnboardingServiceTest {
         final OnboardingRequest onboardingRequest = new OnboardingRequest(
                 "보호자닉네임",
                 List.of(
-                        new SeniorEntry("할머니", Gender.FEMALE, NotificationMode.BASIC_ALERT),
-                        new SeniorEntry("할아버지", Gender.MALE, NotificationMode.INTENSIVE_CARE)
+                        new SeniorEntry("할머니", Gender.FEMALE, CareMode.AUTONOMOUS),
+                        new SeniorEntry("할아버지", Gender.MALE, CareMode.MANAGED)
                 )
         );
 
@@ -88,6 +95,9 @@ class OnboardingServiceTest {
         assertThat(response.responses()).hasSize(2);
         assertThat(response.responses().get(0).nickname()).isEqualTo("할머니");
         assertThat(response.responses().get(1).nickname()).isEqualTo("할아버지");
+        verify(notificationSettingsRepository, times(2)).save(any(NotificationSettings.class));
+        verify(senior1).changeCareMode(CareMode.AUTONOMOUS);
+        verify(senior2).changeCareMode(CareMode.MANAGED);
     }
 
     @Test
@@ -100,7 +110,7 @@ class OnboardingServiceTest {
 
         final OnboardingRequest onboardingRequest = new OnboardingRequest(
                 "닉네임",
-                List.of(new SeniorEntry("할머니", Gender.FEMALE, NotificationMode.BASIC_ALERT))
+                List.of(new SeniorEntry("할머니", Gender.FEMALE, CareMode.AUTONOMOUS))
         );
 
         // when & then

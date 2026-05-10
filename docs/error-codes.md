@@ -67,6 +67,15 @@
 | `CARE_003` | 403 | Only caregivers can specify seniorId | 시니어는 seniorId 지정 불가 |
 | `CARE_004` | 403 | Senior cannot mutate prescription before caregiver review window | MANAGED 모드 0~72h 사이 시니어 본인이 처방전 변경 시도. 보호자 검토 대기 중. 72h 경과 시 fallback 통과 |
 
+### Notification
+
+| 코드 | HTTP | 메시지 | 설명 |
+|---|---|---|---|
+| `NOTIFICATION_001` | 404 | Notification not found | 알림 row 없음 |
+| `NOTIFICATION_002` | 403 | Cannot access another user's notification | 본인 알림 아님 |
+| `NOTIFICATION_003` | 404 | Device token not found | 디바이스 토큰 row 없음 |
+| `NOTIFICATION_004` | 403 | Cannot access another user's device token | 본인 디바이스 토큰 아님 |
+
 ## 프론트엔드 처리 가이드
 
 ```javascript

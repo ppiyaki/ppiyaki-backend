@@ -1,4 +1,4 @@
-package com.ppiyaki.medication;
+package com.ppiyaki.notification;
 
 import com.ppiyaki.common.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -40,16 +41,29 @@ public class DeviceToken extends BaseTimeEntity {
     @Column(name = "last_seen_at")
     private LocalDateTime lastSeenAt;
 
-    public DeviceToken(
+    DeviceToken(
             final Long userId,
             final String token,
             final DevicePlatform platform,
-            final Boolean isActive,
-            final LocalDateTime lastSeenAt) {
-        this.userId = userId;
-        this.token = token;
-        this.platform = platform;
-        this.isActive = isActive;
+            final LocalDateTime lastSeenAt
+    ) {
+        this.userId = Objects.requireNonNull(userId, "userId must not be null");
+        this.token = Objects.requireNonNull(token, "token must not be null");
+        this.platform = Objects.requireNonNull(platform, "platform must not be null");
+        this.isActive = true;
         this.lastSeenAt = lastSeenAt;
+    }
+
+    public static DeviceToken register(final Long userId, final String token, final DevicePlatform platform) {
+        return new DeviceToken(userId, token, platform, LocalDateTime.now());
+    }
+
+    public void reactivate(final LocalDateTime lastSeenAt) {
+        this.isActive = true;
+        this.lastSeenAt = Objects.requireNonNull(lastSeenAt, "lastSeenAt must not be null");
+    }
+
+    public void deactivate() {
+        this.isActive = false;
     }
 }
