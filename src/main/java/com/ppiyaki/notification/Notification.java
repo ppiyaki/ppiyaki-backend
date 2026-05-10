@@ -86,6 +86,26 @@ public class Notification extends BaseTimeEntity {
         this.scheduleId = scheduleId;
     }
 
+    public static Notification createForMedicationReminder(
+            final Long seniorUserId,
+            final String title,
+            final String body,
+            final LocalDate targetDate,
+            final String mealSlot
+    ) {
+        return new Notification(
+                seniorUserId,
+                null,
+                NotificationCategory.MEDICATION_REMINDER,
+                title,
+                body,
+                null,
+                targetDate,
+                mealSlot,
+                null
+        );
+    }
+
     public boolean isRead() {
         return this.readAt != null;
     }
