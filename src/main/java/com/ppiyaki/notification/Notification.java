@@ -128,6 +128,26 @@ public class Notification extends BaseTimeEntity {
         );
     }
 
+    public static Notification createForDurWarning(
+            final Long caregiverId,
+            final Long seniorId,
+            final String title,
+            final String body,
+            final Long medicineId
+    ) {
+        return new Notification(
+                caregiverId,
+                seniorId,
+                NotificationCategory.DUR_WARNING,
+                title,
+                body,
+                null,
+                null,
+                null,
+                medicineId
+        );
+    }
+
     public boolean isRead() {
         return this.readAt != null;
     }
