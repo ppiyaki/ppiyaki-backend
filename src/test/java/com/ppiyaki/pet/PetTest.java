@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDate;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -18,8 +19,8 @@ class PetTest {
         // then
         assertThat(pet.getPoint()).isEqualTo(0L);
         assertThat(pet.getLevel()).isEqualTo(0);
-        assertThat(pet.getCurrentStreak()).isEqualTo(0);
-        assertThat(pet.getStage()).isEqualTo(PetStage.EGG);
+        assertThat(pet.getStreak()).isEqualTo(0);
+        assertThat(pet.getHighestStage()).isEqualTo(PetStage.EGG);
     }
 
     @Test
@@ -44,6 +45,8 @@ class PetTest {
         // when & then
         assertThatThrownBy(() -> pet.addPoint(0L))
                 .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> pet.addPoint(-5L))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -64,13 +67,11 @@ class PetTest {
         final LocalDate today = LocalDate.now();
 
         // when
-        for (int i = 0; i < 7; i++) {
-            pet.incrementStreak(today.plusDays(i));
-        }
+        IntStream.range(0, 7).forEach(i -> pet.incrementStreak(today.plusDays(i)));
 
         // then
-        assertThat(pet.getCurrentStreak()).isEqualTo(7);
-        assertThat(pet.getStage()).isEqualTo(PetStage.BABY);
+        assertThat(pet.getStreak()).isEqualTo(7);
+        assertThat(pet.getHighestStage()).isEqualTo(PetStage.BABY);
     }
 
     @Test
@@ -85,7 +86,7 @@ class PetTest {
         pet.incrementStreak(today);
 
         // then
-        assertThat(pet.getCurrentStreak()).isEqualTo(1);
+        assertThat(pet.getStreak()).isEqualTo(1);
     }
 
     @Test
@@ -96,12 +97,10 @@ class PetTest {
         final LocalDate today = LocalDate.now();
 
         // when
-        for (int i = 0; i < 3; i++) {
-            pet.incrementStreak(today.plusDays(i));
-        }
+        IntStream.range(0, 3).forEach(i -> pet.incrementStreak(today.plusDays(i)));
 
         // then
-        assertThat(pet.getStage()).isEqualTo(PetStage.CRACKED_EGG);
+        assertThat(pet.getHighestStage()).isEqualTo(PetStage.CRACKED_EGG);
     }
 
     @Test

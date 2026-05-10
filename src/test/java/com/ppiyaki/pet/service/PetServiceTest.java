@@ -10,6 +10,7 @@ import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.pet.Pet;
 import com.ppiyaki.pet.controller.dto.PetResponse;
+import com.ppiyaki.pet.repository.BadgeRepository;
 import com.ppiyaki.pet.repository.PetRepository;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.repository.UserRepository;
@@ -28,6 +29,9 @@ class PetServiceTest {
     private PetRepository petRepository;
 
     @Mock
+    private BadgeRepository badgeRepository;
+
+    @Mock
     private UserRepository userRepository;
 
     @InjectMocks
@@ -44,6 +48,8 @@ class PetServiceTest {
         final Pet pet = Pet.create();
         pet.addPoint(40L);
         given(petRepository.findById(1L)).willReturn(Optional.of(pet));
+        given(badgeRepository.findByPetId(org.mockito.ArgumentMatchers.any()))
+                .willReturn(java.util.List.of());
 
         // when
         final PetResponse petResponse = petService.readMyPet(1L);
