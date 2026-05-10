@@ -48,4 +48,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             final java.time.LocalDate targetDate,
             final Long scheduleId
     );
+
+    java.util.Optional<Notification> findFirstByUserIdAndCategoryAndSeniorIdOrderByCreatedAtDesc(
+            final Long userId,
+            final NotificationCategory category,
+            final Long seniorId
+    );
 }
