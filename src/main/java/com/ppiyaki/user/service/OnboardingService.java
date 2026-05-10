@@ -2,8 +2,11 @@ package com.ppiyaki.user.service;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.notification.NotificationSettings;
+import com.ppiyaki.notification.repository.NotificationSettingsRepository;
 import com.ppiyaki.pet.Pet;
 import com.ppiyaki.pet.repository.PetRepository;
+import com.ppiyaki.user.CareMode;
 import com.ppiyaki.user.CareRelation;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.UserRole;
@@ -23,15 +26,18 @@ public class OnboardingService {
     private final UserRepository userRepository;
     private final CareRelationRepository careRelationRepository;
     private final PetRepository petRepository;
+    private final NotificationSettingsRepository notificationSettingsRepository;
 
     public OnboardingService(
             final UserRepository userRepository,
             final CareRelationRepository careRelationRepository,
-            final PetRepository petRepository
+            final PetRepository petRepository,
+            final NotificationSettingsRepository notificationSettingsRepository
     ) {
         this.userRepository = userRepository;
         this.careRelationRepository = careRelationRepository;
         this.petRepository = petRepository;
+        this.notificationSettingsRepository = notificationSettingsRepository;
     }
 
     @Transactional
@@ -49,16 +55,31 @@ public class OnboardingService {
 
         for (final OnboardingRequest.SeniorEntry seniorEntry : onboardingRequest.seniors()) {
             final User senior = userRepository.save(
-                    User.createSenior(seniorEntry.nickname(), seniorEntry.gender(), seniorEntry.notificationMode()));
+                    User.createSenior(seniorEntry.nickname(), seniorEntry.gender()));
+            senior.changeCareMode(seniorEntry.careMode());
 
             final Pet pet = petRepository.save(Pet.create());
             senior.assignPet(pet.getId());
 
             careRelationRepository.save(CareRelation.createLinked(senior.getId(), caregiverId));
 
+            notificationSettingsRepository.save(
+                    buildSettingsForCareMode(caregiverId, senior.getId(), seniorEntry.careMode()));
+
             seniorResults.add(new SeniorResult(senior.getId(), senior.getNickname(), pet.getId()));
         }
 
         return new OnboardingResponse(caregiver.getNickname(), seniorResults);
+    }
+
+    private NotificationSettings buildSettingsForCareMode(
+            final Long caregiverId,
+            final Long seniorId,
+            final CareMode mode
+    ) {
+        if (mode == CareMode.MANAGED) {
+            return NotificationSettings.createWithIntensivePreset(caregiverId, seniorId);
+        }
+        return NotificationSettings.createWithStandardPreset(caregiverId, seniorId);
     }
 }

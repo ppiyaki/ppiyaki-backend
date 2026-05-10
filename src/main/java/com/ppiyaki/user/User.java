@@ -57,10 +57,6 @@ public class User extends BaseTimeEntity {
     @Column(name = "care_mode", nullable = false)
     private CareMode careMode;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "notification_mode")
-    private NotificationMode notificationMode;
-
     @Column(name = "breakfast_time")
     private LocalTime breakfastTime;
 
@@ -69,6 +65,9 @@ public class User extends BaseTimeEntity {
 
     @Column(name = "dinner_time")
     private LocalTime dinnerTime;
+
+    @Column(name = "last_active_at")
+    private java.time.LocalDateTime lastActiveAt;
 
     public User(
             final String loginId,
@@ -96,18 +95,11 @@ public class User extends BaseTimeEntity {
                 nickname, null, dob, null);
     }
 
-    public static User createSenior(
-            final String nickname,
-            final Gender gender,
-            final NotificationMode notificationMode
-    ) {
+    public static User createSenior(final String nickname, final Gender gender) {
         Objects.requireNonNull(nickname, "nickname must not be null");
         Objects.requireNonNull(gender, "gender must not be null");
-        Objects.requireNonNull(notificationMode, "notificationMode must not be null");
-        final User user = new User(null, null, UserRole.SENIOR, AuthProvider.INVITE_ONLY,
+        return new User(null, null, UserRole.SENIOR, AuthProvider.INVITE_ONLY,
                 nickname, gender, null, null);
-        user.notificationMode = notificationMode;
-        return user;
     }
 
     public void updateNickname(final String nickname) {
@@ -130,5 +122,9 @@ public class User extends BaseTimeEntity {
         this.breakfastTime = Objects.requireNonNull(breakfastTime, "breakfastTime must not be null");
         this.lunchTime = Objects.requireNonNull(lunchTime, "lunchTime must not be null");
         this.dinnerTime = Objects.requireNonNull(dinnerTime, "dinnerTime must not be null");
+    }
+
+    public void touchActiveAt(final java.time.LocalDateTime now) {
+        this.lastActiveAt = Objects.requireNonNull(now, "now must not be null");
     }
 }

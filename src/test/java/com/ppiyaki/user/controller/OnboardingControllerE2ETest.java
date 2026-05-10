@@ -26,6 +26,8 @@ class OnboardingControllerE2ETest {
     @BeforeEach
     void setUp() {
         RestAssured.port = port;
+        jdbcTemplate.update("DELETE FROM notification_settings WHERE caregiver_id IN "
+                + "(SELECT id FROM users WHERE login_id = 'onboard_e2e')");
         jdbcTemplate.update("DELETE FROM care_relations WHERE caregiver_id IN "
                 + "(SELECT id FROM users WHERE login_id = 'onboard_e2e')");
         jdbcTemplate.update("DELETE FROM pets WHERE id IN "
@@ -67,12 +69,12 @@ class OnboardingControllerE2ETest {
                                 {
                                     "nickname": "온보딩할머니",
                                     "gender": "FEMALE",
-                                    "notificationMode": "BASIC_ALERT"
+                                    "careMode": "AUTONOMOUS"
                                 },
                                 {
                                     "nickname": "온보딩할아버지",
                                     "gender": "MALE",
-                                    "notificationMode": "INTENSIVE_CARE"
+                                    "careMode": "MANAGED"
                                 }
                             ]
                         }
@@ -89,5 +91,13 @@ class OnboardingControllerE2ETest {
                 .body("responses[1].nickname", is("온보딩할아버지"))
                 .body("responses[1].seniorId", notNullValue())
                 .body("responses[1].petId", notNullValue());
+
+        // then — careMode 매핑 검증: STANDARD → AUTONOMOUS, INTENSIVE → MANAGED
+        final String standardCareMode = jdbcTemplate.queryForObject(
+                "SELECT care_mode FROM users WHERE nickname = '온보딩할머니'", String.class);
+        final String intensiveCareMode = jdbcTemplate.queryForObject(
+                "SELECT care_mode FROM users WHERE nickname = '온보딩할아버지'", String.class);
+        assert "AUTONOMOUS".equals(standardCareMode) : "STANDARD → AUTONOMOUS, got: " + standardCareMode;
+        assert "MANAGED".equals(intensiveCareMode) : "INTENSIVE → MANAGED, got: " + intensiveCareMode;
     }
 }

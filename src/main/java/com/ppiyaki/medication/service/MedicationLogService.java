@@ -127,7 +127,7 @@ public class MedicationLogService {
 
         // 복약 성공 이벤트 발행 (TAKEN→TAKEN 중복 방지)
         if (request.status() == LogStatus.TAKEN && previousStatus != LogStatus.TAKEN) {
-            eventPublisher.publishEvent(new MedicationTakenEvent(seniorId));
+            eventPublisher.publishEvent(new MedicationTakenEvent(seniorId, request.targetDate()));
         }
 
         // Phase 2: 사진 + status=TAKEN일 때 약 개수 AI 검증 (spec medication-log-phase2 §5-4)
