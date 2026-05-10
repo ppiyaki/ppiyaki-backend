@@ -55,7 +55,11 @@ public enum ErrorCode {
     CHAT_PHOTO_FILE_EMPTY(HttpStatus.BAD_REQUEST, "CHAT_005", "Photo file is empty"),
     CHAT_PHOTO_TYPE_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "CHAT_006",
             "Photo file type not supported (jpeg/png/webp only)"),
-    CHAT_PHOTO_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "CHAT_007", "Photo file exceeds 10MB limit");
+    CHAT_PHOTO_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE, "CHAT_007", "Photo file exceeds 10MB limit"),
+
+    // Notification
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "NOTIFICATION_001", "Notification not found"),
+    NOTIFICATION_FORBIDDEN(HttpStatus.FORBIDDEN, "NOTIFICATION_002", "Cannot access another user's notification");
 
     private final HttpStatus status;
     private final String code;
