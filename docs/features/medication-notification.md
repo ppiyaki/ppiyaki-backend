@@ -1,7 +1,7 @@
 ---
 feature: 복약 알림
 slug: medication-notification
-status: draft
+status: approved
 owner: @goohong
 scope: medication
 related_issues: []
@@ -86,7 +86,7 @@ last_reviewed: 2026-05-10
 **신규 컨텍스트**: `notification` (`com.ppiyaki.notification.*`).
 - `Notification` (알림 row, 영속화)
 - `NotificationSettings` (보호자 ↔ 시니어별 설정 — N:M)
-- `NotificationMode` enum (프리셋: `STANDARD` / `INTENSIVE`) — 기존 `com.ppiyaki.user.NotificationMode` 위치에서 이전 + 이름 변경 (`BASIC_ALERT`→`STANDARD`, `INTENSIVE_CARE`→`INTENSIVE`)
+- `NotificationMode` enum (`STANDARD` / `INTENSIVE` / `CUSTOM`) — STANDARD/INTENSIVE는 프리셋, CUSTOM은 보호자가 settings 항목을 직접 수정한 상태. 기존 `com.ppiyaki.user.NotificationMode` 위치에서 이전 + 이름 변경 (`BASIC_ALERT`→`STANDARD`, `INTENSIVE_CARE`→`INTENSIVE`)
 - `NotificationService` (발송 + 조회)
 - `PushSender` (FCM 어댑터)
 
@@ -152,7 +152,7 @@ last_reviewed: 2026-05-10
 
 **복약 완료 알림**: `MedicationLog` 업서트 후 그 날 schedule이 모두 인증되었는지 확인 → 마지막 인증 시 발송. 멱등 `(caregiver_id, category=MEDICATION_COMPLETE, senior_id, target_date)`.
 
-**가족 안전망 알림**: Cron `FamilySafetyChecker` 매 시간 실행. `User.last_active_at + 임계` 경과한 시니어의 보호자에게 발송. 멱등 — 시니어가 다시 접속할 때까지 재발송 X (state flag 또는 동일 자연키 + 마지막 발송 후 N시간 cooldown).
+**가족 안전망 알림**: Cron `FamilySafetyChecker` 매 시간 실행. `User.last_active_at + 임계` 경과한 시니어의 보호자에게 발송. 멱등 — `last_active_at` 갱신 시점 이후의 가장 최근 `FAMILY_SAFETY` row가 없으면 발송, 있으면 skip. 시니어 재접속 시 다음 임계 초과 때 새 알림 가능 (cooldown 정책 = 시니어 재접속까지 1회만).
 
 ### 5-5) DB 마이그레이션
 
@@ -185,7 +185,7 @@ CREATE TABLE notification_settings (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     caregiver_id BIGINT NOT NULL,
     senior_id BIGINT NOT NULL,
-    mode VARCHAR(16) NOT NULL DEFAULT 'STANDARD',  -- 마지막 적용 프리셋
+    mode VARCHAR(16) NOT NULL DEFAULT 'STANDARD',  -- 'STANDARD' | 'INTENSIVE' | 'CUSTOM'. 항목 직접 수정 시 자동 'CUSTOM'으로 전환
     dur_warning_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     medication_delay_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     medication_delay_threshold_minutes INT NOT NULL DEFAULT 30,
@@ -225,7 +225,7 @@ ALTER TABLE users ADD COLUMN last_active_at DATETIME NULL;
 - [ ] **PR 6: 시니어 복약 시간 알림** — `MedicationReminderScheduler` + 트리거 + 자연키 멱등.
 - [ ] **PR 7: 보호자 미복약/지연 알림** — `MedicationDelayChecker` + 보호자별 임계 적용. 같은 PR에서 `DashboardService.DELAY_THRESHOLD_MINUTES` 하드코딩 제거 → settings 참조로 통합 (caregiver-dashboard.md §8 Q5 해소).
 - [ ] **PR 8: 보호자 DUR 긴급 경고** — `DurCheckService` 연동. 처방전 등록 시 즉시 트리거.
-- [ ] **PR 9: 가족 안전망 알림 + last_active_at** — `users.last_active_at` 컬럼 + interceptor 갱신 + `FamilySafetyChecker` cron.
+- [ ] **PR 9: 가족 안전망 알림 + last_active_at** — `users.last_active_at` 컬럼 + 시니어 인증 모든 요청에 `HandlerInterceptor` 1분 throttle 갱신 + `FamilySafetyChecker` cron + 재접속까지 1회 멱등.
 - [ ] **PR 10: 보호자 복약 완료 알림** — `MedicationLog` 업서트 후 day-complete 검사 + 멱등 발송.
 
 ## 7) 테스트 전략
@@ -239,19 +239,19 @@ ALTER TABLE users ADD COLUMN last_active_at DATETIME NULL;
 
 ## 8) 오픈 질문
 
-> Q1, Q2, Q4, Q9는 2026-05-10 해소 (§9 참조).
+> 모든 질문 2026-05-10 해소 (§9 참조). 새 질문 발생 시 추가.
 
-| # | 질문 | 선택지 | 담당/기한 |
-|---|---|---|---|
-| ~~Q1~~ | ~~enum 이름~~ | **해소 — `STANDARD` / `INTENSIVE`** | ✅ |
-| ~~Q2~~ | ~~프리셋 default~~ | **해소 — §5-5 후보표 그대로** | ✅ |
-| Q3 | 시니어 본인이 자기 알림 설정 조회/갱신 가능한가 | (a) 보호자 전용 (현재 디자인에서 본 것) (b) 시니어도 read만 (c) 시니어도 자기 항목(MEDICATION_REMINDER) toggle 가능 | @goohong |
-| ~~Q4~~ | ~~FCM Service Account 발급~~ | **해소 — 사용자 직접 즉시 발급** | ✅ |
-| Q5 | `last_active_at` 갱신 트리거 범위 | (a) 모든 인증 API 요청 (b) 핵심 endpoints만 (예: 알림함, 복약 인증) | @goohong |
-| Q6 | 사용자가 settings 항목을 직접 수정하면 `mode` 컬럼은? | (a) 마지막 적용 프리셋 그대로 유지 (b) `CUSTOM`으로 변경 (c) `mode` 컬럼 제거하고 client-side 표시만 | @goohong |
-| Q7 | 푸시와 알림함 row의 관계 | (a) 항상 1:1 (모든 푸시는 row 생성) (b) 일부 카테고리만 row (예: 시니어 복약시간은 push only, no row) | @goohong |
-| Q8 | 가족 안전망 알림 cooldown 정책 | (a) 시니어 재접속까지 1회만 (b) N시간 간격으로 반복 | @goohong |
-| ~~Q9~~ | ~~알림 발송 순서~~ | **해소 — (a) DB row 저장 → push, `@TransactionalEventListener(AFTER_COMMIT)`** | ✅ |
+| # | 질문 | 결정 |
+|---|---|---|
+| ~~Q1~~ | enum 이름 | `STANDARD` / `INTENSIVE` / `CUSTOM` ✅ |
+| ~~Q2~~ | 프리셋 default | §5-5 후보표 그대로 ✅ |
+| ~~Q3~~ | 시니어 본인 알림 설정 접근 | 보호자 전용 (시니어 측 설정 페이지 없음) ✅ |
+| ~~Q4~~ | FCM Service Account | 사용자 직접 즉시 발급 ✅ |
+| ~~Q5~~ | `last_active_at` 갱신 범위 | 시니어 인증 모든 요청 + 1분 throttle ✅ |
+| ~~Q6~~ | 직접 수정 시 mode 컬럼 | `CUSTOM`으로 자동 전환 ✅ |
+| ~~Q7~~ | 푸시 ↔ row 관계 | 항상 1:1 (5종 모두 알림함 표시) ✅ |
+| ~~Q8~~ | 가족 안전망 cooldown | 시니어 재접속까지 1회만 ✅ |
+| ~~Q9~~ | 알림 발송 순서 | (a) DB → push, `@TransactionalEventListener(AFTER_COMMIT)` ✅ |
 
 ## 9) 결정 로그
 
@@ -262,3 +262,9 @@ ALTER TABLE users ADD COLUMN last_active_at DATETIME NULL;
 - 2026-05-10: **Q4 해소** — FCM Service Account는 사용자 본인이 즉시 발급. 환경변수 키: `FCM_PROJECT_ID`, `FCM_CREDENTIALS_JSON_BASE64`. application.yml + backend-cd.yml `docker run -e` 동기화 필수 (피야키 CD 환경변수 룰).
 - 2026-05-10: **Q9 해소** — 알림 발송 순서는 (a) DB row 저장 → push 채택. 구현은 `@TransactionalEventListener(phase = AFTER_COMMIT)` 패턴 — 트랜잭션 커밋 후 push 호출. 이유: ① 알림함(인앱 row)이 진실이고 push는 best-effort, ② push 외부 의존도 높아 (b)는 인앱 누락 위험, ③ ppiyaki 운영 규모(시니어 수십 명)에서 (c) outbox 패턴은 over-engineering, ④ 자연키 멱등(`uk_dedup`)으로 push retry 시 row 중복 방지.
 - 2026-05-10: **모델 결정 — 옵션 B (보호자 ↔ 시니어 N:M `notification_settings` 테이블) 채택**. develop이 14커밋 진행되며 박도현 PR이 `users.notification_mode` 컬럼 + `OnboardingRequest.notificationMode` 필드 + `NotificationMode` enum (`com.ppiyaki.user` 위치)을 머지한 사실 확인 → 본 spec과 충돌. refactor 필요. 이유: ① Figma 보호자 알림 설정(203:1283)은 시니어별 보호자 측 조정 화면 + 항목별 toggle/임계 시간 드롭다운 → 단일 enum 2값으로 표현 불가, ② 같은 시니어를 여러 보호자가 다른 설정으로 케어할 시나리오 대응, ③ DELAY_THRESHOLD_MINUTES 등 임계값을 보호자 측 설정으로 일원화 (caregiver-dashboard.md §8 Q5 자연 해소). enum은 `STANDARD`/`INTENSIVE`로 재명명 (CareMode와 단어 충돌 회피) + `com.ppiyaki.notification.NotificationMode`로 위치 이전. Onboarding API는 `notificationMode` 필드 제거 + default `STANDARD` 프리셋으로 settings row 자동 생성. `docs/features/onboarding.md` spec 동시 갱신. 사용자 합의.
+- 2026-05-10: **Q3 해소** — 시니어 본인 알림 설정 접근 = 보호자 전용. 이유: ① Figma에 시니어 측 설정 화면 없음, ② N:M 모델에서 시니어 read 의미 모호, ③ 본 기능 목적상 시니어가 자기 복약 알림 끄는 것은 모순적, ④ 필요 시 별도 spec으로. `MEDICATION_REMINDER`는 default ON 강제.
+- 2026-05-10: **Q5 해소** — `last_active_at` 갱신 = 시니어 인증된 모든 API 요청 + 1분 throttle. 이유: ppiyaki 운영 규모에서 매 요청 update 부담 없음, endpoint 분류 비용 vs 효익 작음, throttle로 동일 분 내 중복 write 방지.
+- 2026-05-10: **Q6 해소** — settings 항목 직접 수정 시 `mode` = `CUSTOM` 자동 전환. enum에 `CUSTOM` 추가 (`STANDARD` / `INTENSIVE` / `CUSTOM`). 이유: UI 표시와 실제 값 일치(정직), 서버 로직 단순, 프리셋 재적용은 별도 endpoint이라 자연스럽게 mode 복귀.
+- 2026-05-10: **Q7 해소** — 푸시 ↔ 알림함 row 항상 1:1. 이유: Figma 5종(시니어 복약시간 / 보호자 미복약·DUR·가족안전망·복약완료) 모두 알림함 표시 의도, 단순/일관성, 푸시 누락 보완, ppiyaki 규모에서 부하 무시 가능.
+- 2026-05-10: **Q8 해소** — 가족 안전망 알림 cooldown = 시니어 재접속까지 1회만. 구현은 `last_active_at` 갱신 시점 이후의 가장 최근 `FAMILY_SAFETY` row 존재 여부로 판정. 이유: 알림 피로 방지, 보호자가 한 번 인지하면 후속은 본인 책임, 구현 단순 (시니어 재접속 시 자연 reset).
+- 2026-05-10: 모든 오픈 질문 해소 → status `draft` → `approved`. 다음 단계: PR 머지 후 PR 2(refactor + notification_settings) 착수.
