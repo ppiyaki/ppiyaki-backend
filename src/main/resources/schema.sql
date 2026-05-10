@@ -129,6 +129,28 @@
     alter table notification_settings
        add constraint uk_caregiver_senior unique (caregiver_id, senior_id);
 
+    create table notifications (
+        target_date date,
+        created_at datetime(6),
+        id bigint not null auto_increment,
+        read_at datetime(6),
+        schedule_id bigint,
+        senior_id bigint,
+        updated_at datetime(6),
+        user_id bigint not null,
+        meal_slot varchar(16),
+        category varchar(32) not null,
+        title varchar(255) not null,
+        body TEXT not null,
+        payload JSON,
+        primary key (id)
+    ) engine=InnoDB;
+
+    create index idx_notifications_user_created on notifications (user_id, created_at);
+
+    alter table notifications
+       add constraint uk_notifications_dedup unique (user_id, category, senior_id, target_date, meal_slot, schedule_id);
+
     create table oauth_identities (
         created_at datetime(6),
         id bigint not null auto_increment,
