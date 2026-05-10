@@ -50,19 +50,22 @@ public class DurCheckService {
     private final MedicationScheduleRepository medicationScheduleRepository;
     private final CareRelationRepository careRelationRepository;
     private final MfdsApiClient mfdsApiClient;
+    private final com.ppiyaki.notification.service.DurWarningDispatcher durWarningDispatcher;
 
     public DurCheckService(
             final DurCheckRepository durCheckRepository,
             final MedicineRepository medicineRepository,
             final MedicationScheduleRepository medicationScheduleRepository,
             final CareRelationRepository careRelationRepository,
-            final MfdsApiClient mfdsApiClient
+            final MfdsApiClient mfdsApiClient,
+            final com.ppiyaki.notification.service.DurWarningDispatcher durWarningDispatcher
     ) {
         this.durCheckRepository = durCheckRepository;
         this.medicineRepository = medicineRepository;
         this.medicationScheduleRepository = medicationScheduleRepository;
         this.careRelationRepository = careRelationRepository;
         this.mfdsApiClient = mfdsApiClient;
+        this.durWarningDispatcher = durWarningDispatcher;
     }
 
     @Transactional
@@ -115,6 +118,8 @@ public class DurCheckService {
 
         log.info("DUR check completed: medicineId={} level={} warnings={}",
                 medicineId, warningLevel, warnings.size());
+
+        durWarningDispatcher.dispatch(medicine.getOwnerId(), medicineId, warningLevel);
 
         return DurCheckResponse.from(durCheck, warnings, false);
     }
