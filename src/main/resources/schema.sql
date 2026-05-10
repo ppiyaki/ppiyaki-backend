@@ -122,7 +122,6 @@
         id bigint not null auto_increment,
         senior_id bigint not null,
         updated_at datetime(6),
-        mode enum ('CUSTOM','INTENSIVE','STANDARD') not null,
         primary key (id)
     ) engine=InnoDB;
 

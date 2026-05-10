@@ -3,8 +3,6 @@ package com.ppiyaki.notification;
 import com.ppiyaki.common.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -35,10 +33,6 @@ public class NotificationSettings extends BaseTimeEntity {
     @Column(name = "senior_id", nullable = false)
     private Long seniorId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "mode", nullable = false, length = 16)
-    private NotificationMode mode;
-
     @Column(name = "dur_warning_enabled", nullable = false)
     private boolean durWarningEnabled;
 
@@ -60,7 +54,6 @@ public class NotificationSettings extends BaseTimeEntity {
     NotificationSettings(
             final Long caregiverId,
             final Long seniorId,
-            final NotificationMode mode,
             final boolean durWarningEnabled,
             final boolean medicationDelayEnabled,
             final int medicationDelayThresholdMinutes,
@@ -70,7 +63,6 @@ public class NotificationSettings extends BaseTimeEntity {
     ) {
         this.caregiverId = Objects.requireNonNull(caregiverId, "caregiverId must not be null");
         this.seniorId = Objects.requireNonNull(seniorId, "seniorId must not be null");
-        this.mode = Objects.requireNonNull(mode, "mode must not be null");
         this.durWarningEnabled = durWarningEnabled;
         this.medicationDelayEnabled = medicationDelayEnabled;
         this.medicationDelayThresholdMinutes = medicationDelayThresholdMinutes;
@@ -80,35 +72,14 @@ public class NotificationSettings extends BaseTimeEntity {
     }
 
     public static NotificationSettings createWithStandardPreset(final Long caregiverId, final Long seniorId) {
-        return new NotificationSettings(
-                caregiverId,
-                seniorId,
-                NotificationMode.STANDARD,
-                true,
-                true,
-                60,
-                true,
-                48,
-                false
-        );
+        return new NotificationSettings(caregiverId, seniorId, true, true, 60, true, 48, false);
     }
 
     public static NotificationSettings createWithIntensivePreset(final Long caregiverId, final Long seniorId) {
-        return new NotificationSettings(
-                caregiverId,
-                seniorId,
-                NotificationMode.INTENSIVE,
-                true,
-                true,
-                30,
-                true,
-                12,
-                true
-        );
+        return new NotificationSettings(caregiverId, seniorId, true, true, 30, true, 12, true);
     }
 
     public void applyStandardPreset() {
-        this.mode = NotificationMode.STANDARD;
         this.durWarningEnabled = true;
         this.medicationDelayEnabled = true;
         this.medicationDelayThresholdMinutes = 60;
@@ -118,12 +89,27 @@ public class NotificationSettings extends BaseTimeEntity {
     }
 
     public void applyIntensivePreset() {
-        this.mode = NotificationMode.INTENSIVE;
         this.durWarningEnabled = true;
         this.medicationDelayEnabled = true;
         this.medicationDelayThresholdMinutes = 30;
         this.familySafetyEnabled = true;
         this.familySafetyThresholdHours = 12;
         this.medicationCompleteEnabled = true;
+    }
+
+    public void updateAllFields(
+            final boolean durWarningEnabled,
+            final boolean medicationDelayEnabled,
+            final int medicationDelayThresholdMinutes,
+            final boolean familySafetyEnabled,
+            final int familySafetyThresholdHours,
+            final boolean medicationCompleteEnabled
+    ) {
+        this.durWarningEnabled = durWarningEnabled;
+        this.medicationDelayEnabled = medicationDelayEnabled;
+        this.medicationDelayThresholdMinutes = medicationDelayThresholdMinutes;
+        this.familySafetyEnabled = familySafetyEnabled;
+        this.familySafetyThresholdHours = familySafetyThresholdHours;
+        this.medicationCompleteEnabled = medicationCompleteEnabled;
     }
 }
