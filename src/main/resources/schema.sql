@@ -232,6 +232,7 @@
         dinner_time time(6),
         created_at datetime(6),
         id bigint not null auto_increment,
+        last_active_at datetime(6),
         pet bigint,
         updated_at datetime(6),
         login_id varchar(255),
