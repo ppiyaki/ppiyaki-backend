@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDate;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -66,9 +67,7 @@ class PetTest {
         final LocalDate today = LocalDate.now();
 
         // when
-        for (int i = 0; i < 7; i++) {
-            pet.incrementStreak(today.plusDays(i));
-        }
+        IntStream.range(0, 7).forEach(i -> pet.incrementStreak(today.plusDays(i)));
 
         // then
         assertThat(pet.getStreak()).isEqualTo(7);
@@ -98,9 +97,7 @@ class PetTest {
         final LocalDate today = LocalDate.now();
 
         // when
-        for (int i = 0; i < 3; i++) {
-            pet.incrementStreak(today.plusDays(i));
-        }
+        IntStream.range(0, 3).forEach(i -> pet.incrementStreak(today.plusDays(i)));
 
         // then
         assertThat(pet.getHighestStage()).isEqualTo(PetStage.CRACKED_EGG);

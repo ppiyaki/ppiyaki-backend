@@ -10,6 +10,9 @@
     alter table badges
        add constraint uk_badges_pet_type unique (pet_id, badge_type);
 
+    alter table badges
+       add constraint fk_badges_pet foreign key (pet_id) references pets(id) on delete cascade;
+
     create table care_relations (
         caregiver_id bigint,
         created_at datetime(6),
