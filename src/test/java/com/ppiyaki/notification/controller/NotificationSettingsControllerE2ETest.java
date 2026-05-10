@@ -38,7 +38,7 @@ class NotificationSettingsControllerE2ETest {
     }
 
     @Test
-    @DisplayName("조회 + PUT(mode→CUSTOM) + 프리셋 적용(INTENSIVE) + 다른 보호자 접근 시 403")
+    @DisplayName("조회 + PUT 항목 갱신 + 프리셋 적용(MANAGED→INTENSIVE preset) + 다른 보호자 접근 시 403")
     void notification_settings_flow() {
         final String ownerToken = signupAndGetToken("ns_owner");
         final String otherToken = signupAndGetToken("ns_other");
@@ -83,7 +83,7 @@ class NotificationSettingsControllerE2ETest {
                 .header("Authorization", "Bearer " + ownerToken)
                 .contentType(ContentType.JSON)
                 .body("""
-                        {"mode": "INTENSIVE"}
+                        {"careMode": "MANAGED"}
                         """)
                 .when()
                 .post("/api/v1/seniors/" + seniorId + "/notification-settings/preset")
@@ -111,7 +111,7 @@ class NotificationSettingsControllerE2ETest {
                         {
                           "nickname": "보호자온보딩",
                           "seniors": [
-                            {"nickname": "NS시니어", "gender": "FEMALE", "notificationMode": "STANDARD"}
+                            {"nickname": "NS시니어", "gender": "FEMALE", "careMode": "AUTONOMOUS"}
                           ]
                         }
                         """)

@@ -2,7 +2,6 @@ package com.ppiyaki.user.service;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.notification.NotificationMode;
 import com.ppiyaki.notification.NotificationSettings;
 import com.ppiyaki.notification.repository.NotificationSettingsRepository;
 import com.ppiyaki.pet.Pet;
@@ -57,7 +56,7 @@ public class OnboardingService {
         for (final OnboardingRequest.SeniorEntry seniorEntry : onboardingRequest.seniors()) {
             final User senior = userRepository.save(
                     User.createSenior(seniorEntry.nickname(), seniorEntry.gender()));
-            senior.changeCareMode(resolveCareMode(seniorEntry.notificationMode()));
+            senior.changeCareMode(seniorEntry.careMode());
 
             final Pet pet = petRepository.save(Pet.create());
             senior.assignPet(pet.getId());
@@ -65,7 +64,7 @@ public class OnboardingService {
             careRelationRepository.save(CareRelation.createLinked(senior.getId(), caregiverId));
 
             notificationSettingsRepository.save(
-                    buildSettingsForPreset(caregiverId, senior.getId(), seniorEntry.notificationMode()));
+                    buildSettingsForCareMode(caregiverId, senior.getId(), seniorEntry.careMode()));
 
             seniorResults.add(new SeniorResult(senior.getId(), senior.getNickname(), pet.getId()));
         }
@@ -73,18 +72,14 @@ public class OnboardingService {
         return new OnboardingResponse(caregiver.getNickname(), seniorResults);
     }
 
-    private NotificationSettings buildSettingsForPreset(
+    private NotificationSettings buildSettingsForCareMode(
             final Long caregiverId,
             final Long seniorId,
-            final NotificationMode mode
+            final CareMode mode
     ) {
-        if (mode == NotificationMode.INTENSIVE) {
+        if (mode == CareMode.MANAGED) {
             return NotificationSettings.createWithIntensivePreset(caregiverId, seniorId);
         }
         return NotificationSettings.createWithStandardPreset(caregiverId, seniorId);
-    }
-
-    private CareMode resolveCareMode(final NotificationMode mode) {
-        return mode == NotificationMode.INTENSIVE ? CareMode.MANAGED : CareMode.AUTONOMOUS;
     }
 }
