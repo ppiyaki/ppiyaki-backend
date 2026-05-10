@@ -73,6 +73,8 @@
 |---|---|---|---|
 | `NOTIFICATION_001` | 404 | Notification not found | 알림 row 없음 |
 | `NOTIFICATION_002` | 403 | Cannot access another user's notification | 본인 알림 아님 |
+| `NOTIFICATION_003` | 404 | Device token not found | 디바이스 토큰 row 없음 |
+| `NOTIFICATION_004` | 403 | Cannot access another user's device token | 본인 디바이스 토큰 아님 |
 
 ## 프론트엔드 처리 가이드
 
