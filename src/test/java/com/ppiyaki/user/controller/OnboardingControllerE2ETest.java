@@ -69,12 +69,12 @@ class OnboardingControllerE2ETest {
                                 {
                                     "nickname": "온보딩할머니",
                                     "gender": "FEMALE",
-                                    "notificationMode": "STANDARD"
+                                    "careMode": "AUTONOMOUS"
                                 },
                                 {
                                     "nickname": "온보딩할아버지",
                                     "gender": "MALE",
-                                    "notificationMode": "INTENSIVE"
+                                    "careMode": "MANAGED"
                                 }
                             ]
                         }

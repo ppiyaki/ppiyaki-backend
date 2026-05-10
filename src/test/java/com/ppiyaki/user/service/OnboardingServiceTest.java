@@ -10,7 +10,6 @@ import static org.mockito.Mockito.verify;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.notification.NotificationMode;
 import com.ppiyaki.notification.NotificationSettings;
 import com.ppiyaki.notification.repository.NotificationSettingsRepository;
 import com.ppiyaki.pet.Pet;
@@ -83,8 +82,8 @@ class OnboardingServiceTest {
         final OnboardingRequest onboardingRequest = new OnboardingRequest(
                 "보호자닉네임",
                 List.of(
-                        new SeniorEntry("할머니", Gender.FEMALE, NotificationMode.STANDARD),
-                        new SeniorEntry("할아버지", Gender.MALE, NotificationMode.INTENSIVE)
+                        new SeniorEntry("할머니", Gender.FEMALE, CareMode.AUTONOMOUS),
+                        new SeniorEntry("할아버지", Gender.MALE, CareMode.MANAGED)
                 )
         );
 
@@ -111,7 +110,7 @@ class OnboardingServiceTest {
 
         final OnboardingRequest onboardingRequest = new OnboardingRequest(
                 "닉네임",
-                List.of(new SeniorEntry("할머니", Gender.FEMALE, NotificationMode.STANDARD))
+                List.of(new SeniorEntry("할머니", Gender.FEMALE, CareMode.AUTONOMOUS))
         );
 
         // when & then

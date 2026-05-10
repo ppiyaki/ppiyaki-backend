@@ -86,7 +86,7 @@ last_reviewed: 2026-05-10
 **신규 컨텍스트**: `notification` (`com.ppiyaki.notification.*`).
 - `Notification` (알림 row, 영속화)
 - `NotificationSettings` (보호자 ↔ 시니어별 설정 — N:M)
-- `NotificationMode` enum (`STANDARD` / `INTENSIVE`) — onboarding/프리셋 적용 시 입력값으로만 사용. `notification_settings`에 저장하지 않음 (모드는 초기 프리셋 표시일 뿐 영속 의미 없음). 기존 `com.ppiyaki.user.NotificationMode` 위치에서 이전 + 이름 변경 (`BASIC_ALERT`→`STANDARD`, `INTENSIVE_CARE`→`INTENSIVE`)
+- 입력 enum은 `CareMode` 단일 (`MANAGED` / `AUTONOMOUS`) — onboarding/프리셋 적용 시 입력. `NotificationMode` enum은 폐기 (#294, careMode 단일 입력으로 통합). 백엔드에서 `MANAGED` → INTENSIVE preset / `AUTONOMOUS` → STANDARD preset 매핑.
 - `NotificationService` (발송 + 조회)
 - `PushSender` (FCM 어댑터)
 
@@ -265,6 +265,7 @@ ALTER TABLE users ADD COLUMN last_active_at DATETIME NULL;
 - 2026-05-10: **Q5 해소** — `last_active_at` 갱신 = 시니어 인증된 모든 API 요청 + 1분 throttle. 이유: ppiyaki 운영 규모에서 매 요청 update 부담 없음, endpoint 분류 비용 vs 효익 작음, throttle로 동일 분 내 중복 write 방지.
 - 2026-05-10: **Q6 해소** — settings 항목 직접 수정 시 `mode` = `CUSTOM` 자동 전환. enum에 `CUSTOM` 추가 (`STANDARD` / `INTENSIVE` / `CUSTOM`). 이유: UI 표시와 실제 값 일치(정직), 서버 로직 단순, 프리셋 재적용은 별도 endpoint이라 자연스럽게 mode 복귀.
 - 2026-05-10 (Q6 번복): **`mode` 컬럼 + CUSTOM 제거** (PR #291). 이유: mode는 onboarding/프리셋 적용 시점의 입력값일 뿐 저장 의미 없음 (어차피 초기 프리셋 표시). 보호자가 항목 직접 수정해도 mode를 굳이 추적할 필요 없음. enum은 STANDARD/INTENSIVE 2값만 (DTO에서만 사용). `notification_settings.mode` 컬럼 + `NotificationSettings.mode` 필드 제거 + `NotificationMode.CUSTOM` 제거.
+- 2026-05-10 (#294): **입력 enum을 `CareMode` 단일로 통합** — UI 모음집 확인 결과 onboarding 모드 선택은 careMode 수준의 통합 프리셋(처방전 권한 + 알림 + 향후 복약인증 강제/여유 등). 개념 크기상 careMode가 상위. `OnboardingRequest.SeniorEntry.careMode` (`MANAGED`/`AUTONOMOUS`)로 변경 + `POST /notification-settings/preset` body도 `careMode`. 백엔드 매핑: `MANAGED` → INTENSIVE preset / `AUTONOMOUS` → STANDARD preset. `NotificationMode` enum 폐기. 호환성 깨짐 — 프론트엔드 cut-over.
 - 2026-05-10: **Q7 해소** — 푸시 ↔ 알림함 row 항상 1:1. 이유: Figma 5종(시니어 복약시간 / 보호자 미복약·DUR·가족안전망·복약완료) 모두 알림함 표시 의도, 단순/일관성, 푸시 누락 보완, ppiyaki 규모에서 부하 무시 가능.
 - 2026-05-10: **Q8 해소** — 가족 안전망 알림 cooldown = 시니어 재접속까지 1회만. 구현은 `last_active_at` 갱신 시점 이후의 가장 최근 `FAMILY_SAFETY` row 존재 여부로 판정. 이유: 알림 피로 방지, 보호자가 한 번 인지하면 후속은 본인 책임, 구현 단순 (시니어 재접속 시 자연 reset).
 - 2026-05-10: 모든 오픈 질문 해소 → status `draft` → `approved`. 다음 단계: PR 머지 후 PR 2(refactor + notification_settings) 착수.

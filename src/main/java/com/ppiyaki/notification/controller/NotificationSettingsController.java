@@ -48,6 +48,6 @@ public class NotificationSettingsController {
             @PathVariable final Long seniorId,
             @Valid @RequestBody final PresetApplyRequest request
     ) {
-        return ResponseEntity.ok(notificationSettingsService.applyPreset(caregiverId, seniorId, request.mode()));
+        return ResponseEntity.ok(notificationSettingsService.applyPreset(caregiverId, seniorId, request.careMode()));
     }
 }

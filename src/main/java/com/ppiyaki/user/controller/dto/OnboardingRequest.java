@@ -1,6 +1,6 @@
 package com.ppiyaki.user.controller.dto;
 
-import com.ppiyaki.notification.NotificationMode;
+import com.ppiyaki.user.CareMode;
 import com.ppiyaki.user.Gender;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -16,7 +16,7 @@ public record OnboardingRequest(
     public record SeniorEntry(
             @NotBlank String nickname,
             @NotNull Gender gender,
-            @NotNull NotificationMode notificationMode
+            @NotNull CareMode careMode
     ) {
     }
 }
