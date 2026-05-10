@@ -264,11 +264,13 @@ OCR + LLM 파싱으로 추출된 약물 후보. 처방전 1건당 N행. 보호�
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| point | bigint (`Long`) | 누적 포인트. 복약 성공 이벤트로 증가 |
+| point | bigint NOT NULL | 누적 포인트. 복약 성공 이벤트로 증가 |
+| streak | int NOT NULL | 연속 복약 일수. 하루 전체 TAKEN 시 +1 |
+| highest_stage | varchar NOT NULL | `PetStage` enum: `EGG`(0일)/`CRACKED_EGG`(3일)/`BABY`(7일)/`HEALTHY`(14일)/`GUARDIAN`(30일)/`EMPEROR`(100일). 달성 후 유지, 7일 미인증 시 EGG 리셋 |
+| last_taken_date | date nullable | 마지막 복약 완료일. 리셋 판정용 |
 | created_at / updated_at | timestamp | `BaseTimeEntity` |
 
-> **레벨/스테이지는 서버(도메인 로직)에서 `point`로부터 계산**한다. 예: `level = floor(sqrt(point / 10))`. 밸런스 변경 시 DB 마이그레이션 없이 재계산할 수 있어 기획 반복에 유리하다.
-> **코드 갭**: 현재 `Pet.java`는 `CreatedTimeEntity`/`BaseTimeEntity`를 상속하지 않아 `created_at`/`updated_at`이 없다. 추적: §7-18.
+> **레벨**은 `point`로부터 계산: `level = floor(sqrt(point / 10))`. **성장 단계**는 `streak`으로부터 `PetStage.fromStreak()`으로 계산.
 
 ### pill_identifications (target: `@Table(name = "pill_identifications")`, no time mixin)
 식약처 의약품 낱알식별 정보 마스터 (식약처 OpenAPI `MdcinGrnIdntfcInfoService03/getMdcinGrnIdntfcInfoList03`을 주 1회 batch로 동기화). 약명 추정 없이 외형(각인·색·모양·분할선)으로 약 후보를 검색하기 위한 자체 인덱스. 자세한 설계: `docs/features/pill-identification.md`.

@@ -5,11 +5,15 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 
+import com.ppiyaki.medication.LogStatus;
+import com.ppiyaki.medication.MedicationLog;
+import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.event.MedicationTakenEvent;
 import com.ppiyaki.pet.Pet;
 import com.ppiyaki.pet.repository.PetRepository;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.repository.UserRepository;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -27,11 +31,19 @@ class PetPointListenerTest {
     @Mock
     private PetRepository petRepository;
 
+    @Mock
+    private com.ppiyaki.medication.repository.MedicationScheduleRepository medicationScheduleRepository;
+
+    @Mock
+    private com.ppiyaki.medication.repository.MedicationLogRepository medicationLogRepository;
+
     private PetPointListener petPointListener;
 
     @BeforeEach
     void setUp() {
-        petPointListener = new PetPointListener(userRepository, petRepository, 10L);
+        petPointListener = new PetPointListener(
+                userRepository, petRepository, medicationScheduleRepository,
+                medicationLogRepository, 10L);
     }
 
     @Test
@@ -76,5 +88,69 @@ class PetPointListenerTest {
         petPointListener.onMedicationTaken(new MedicationTakenEvent(999L, java.time.LocalDate.now()));
 
         // then — 예외 없이 정상 종료
+    }
+
+    @Test
+    @DisplayName("하루 전체 복약 완료 시 streak이 증가한다")
+    void onMedicationTaken_allTaken_incrementsStreak() {
+        // given
+        final User user = mock(User.class);
+        lenient().when(user.getPet()).thenReturn(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+
+        final Pet pet = Pet.create();
+        given(petRepository.findById(1L)).willReturn(Optional.of(pet));
+
+        final MedicationSchedule schedule1 = mock(MedicationSchedule.class);
+        final MedicationSchedule schedule2 = mock(MedicationSchedule.class);
+        given(medicationScheduleRepository.findActiveByOwnerAndDate(
+                org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
+                .willReturn(List.of(schedule1, schedule2));
+
+        final MedicationLog log1 = mock(MedicationLog.class);
+        given(log1.getStatus()).willReturn(LogStatus.TAKEN);
+        final MedicationLog log2 = mock(MedicationLog.class);
+        given(log2.getStatus()).willReturn(LogStatus.TAKEN);
+        given(medicationLogRepository.findBySeniorIdAndTargetDate(
+                org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
+                .willReturn(List.of(log1, log2));
+
+        // when
+        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L));
+
+        // then
+        assertThat(pet.getCurrentStreak()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("일부 MISSED가 있으면 streak이 증가하지 않는다")
+    void onMedicationTaken_someMissed_noStreakIncrease() {
+        // given
+        final User user = mock(User.class);
+        lenient().when(user.getPet()).thenReturn(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+
+        final Pet pet = Pet.create();
+        given(petRepository.findById(1L)).willReturn(Optional.of(pet));
+
+        final MedicationSchedule schedule1 = mock(MedicationSchedule.class);
+        final MedicationSchedule schedule2 = mock(MedicationSchedule.class);
+        given(medicationScheduleRepository.findActiveByOwnerAndDate(
+                org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
+                .willReturn(List.of(schedule1, schedule2));
+
+        final MedicationLog log1 = mock(MedicationLog.class);
+        given(log1.getStatus()).willReturn(LogStatus.TAKEN);
+        final MedicationLog log2 = mock(MedicationLog.class);
+        given(log2.getStatus()).willReturn(LogStatus.MISSED);
+        given(medicationLogRepository.findBySeniorIdAndTargetDate(
+                org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
+                .willReturn(List.of(log1, log2));
+
+        // when
+        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L));
+
+        // then
+        assertThat(pet.getCurrentStreak()).isEqualTo(0);
     }
 }
