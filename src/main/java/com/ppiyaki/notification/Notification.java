@@ -106,6 +106,28 @@ public class Notification extends BaseTimeEntity {
         );
     }
 
+    public static Notification createForMedicationDelay(
+            final Long caregiverId,
+            final Long seniorId,
+            final String title,
+            final String body,
+            final LocalDate targetDate,
+            final String mealSlot,
+            final Long scheduleId
+    ) {
+        return new Notification(
+                caregiverId,
+                seniorId,
+                NotificationCategory.MEDICATION_DELAY,
+                title,
+                body,
+                null,
+                targetDate,
+                mealSlot,
+                scheduleId
+        );
+    }
+
     public boolean isRead() {
         return this.readAt != null;
     }
