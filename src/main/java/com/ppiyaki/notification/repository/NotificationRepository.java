@@ -33,4 +33,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             WHERE n.userId = :userId AND n.readAt IS NULL
             """)
     int markAllAsRead(@Param("userId") final Long userId, @Param("readAt") final LocalDateTime readAt);
+
+    boolean existsByUserIdAndCategoryAndTargetDateAndMealSlot(
+            final Long userId,
+            final NotificationCategory category,
+            final java.time.LocalDate targetDate,
+            final String mealSlot
+    );
 }
