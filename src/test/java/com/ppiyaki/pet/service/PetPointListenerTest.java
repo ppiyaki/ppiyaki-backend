@@ -1,6 +1,8 @@
 package com.ppiyaki.pet.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -37,13 +39,16 @@ class PetPointListenerTest {
     @Mock
     private com.ppiyaki.medication.repository.MedicationLogRepository medicationLogRepository;
 
+    @Mock
+    private BadgeService badgeService;
+
     private PetPointListener petPointListener;
 
     @BeforeEach
     void setUp() {
         petPointListener = new PetPointListener(
                 userRepository, petRepository, medicationScheduleRepository,
-                medicationLogRepository, 10L);
+                medicationLogRepository, badgeService, 10L);
     }
 
     @Test
@@ -104,7 +109,7 @@ class PetPointListenerTest {
         final MedicationSchedule schedule1 = mock(MedicationSchedule.class);
         final MedicationSchedule schedule2 = mock(MedicationSchedule.class);
         given(medicationScheduleRepository.findActiveByOwnerAndDate(
-                org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
+                eq(1L), any()))
                 .willReturn(List.of(schedule1, schedule2));
 
         final MedicationLog log1 = mock(MedicationLog.class);
@@ -112,14 +117,48 @@ class PetPointListenerTest {
         final MedicationLog log2 = mock(MedicationLog.class);
         given(log2.getStatus()).willReturn(LogStatus.TAKEN);
         given(medicationLogRepository.findBySeniorIdAndTargetDate(
-                org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
+                eq(1L), any()))
                 .willReturn(List.of(log1, log2));
 
         // when
-        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L));
+        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L, java.time.LocalDate.now()));
 
         // then
-        assertThat(pet.getCurrentStreak()).isEqualTo(1);
+        assertThat(pet.getStreak()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("로그 수가 스케줄 수를 초과하면 streak이 증가하지 않는다")
+    void onMedicationTaken_moreLogsThanSchedules_noStreakIncrease() {
+        // given
+        final User user = mock(User.class);
+        lenient().when(user.getPet()).thenReturn(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+
+        final Pet pet = Pet.create();
+        given(petRepository.findById(1L)).willReturn(Optional.of(pet));
+
+        final MedicationSchedule schedule1 = mock(MedicationSchedule.class);
+        final MedicationSchedule schedule2 = mock(MedicationSchedule.class);
+        given(medicationScheduleRepository.findActiveByOwnerAndDate(
+                eq(1L), any()))
+                .willReturn(List.of(schedule1, schedule2));
+
+        final MedicationLog log1 = mock(MedicationLog.class);
+        given(log1.getStatus()).willReturn(LogStatus.TAKEN);
+        final MedicationLog log2 = mock(MedicationLog.class);
+        given(log2.getStatus()).willReturn(LogStatus.TAKEN);
+        final MedicationLog log3 = mock(MedicationLog.class);
+        given(log3.getStatus()).willReturn(LogStatus.TAKEN);
+        given(medicationLogRepository.findBySeniorIdAndTargetDate(
+                eq(1L), any()))
+                .willReturn(List.of(log1, log2, log3));
+
+        // when
+        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L, java.time.LocalDate.now()));
+
+        // then — takenCount(3) != totalSchedules(2) → streak 미증가
+        assertThat(pet.getStreak()).isEqualTo(0);
     }
 
     @Test
@@ -136,7 +175,7 @@ class PetPointListenerTest {
         final MedicationSchedule schedule1 = mock(MedicationSchedule.class);
         final MedicationSchedule schedule2 = mock(MedicationSchedule.class);
         given(medicationScheduleRepository.findActiveByOwnerAndDate(
-                org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
+                eq(1L), any()))
                 .willReturn(List.of(schedule1, schedule2));
 
         final MedicationLog log1 = mock(MedicationLog.class);
@@ -144,13 +183,13 @@ class PetPointListenerTest {
         final MedicationLog log2 = mock(MedicationLog.class);
         given(log2.getStatus()).willReturn(LogStatus.MISSED);
         given(medicationLogRepository.findBySeniorIdAndTargetDate(
-                org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
+                eq(1L), any()))
                 .willReturn(List.of(log1, log2));
 
         // when
-        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L));
+        petPointListener.onMedicationTaken(new MedicationTakenEvent(1L, java.time.LocalDate.now()));
 
         // then
-        assertThat(pet.getCurrentStreak()).isEqualTo(0);
+        assertThat(pet.getStreak()).isEqualTo(0);
     }
 }

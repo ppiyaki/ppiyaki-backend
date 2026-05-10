@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -62,15 +63,21 @@ public class Pet extends BaseTimeEntity {
     }
 
     public void incrementStreak(final LocalDate date) {
-        java.util.Objects.requireNonNull(date, "date must not be null");
+        Objects.requireNonNull(date, "date must not be null");
         if (this.lastTakenDate != null && this.lastTakenDate.equals(date)) {
             return;
         }
-        if (this.lastTakenDate != null
-                && ChronoUnit.DAYS.between(this.lastTakenDate, date) >= RESET_DAYS) {
-            resetStreak();
+        if (this.lastTakenDate != null) {
+            final long daysBetween = ChronoUnit.DAYS.between(this.lastTakenDate, date);
+            if (daysBetween == 1) {
+                this.streak++;
+            } else {
+                resetStreak();
+                this.streak = 1;
+            }
+        } else {
+            this.streak++;
         }
-        this.streak++;
         this.lastTakenDate = date;
 
         final PetStage currentStage = PetStage.fromStreak(this.streak);
@@ -79,25 +86,16 @@ public class Pet extends BaseTimeEntity {
         }
     }
 
-    public void resetStreak() {
-        this.streak = 0;
-        this.highestStage = PetStage.EGG;
-    }
-
-    public PetStage getStage() {
-        checkAutoReset();
-        return this.highestStage;
-    }
-
-    public int getCurrentStreak() {
-        checkAutoReset();
-        return this.streak;
-    }
-
-    private void checkAutoReset() {
+    public void checkAndResetIfInactive(final LocalDate today) {
+        Objects.requireNonNull(today, "today must not be null");
         if (this.lastTakenDate != null
-                && ChronoUnit.DAYS.between(this.lastTakenDate, LocalDate.now()) >= RESET_DAYS) {
+                && ChronoUnit.DAYS.between(this.lastTakenDate, today) >= RESET_DAYS) {
             resetStreak();
         }
+    }
+
+    void resetStreak() {
+        this.streak = 0;
+        this.highestStage = PetStage.EGG;
     }
 }
