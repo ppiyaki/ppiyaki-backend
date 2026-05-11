@@ -1,9 +1,9 @@
 package com.ppiyaki.pet.controller;
 
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
+import com.ppiyaki.pet.BadgeType;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
@@ -103,7 +103,7 @@ class PetControllerE2ETest {
                 .get("/api/v1/pets/badges/types")
                 .then()
                 .statusCode(200)
-                .body("$.size()", greaterThanOrEqualTo(5))
+                .body("$.size()", is(BadgeType.values().length))
                 .body("[0].badgeType", is(notNullValue()))
                 .body("[0].displayName", is(notNullValue()))
                 .body("[0].description", is(notNullValue()));
