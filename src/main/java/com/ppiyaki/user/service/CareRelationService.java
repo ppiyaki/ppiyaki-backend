@@ -18,6 +18,8 @@ import com.ppiyaki.user.repository.RefreshTokenRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,8 +60,15 @@ public class CareRelationService {
         final List<CareRelation> careRelations = careRelationRepository.findByCaregiverIdAndDeletedAtIsNull(
                 caregiverId);
 
+        final List<Long> seniorIds = careRelations.stream()
+                .map(CareRelation::getSeniorId)
+                .toList();
+
+        final Map<Long, User> seniorsById = userRepository.findAllById(seniorIds).stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
+
         return careRelations.stream()
-                .map(relation -> findUserById(relation.getSeniorId()))
+                .map(relation -> seniorsById.get(relation.getSeniorId()))
                 .map(SeniorSummaryResponse::from)
                 .toList();
     }
