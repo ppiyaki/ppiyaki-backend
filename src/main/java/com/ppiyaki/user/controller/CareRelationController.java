@@ -4,13 +4,16 @@ import com.ppiyaki.user.controller.dto.CodeLoginRequest;
 import com.ppiyaki.user.controller.dto.InviteCodeRequest;
 import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
+import com.ppiyaki.user.controller.dto.SeniorSummaryResponse;
 import com.ppiyaki.user.service.CareRelationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,6 +28,14 @@ public class CareRelationController {
 
     public CareRelationController(final CareRelationService careRelationService) {
         this.careRelationService = careRelationService;
+    }
+
+    @GetMapping("/care-relations/seniors")
+    public ResponseEntity<List<SeniorSummaryResponse>> readSeniors(
+            @AuthenticationPrincipal final Long userId
+    ) {
+        final List<SeniorSummaryResponse> responses = careRelationService.readSeniors(userId);
+        return ResponseEntity.ok(responses);
     }
 
     @PostMapping("/care-relations/invite")

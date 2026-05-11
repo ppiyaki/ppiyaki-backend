@@ -13,4 +13,6 @@ public interface CareRelationRepository extends JpaRepository<CareRelation, Long
     );
 
     List<CareRelation> findBySeniorIdAndDeletedAtIsNull(final Long seniorId);
+
+    List<CareRelation> findByCaregiverIdAndDeletedAtIsNull(final Long caregiverId);
 }

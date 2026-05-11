@@ -1,5 +1,6 @@
 package com.ppiyaki.user.controller;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -108,5 +109,51 @@ class CareRelationControllerE2ETest {
                 .body("accessToken", notNullValue())
                 .body("refreshToken", notNullValue())
                 .body("isOnboarded", is(true));
+    }
+
+    @Test
+    @DisplayName("보호자가 연동된 시니어 목록을 조회한다")
+    void readSeniors_success() {
+        // given — 보호자 회원가입
+        final String caregiverToken = RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "loginId": "cg_code_e2e",
+                            "password": "pass1234!",
+                            "nickname": "보호자코드E2E"
+                        }
+                        """)
+                .when()
+                .post("/api/v1/auth/signup")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("accessToken");
+
+        // given — 시니어 대리 생성
+        RestAssured.given()
+                .header("Authorization", "Bearer " + caregiverToken)
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "nickname": "시니어코드E2E",
+                            "dob": "1945-03-15"
+                        }
+                        """)
+                .when()
+                .post("/api/v1/seniors")
+                .then()
+                .statusCode(201);
+
+        // when & then — 시니어 목록 조회
+        RestAssured.given()
+                .header("Authorization", "Bearer " + caregiverToken)
+                .when()
+                .get("/api/v1/care-relations/seniors")
+                .then()
+                .statusCode(200)
+                .body("$", hasSize(1))
+                .body("[0].nickname", is("시니어코드E2E"));
     }
 }
