@@ -89,7 +89,8 @@ class MedicationLogControllerE2ETest {
                 .body("status", is("TAKEN"))
                 .body("isProxy", is(false))
                 .body("confirmedByUserId", equalTo(senior.userId().intValue()))
-                .body("photoUrl", is("https://kr.object.ncloudstorage.com/ppiyaki-test/" + objectKey));
+                .body("photoUrl", org.hamcrest.Matchers.startsWith(
+                        "https://kr.object.ncloudstorage.com/ppiyaki-test/" + objectKey + "?"));
 
         // then — GET
         RestAssured.given()
