@@ -1,5 +1,6 @@
 package com.ppiyaki.pet.controller;
 
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -73,5 +74,38 @@ class PetControllerE2ETest {
                 .body("streak", is(0))
                 .body("badges", is(notNullValue()))
                 .body("badges.size()", is(0));
+    }
+
+    @Test
+    @DisplayName("BadgeType 전체 리스트를 조회한다")
+    void readBadgeTypes_success() {
+        // given — 회원가입 (인증 필요)
+        final String accessToken = RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "loginId": "pet_e2e_user",
+                            "password": "pass1234!",
+                            "nickname": "뱃지유저"
+                        }
+                        """)
+                .when()
+                .post("/api/v1/auth/signup")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("accessToken");
+
+        // when & then
+        RestAssured.given()
+                .header("Authorization", "Bearer " + accessToken)
+                .when()
+                .get("/api/v1/pets/badges/types")
+                .then()
+                .statusCode(200)
+                .body("$.size()", greaterThanOrEqualTo(5))
+                .body("[0].badgeType", is(notNullValue()))
+                .body("[0].displayName", is(notNullValue()))
+                .body("[0].description", is(notNullValue()));
     }
 }
