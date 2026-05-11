@@ -1,7 +1,9 @@
 package com.ppiyaki.pet.controller;
 
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 
+import com.ppiyaki.pet.BadgeType;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,7 +55,8 @@ class PetControllerE2ETest {
                 .path("accessToken");
 
         // given — 펫 생성 및 유저에 연결 (DB 직접)
-        jdbcTemplate.update("INSERT INTO pets (point, created_at, updated_at) VALUES (40, NOW(6), NOW(6))");
+        jdbcTemplate.update(
+                "INSERT INTO pets (point, streak, highest_stage, created_at, updated_at) VALUES (40, 0, 'EGG', NOW(6), NOW(6))");
         final Long petId = jdbcTemplate.queryForObject(
                 "SELECT id FROM pets WHERE point = 40 ORDER BY id DESC LIMIT 1", Long.class);
         jdbcTemplate.update("UPDATE users SET pet = ? WHERE login_id = 'pet_e2e_user'", petId);
@@ -66,6 +69,43 @@ class PetControllerE2ETest {
                 .then()
                 .statusCode(200)
                 .body("point", is(40))
-                .body("level", is(2));
+                .body("level", is(2))
+                .body("stage", is("EGG"))
+                .body("streak", is(0))
+                .body("badges", is(notNullValue()))
+                .body("badges.size()", is(0));
+    }
+
+    @Test
+    @DisplayName("BadgeType 전체 리스트를 조회한다")
+    void readBadgeTypes_success() {
+        // given — 회원가입 (인증 필요)
+        final String accessToken = RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "loginId": "pet_e2e_user",
+                            "password": "pass1234!",
+                            "nickname": "뱃지유저"
+                        }
+                        """)
+                .when()
+                .post("/api/v1/auth/signup")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("accessToken");
+
+        // when & then
+        RestAssured.given()
+                .header("Authorization", "Bearer " + accessToken)
+                .when()
+                .get("/api/v1/pets/badges/types")
+                .then()
+                .statusCode(200)
+                .body("$.size()", is(BadgeType.values().length))
+                .body("[0].badgeType", is(notNullValue()))
+                .body("[0].displayName", is(notNullValue()))
+                .body("[0].description", is(notNullValue()));
     }
 }

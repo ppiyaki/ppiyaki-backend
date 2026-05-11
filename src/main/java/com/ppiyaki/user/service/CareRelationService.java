@@ -4,17 +4,22 @@ import com.ppiyaki.common.auth.JwtProvider;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.common.ratelimit.RateLimiter;
+import com.ppiyaki.user.CareRelation;
 import com.ppiyaki.user.InviteCode;
 import com.ppiyaki.user.InviteCode.InviteCodeWithRaw;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
+import com.ppiyaki.user.controller.dto.SeniorSummaryResponse;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.InviteCodeRepository;
 import com.ppiyaki.user.repository.RefreshTokenRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +50,27 @@ public class CareRelationService {
         this.jwtProvider = jwtProvider;
         this.authService = authService;
         this.rateLimiter = rateLimiter;
+    }
+
+    @Transactional(readOnly = true)
+    public List<SeniorSummaryResponse> readSeniors(final Long caregiverId) {
+        final User caregiver = findUserById(caregiverId);
+        validateRole(caregiver, UserRole.CAREGIVER);
+
+        final List<CareRelation> careRelations = careRelationRepository.findByCaregiverIdAndDeletedAtIsNull(
+                caregiverId);
+
+        final List<Long> seniorIds = careRelations.stream()
+                .map(CareRelation::getSeniorId)
+                .toList();
+
+        final Map<Long, User> seniorsById = userRepository.findAllById(seniorIds).stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
+
+        return careRelations.stream()
+                .map(relation -> seniorsById.get(relation.getSeniorId()))
+                .map(SeniorSummaryResponse::from)
+                .toList();
     }
 
     @Transactional

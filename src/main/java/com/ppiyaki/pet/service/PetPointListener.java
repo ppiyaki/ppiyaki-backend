@@ -1,10 +1,16 @@
 package com.ppiyaki.pet.service;
 
+import com.ppiyaki.medication.LogStatus;
+import com.ppiyaki.medication.MedicationLog;
 import com.ppiyaki.medication.event.MedicationTakenEvent;
+import com.ppiyaki.medication.repository.MedicationLogRepository;
+import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.pet.Pet;
 import com.ppiyaki.pet.repository.PetRepository;
 import com.ppiyaki.user.User;
 import com.ppiyaki.user.repository.UserRepository;
+import java.time.LocalDate;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,15 +27,24 @@ public class PetPointListener {
 
     private final UserRepository userRepository;
     private final PetRepository petRepository;
+    private final MedicationScheduleRepository medicationScheduleRepository;
+    private final MedicationLogRepository medicationLogRepository;
+    private final BadgeService badgeService;
     private final long pointPerTaken;
 
     public PetPointListener(
             final UserRepository userRepository,
             final PetRepository petRepository,
+            final MedicationScheduleRepository medicationScheduleRepository,
+            final MedicationLogRepository medicationLogRepository,
+            final BadgeService badgeService,
             @Value("${pet.points.per-taken:10}") final long pointPerTaken
     ) {
         this.userRepository = userRepository;
         this.petRepository = petRepository;
+        this.medicationScheduleRepository = medicationScheduleRepository;
+        this.medicationLogRepository = medicationLogRepository;
+        this.badgeService = badgeService;
         this.pointPerTaken = pointPerTaken;
     }
 
@@ -49,5 +64,28 @@ public class PetPointListener {
         }
 
         pet.addPoint(pointPerTaken);
+
+        final LocalDate targetDate = event.targetDate();
+        if (isDayFullyTaken(event.seniorId(), targetDate)) {
+            pet.incrementStreak(targetDate);
+        }
+
+        badgeService.checkAndAwardBadges(pet);
+    }
+
+    private boolean isDayFullyTaken(final Long seniorId, final LocalDate date) {
+        final int totalSchedules = medicationScheduleRepository
+                .findActiveByOwnerAndDate(seniorId, date).size();
+        if (totalSchedules == 0) {
+            return false;
+        }
+
+        final List<MedicationLog> logs = medicationLogRepository
+                .findBySeniorIdAndTargetDate(seniorId, date);
+        final long takenCount = logs.stream()
+                .filter(medicationLog -> medicationLog.getStatus() == LogStatus.TAKEN)
+                .count();
+
+        return takenCount == totalSchedules;
     }
 }

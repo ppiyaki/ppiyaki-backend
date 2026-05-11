@@ -1,4 +1,18 @@
 
+    create table badges (
+        created_at datetime(6),
+        id bigint not null auto_increment,
+        pet_id bigint not null,
+        badge_type enum ('BUDDY','FAMILY_LINK','FIRST_STEP','HEALTH_GUARDIAN','MIRACLE_MORNING') not null,
+        primary key (id)
+    ) engine=InnoDB;
+
+    alter table badges
+       add constraint uk_badges_pet_type unique (pet_id, badge_type);
+
+    alter table badges
+       add constraint fk_badges_pet foreign key (pet_id) references pets(id) on delete cascade;
+
     create table care_relations (
         caregiver_id bigint,
         created_at datetime(6),
@@ -162,8 +176,11 @@
     create table pets (
         created_at datetime(6),
         id bigint not null auto_increment,
-        point bigint,
+        last_taken_date date,
+        point bigint not null,
+        streak int not null default 0,
         updated_at datetime(6),
+        highest_stage enum ('BABY','CRACKED_EGG','EGG','EMPEROR','GUARDIAN','HEALTHY') not null default 'EGG',
         primary key (id)
     ) engine=InnoDB;
 
