@@ -57,6 +57,7 @@ public class MedicationLogService {
     private final NcpStorageProperties storageProperties;
     private final S3Client s3Client;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.ppiyaki.notification.repository.NotificationRepository notificationRepository;
 
     public MedicationLogService(
             final MedicationLogRepository medicationLogRepository,
@@ -67,7 +68,8 @@ public class MedicationLogService {
             final OpenAiClient openAiClient,
             final NcpStorageProperties storageProperties,
             final S3Client s3Client,
-            final ApplicationEventPublisher eventPublisher
+            final ApplicationEventPublisher eventPublisher,
+            final com.ppiyaki.notification.repository.NotificationRepository notificationRepository
     ) {
         this.medicationLogRepository = medicationLogRepository;
         this.medicationScheduleRepository = medicationScheduleRepository;
@@ -78,6 +80,7 @@ public class MedicationLogService {
         this.storageProperties = storageProperties;
         this.s3Client = s3Client;
         this.eventPublisher = eventPublisher;
+        this.notificationRepository = notificationRepository;
     }
 
     @Transactional
@@ -134,6 +137,10 @@ public class MedicationLogService {
         // 복약 성공 이벤트 발행 (TAKEN→TAKEN 중복 방지)
         if (request.status() == LogStatus.TAKEN && previousStatus != LogStatus.TAKEN) {
             eventPublisher.publishEvent(new MedicationTakenEvent(seniorId, request.targetDate()));
+            // 같은 시니어/날짜/슬롯 MEDICATION_REMINDER 알림 자동 전이 (issue #324).
+            // 시니어 본인 인증/보호자 대리 인증 모두 시니어의 알림이 대상 (userId=seniorId).
+            notificationRepository.markReminderTaken(
+                    seniorId, request.targetDate(), schedule.getMealSlot().name(), takenAt);
         }
 
         // Phase 2: 사진 + status=TAKEN일 때 약 개수 AI 검증 (spec medication-log-phase2 §5-4)

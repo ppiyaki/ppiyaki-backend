@@ -13,6 +13,7 @@ public record NotificationItemResponse(
         String payload,
         boolean isRead,
         LocalDateTime readAt,
+        LocalDateTime takenAt,
         LocalDateTime createdAt
 ) {
 
@@ -26,6 +27,7 @@ public record NotificationItemResponse(
                 notification.getPayload(),
                 notification.isRead(),
                 notification.getReadAt(),
+                notification.getTakenAt(),
                 notification.getCreatedAt()
         );
     }

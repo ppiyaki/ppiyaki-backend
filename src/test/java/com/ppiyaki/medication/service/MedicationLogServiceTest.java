@@ -51,6 +51,8 @@ class MedicationLogServiceTest {
     private PhotoUrlAssembler photoUrlAssembler;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private com.ppiyaki.notification.repository.NotificationRepository notificationRepository;
 
     @InjectMocks
     private MedicationLogService medicationLogService;
@@ -333,6 +335,55 @@ class MedicationLogServiceTest {
     }
 
     @Test
+    @DisplayName("신규 TAKEN 전환 시 같은 시니어/날짜/슬롯 MEDICATION_REMINDER 알림 자동 전이 (issue #324)")
+    void 신규_TAKEN_시_알림_자동_전이() throws Exception {
+        // given
+        givenScheduleAndMedicineReturning(30, 30, "1정");
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
+                .thenReturn(Optional.empty());
+        when(medicationLogRepository.saveAndFlush(any(MedicationLog.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(photoUrlAssembler.toFullUrl(any())).thenReturn(null);
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, null);
+
+        // when
+        medicationLogService.upsert(SENIOR_ID, request);
+
+        // then — notificationRepository.markReminderTaken(seniorId, targetDate, "BREAKFAST", takenAt)
+        verify(notificationRepository).markReminderTaken(
+                eq(SENIOR_ID),
+                eq(TARGET_DATE),
+                eq("BREAKFAST"),
+                any(LocalDateTime.class)
+        );
+    }
+
+    @Test
+    @DisplayName("이미 TAKEN인 row 재호출 시 알림 자동 전이도 호출 안 함 — 멱등")
+    void 이미_TAKEN_재호출_시_알림_전이_안함() throws Exception {
+        // given
+        givenScheduleAndMedicineReturning(30, 25);
+        final MedicationLog existing = new MedicationLog(
+                SENIOR_ID, SCHEDULE_ID, TARGET_DATE, LocalDateTime.of(2026, 4, 18, 8, 0),
+                LogStatus.TAKEN, null, false, SENIOR_ID);
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
+                .thenReturn(Optional.of(existing));
+        when(photoUrlAssembler.toFullUrl(any())).thenReturn(null);
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, null);
+
+        // when
+        medicationLogService.upsert(SENIOR_ID, request);
+
+        // then
+        verify(notificationRepository, org.mockito.Mockito.never())
+                .markReminderTaken(any(), any(), any(), any());
+    }
+
+    @Test
     @DisplayName("이미 TAKEN인 row 재호출 시 잔여분 중복 차감 없음 — 멱등")
     void 이미_TAKEN인_경우_차감_없음() throws Exception {
         // given
@@ -471,6 +522,7 @@ class MedicationLogServiceTest {
         final MedicationSchedule schedule = ctor.newInstance();
         setField(schedule, "id", SCHEDULE_ID);
         setField(schedule, "medicineId", MEDICINE_ID);
+        setField(schedule, "mealSlot", com.ppiyaki.medication.MealSlot.BREAKFAST);
         // legacy "1정"/"2정"/"반정" raw 입력을 정수+단위로 정규화
         if (dosage != null) {
             setField(schedule, "dosage", dosage);
@@ -497,6 +549,7 @@ class MedicationLogServiceTest {
         final MedicationSchedule schedule = ctor.newInstance();
         setField(schedule, "id", SCHEDULE_ID);
         setField(schedule, "medicineId", MEDICINE_ID);
+        setField(schedule, "mealSlot", com.ppiyaki.medication.MealSlot.BREAKFAST);
         // 기본 dosage = 1정
         setField(schedule, "dosageQuantity", java.math.BigDecimal.ONE);
         setField(schedule, "dosageUnit", com.ppiyaki.medication.DosageUnit.TABLET);
