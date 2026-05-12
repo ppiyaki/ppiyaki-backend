@@ -62,7 +62,10 @@ public enum ErrorCode {
     NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "NOTIFICATION_001", "Notification not found"),
     NOTIFICATION_FORBIDDEN(HttpStatus.FORBIDDEN, "NOTIFICATION_002", "Cannot access another user's notification"),
     DEVICE_TOKEN_NOT_FOUND(HttpStatus.NOT_FOUND, "NOTIFICATION_003", "Device token not found"),
-    DEVICE_TOKEN_FORBIDDEN(HttpStatus.FORBIDDEN, "NOTIFICATION_004", "Cannot access another user's device token");
+    DEVICE_TOKEN_FORBIDDEN(HttpStatus.FORBIDDEN, "NOTIFICATION_004", "Cannot access another user's device token"),
+
+    // User Withdraw
+    USER_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "USER_003", "User already deleted");
 
     private final HttpStatus status;
     private final String code;

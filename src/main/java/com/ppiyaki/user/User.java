@@ -69,6 +69,9 @@ public class User extends BaseTimeEntity {
     @Column(name = "last_active_at")
     private java.time.LocalDateTime lastActiveAt;
 
+    @Column(name = "deleted_at")
+    private java.time.LocalDateTime deletedAt;
+
     public User(
             final String loginId,
             final String password,
@@ -126,5 +129,13 @@ public class User extends BaseTimeEntity {
 
     public void touchActiveAt(final java.time.LocalDateTime now) {
         this.lastActiveAt = Objects.requireNonNull(now, "now must not be null");
+    }
+
+    public void softDelete(final java.time.LocalDateTime now) {
+        this.deletedAt = Objects.requireNonNull(now, "now must not be null");
+    }
+
+    public boolean isDeleted() {
+        return this.deletedAt != null;
     }
 }
