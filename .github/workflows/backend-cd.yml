@@ -5,13 +5,20 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
+# 동시 배포 직렬화 — 새 push 와도 옛 배포는 끝까지 진행 (cancel-in-progress: false)
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
