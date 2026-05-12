@@ -107,6 +107,10 @@ public class User extends BaseTimeEntity {
                 nickname, gender, null, null);
     }
 
+    public void assignRole(final UserRole role) {
+        this.role = Objects.requireNonNull(role, "role must not be null");
+    }
+
     public void updateNickname(final String nickname) {
         this.nickname = Objects.requireNonNull(nickname, "nickname must not be null");
     }
