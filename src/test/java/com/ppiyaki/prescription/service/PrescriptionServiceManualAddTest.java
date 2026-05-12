@@ -91,7 +91,9 @@ class PrescriptionServiceManualAddTest {
         when(candidateRepository.findByPrescriptionId(prescriptionId)).thenReturn(List.of());
 
         final PrescriptionMedicineAddRequest request = new PrescriptionMedicineAddRequest(
-                "199500096", "타이레놀정 500mg", "1정", "1일 3회 식후");
+                "199500096", "타이레놀정 500mg",
+                java.math.BigDecimal.ONE, "정",
+                "1일 3회 식후");
 
         // when
         prescriptionService.addManualMedicine(ownerId, prescriptionId, request);
@@ -126,7 +128,7 @@ class PrescriptionServiceManualAddTest {
         when(candidateRepository.findByPrescriptionId(prescriptionId)).thenReturn(List.of());
 
         final PrescriptionMedicineAddRequest request = new PrescriptionMedicineAddRequest(
-                "199500096", "타이레놀정 500mg", null, null);
+                "199500096", "타이레놀정 500mg", null, null, null);
 
         // when
         prescriptionService.addManualMedicine(caregiverId, prescriptionId, request);
@@ -148,7 +150,7 @@ class PrescriptionServiceManualAddTest {
                 .thenReturn(Optional.empty());
 
         final PrescriptionMedicineAddRequest request = new PrescriptionMedicineAddRequest(
-                "199500096", "타이레놀정 500mg", null, null);
+                "199500096", "타이레놀정 500mg", null, null, null);
 
         // when & then
         assertThatThrownBy(() -> prescriptionService.addManualMedicine(otherUserId, prescriptionId, request))
@@ -169,7 +171,7 @@ class PrescriptionServiceManualAddTest {
         when(userRepository.findById(ownerId)).thenReturn(Optional.of(givenSenior(ownerId, CareMode.AUTONOMOUS)));
 
         final PrescriptionMedicineAddRequest request = new PrescriptionMedicineAddRequest(
-                "199500096", "타이레놀정 500mg", null, null);
+                "199500096", "타이레놀정 500mg", null, null, null);
 
         // when & then
         assertThatThrownBy(() -> prescriptionService.addManualMedicine(ownerId, prescriptionId, request))
@@ -185,7 +187,7 @@ class PrescriptionServiceManualAddTest {
         // given
         when(prescriptionRepository.findById(999L)).thenReturn(Optional.empty());
         final PrescriptionMedicineAddRequest request = new PrescriptionMedicineAddRequest(
-                "199500096", "타이레놀정 500mg", null, null);
+                "199500096", "타이레놀정 500mg", null, null, null);
 
         // when & then
         assertThatThrownBy(() -> prescriptionService.addManualMedicine(100L, 999L, request))
