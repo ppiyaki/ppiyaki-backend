@@ -162,6 +162,7 @@ public class DashboardService {
         }
 
         final LocalDate today = LocalDate.now();
+        final LocalDate seniorRegisteredDate = senior.getCreatedAt().toLocalDate();
         final long delayThresholdMinutes = resolveDelayThresholdMinutes(userId, seniorId);
         final List<DayEntry> dayEntries = new ArrayList<>();
         int adherenceNumerator = 0;
@@ -169,6 +170,14 @@ public class DashboardService {
         for (int i = 0; i < 7; i++) {
             final LocalDate date = weekStart.plusDays(i);
             final List<SlotMarker> slotMarkers = new ArrayList<>();
+            // 시니어 가입 전 날짜는 모든 슬롯 강제 NOT_SCHEDULED + dayStatus NOT_SCHEDULED (issue #326)
+            if (date.isBefore(seniorRegisteredDate)) {
+                for (final MealSlot slot : MealSlot.values()) {
+                    slotMarkers.add(new SlotMarker(slot, SlotStatus.NOT_SCHEDULED));
+                }
+                dayEntries.add(new DayEntry(date, DayStatus.NOT_SCHEDULED, slotMarkers));
+                continue;
+            }
             final Map<Long, MedicationLog> logBySchedule = logsByDateAndSchedule.getOrDefault(date, Map.of());
             for (final MealSlot slot : MealSlot.values()) {
                 final SlotStatus status = deriveSlotStatusForDate(
@@ -216,10 +225,16 @@ public class DashboardService {
         }
 
         final LocalDate today = LocalDate.now();
+        final LocalDate seniorRegisteredDate = senior.getCreatedAt().toLocalDate();
         final long delayThresholdMinutes = resolveDelayThresholdMinutes(userId, seniorId);
         final List<MonthlyDashboardResponse.DayEntry> dayEntries = new ArrayList<>();
         for (int day = 1; day <= yearMonth.lengthOfMonth(); day++) {
             final LocalDate date = yearMonth.atDay(day);
+            // 시니어 가입 전 날짜는 dayStatus 강제 NOT_SCHEDULED (issue #326)
+            if (date.isBefore(seniorRegisteredDate)) {
+                dayEntries.add(new MonthlyDashboardResponse.DayEntry(date, DayStatus.NOT_SCHEDULED));
+                continue;
+            }
             final List<SlotMarker> markers = new ArrayList<>();
             final Map<Long, MedicationLog> logBySchedule = logsByDateAndSchedule.getOrDefault(date, Map.of());
             for (final MealSlot slot : MealSlot.values()) {
@@ -410,7 +425,10 @@ public class DashboardService {
                     .toList();
             int dailyConsumption = 0;
             for (final MedicationSchedule s : activeSchedules) {
-                dailyConsumption += MedicationSchedule.parseDosageInt(s.getDosage());
+                final java.math.BigDecimal q = s.getDosageQuantity();
+                if (q != null) {
+                    dailyConsumption += q.setScale(0, java.math.RoundingMode.CEILING).intValueExact();
+                }
             }
             if (dailyConsumption == 0) {
                 continue;

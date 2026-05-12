@@ -9,10 +9,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,8 +21,6 @@ import lombok.NoArgsConstructor;
 @Table(name = "medication_schedules")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MedicationSchedule extends CreatedTimeEntity {
-
-    private static final Pattern DOSAGE_INT_PATTERN = Pattern.compile("\\d+");
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,6 +36,13 @@ public class MedicationSchedule extends CreatedTimeEntity {
     @Column(name = "dosage")
     private String dosage;
 
+    @Column(name = "dosage_quantity", precision = 5, scale = 2)
+    private BigDecimal dosageQuantity;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "dosage_unit", length = 16)
+    private DosageUnit dosageUnit;
+
     @Column(name = "days_of_week")
     private String daysOfWeek;
 
@@ -51,14 +55,17 @@ public class MedicationSchedule extends CreatedTimeEntity {
     public MedicationSchedule(
             final Long medicineId,
             final MealSlot mealSlot,
-            final String dosage,
+            final BigDecimal dosageQuantity,
+            final DosageUnit dosageUnit,
             final String daysOfWeek,
             final LocalDate startDate,
             final LocalDate endDate
     ) {
         this.medicineId = Objects.requireNonNull(medicineId, "medicineId must not be null");
         this.mealSlot = Objects.requireNonNull(mealSlot, "mealSlot must not be null");
-        this.dosage = Objects.requireNonNull(dosage, "dosage must not be null");
+        this.dosageQuantity = dosageQuantity;
+        this.dosageUnit = dosageUnit;
+        this.dosage = composeLegacyDosage(dosageQuantity, dosageUnit);
         this.daysOfWeek = daysOfWeek;
         this.startDate = startDate;
         this.endDate = endDate;
@@ -66,7 +73,8 @@ public class MedicationSchedule extends CreatedTimeEntity {
 
     public void update(
             final MealSlot mealSlot,
-            final String dosage,
+            final BigDecimal dosageQuantity,
+            final DosageUnit dosageUnit,
             final String daysOfWeek,
             final LocalDate startDate,
             final LocalDate endDate
@@ -74,8 +82,18 @@ public class MedicationSchedule extends CreatedTimeEntity {
         if (mealSlot != null) {
             this.mealSlot = mealSlot;
         }
-        if (dosage != null) {
-            this.dosage = dosage;
+        if (dosageQuantity != null) {
+            this.dosageQuantity = dosageQuantity;
+        }
+        if (dosageUnit != null) {
+            // PRN으로 전환 시 quantity는 의미 없음 — null로 정정 (legacy dosage 합성 시 비정상값 회피)
+            if (dosageUnit == DosageUnit.PRN) {
+                this.dosageQuantity = null;
+            }
+            this.dosageUnit = dosageUnit;
+        }
+        if (dosageQuantity != null || dosageUnit != null) {
+            this.dosage = composeLegacyDosage(this.dosageQuantity, this.dosageUnit);
         }
         if (daysOfWeek != null) {
             this.daysOfWeek = daysOfWeek;
@@ -89,21 +107,15 @@ public class MedicationSchedule extends CreatedTimeEntity {
     }
 
     /**
-     * dosage 문자열에서 첫 정수를 추출. 예: "1정" → 1, "2정" → 2, "반정"/null → 0.
-     * spec docs/features/caregiver-dashboard.md §8 Q2 default 룰. 잔여분 차감 / 일일 소요량 계산 공용.
+     * 옛 dosage String 컬럼은 PR 4(다음 release)에서 drop 예정. 그때까지 호환성을 위해
+     * 분리 두 필드로부터 합성. quantity와 unit이 둘 다 null이면 dosage도 null.
      */
-    public static int parseDosageInt(final String dosage) {
-        if (dosage == null) {
-            return 0;
+    private static String composeLegacyDosage(final BigDecimal quantity, final DosageUnit unit) {
+        if (quantity == null && unit == null) {
+            return null;
         }
-        final Matcher matcher = DOSAGE_INT_PATTERN.matcher(dosage);
-        if (matcher.find()) {
-            try {
-                return Integer.parseInt(matcher.group());
-            } catch (final NumberFormatException e) {
-                return 0;
-            }
-        }
-        return 0;
+        final String quantityText = quantity != null ? quantity.stripTrailingZeros().toPlainString() : "";
+        final String unitText = unit != null ? unit.getDisplayValue() : "";
+        return quantityText + unitText;
     }
 }

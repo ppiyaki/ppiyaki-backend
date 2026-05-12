@@ -9,5 +9,7 @@ public enum DayStatus {
     DELAYED,
     MISSED,
     PENDING,
-    FUTURE
+    FUTURE,
+    /** 시니어 가입 이전 날짜 — 스케줄/로그 자체가 존재할 수 없는 시점. spec issue #326 */
+    NOT_SCHEDULED
 }

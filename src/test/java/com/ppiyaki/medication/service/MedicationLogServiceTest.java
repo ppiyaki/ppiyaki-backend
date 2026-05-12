@@ -51,6 +51,8 @@ class MedicationLogServiceTest {
     private PhotoUrlAssembler photoUrlAssembler;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private com.ppiyaki.notification.repository.NotificationRepository notificationRepository;
 
     @InjectMocks
     private MedicationLogService medicationLogService;
@@ -312,10 +314,10 @@ class MedicationLogServiceTest {
     }
 
     @Test
-    @DisplayName("신규 TAKEN 업서트 시 Medicine.remainingAmount 1 차감")
+    @DisplayName("신규 TAKEN 업서트 시 schedule.dosage_quantity 기준으로 잔여분 차감 (1정 → 1)")
     void 신규_TAKEN_시_잔여분_차감() throws Exception {
-        // given
-        final Medicine medicine = givenScheduleAndMedicineReturning(30, 30);
+        // given — schedule.dosage_quantity=1, unit=TABLET (default)
+        final Medicine medicine = givenScheduleAndMedicineReturning(30, 30, "1정");
         when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
                 .thenReturn(Optional.empty());
         when(medicationLogRepository.saveAndFlush(any(MedicationLog.class)))
@@ -330,6 +332,55 @@ class MedicationLogServiceTest {
 
         // then
         assertThat(medicine.getRemainingAmount()).isEqualTo(29);
+    }
+
+    @Test
+    @DisplayName("신규 TAKEN 전환 시 같은 시니어/날짜/슬롯 MEDICATION_REMINDER 알림 자동 전이 (issue #324)")
+    void 신규_TAKEN_시_알림_자동_전이() throws Exception {
+        // given
+        givenScheduleAndMedicineReturning(30, 30, "1정");
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
+                .thenReturn(Optional.empty());
+        when(medicationLogRepository.saveAndFlush(any(MedicationLog.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(photoUrlAssembler.toFullUrl(any())).thenReturn(null);
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, null);
+
+        // when
+        medicationLogService.upsert(SENIOR_ID, request);
+
+        // then — notificationRepository.markReminderTaken(seniorId, targetDate, "BREAKFAST", takenAt)
+        verify(notificationRepository).markReminderTaken(
+                eq(SENIOR_ID),
+                eq(TARGET_DATE),
+                eq("BREAKFAST"),
+                any(LocalDateTime.class)
+        );
+    }
+
+    @Test
+    @DisplayName("이미 TAKEN인 row 재호출 시 알림 자동 전이도 호출 안 함 — 멱등")
+    void 이미_TAKEN_재호출_시_알림_전이_안함() throws Exception {
+        // given
+        givenScheduleAndMedicineReturning(30, 25);
+        final MedicationLog existing = new MedicationLog(
+                SENIOR_ID, SCHEDULE_ID, TARGET_DATE, LocalDateTime.of(2026, 4, 18, 8, 0),
+                LogStatus.TAKEN, null, false, SENIOR_ID);
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
+                .thenReturn(Optional.of(existing));
+        when(photoUrlAssembler.toFullUrl(any())).thenReturn(null);
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, null);
+
+        // when
+        medicationLogService.upsert(SENIOR_ID, request);
+
+        // then
+        verify(notificationRepository, org.mockito.Mockito.never())
+                .markReminderTaken(any(), any(), any(), any());
     }
 
     @Test
@@ -397,9 +448,9 @@ class MedicationLogServiceTest {
     }
 
     @Test
-    @DisplayName("dosage 정수 추출 불가(\"반정\")이면 1 fallback 차감")
-    void TAKEN_시_dosage_비정수면_1_fallback() throws Exception {
-        // given
+    @DisplayName("schedule.dosage_quantity가 null이면 차감 skip (PRN/옛 schedule 보호) — spec dosage-quantity-unit-split Q7")
+    void TAKEN_시_dosage_quantity_null이면_차감_skip() throws Exception {
+        // given — quantity 추출 실패 케이스 ("반정"은 분수라 정규식에서 quantity null로 둠)
         final Medicine medicine = givenScheduleAndMedicineReturning(30, 30, "반정");
         when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
                 .thenReturn(Optional.empty());
@@ -413,8 +464,8 @@ class MedicationLogServiceTest {
         // when
         medicationLogService.upsert(SENIOR_ID, request);
 
-        // then
-        assertThat(medicine.getRemainingAmount()).isEqualTo(29);
+        // then — 차감 skip
+        assertThat(medicine.getRemainingAmount()).isEqualTo(30);
     }
 
     @Test
@@ -471,8 +522,17 @@ class MedicationLogServiceTest {
         final MedicationSchedule schedule = ctor.newInstance();
         setField(schedule, "id", SCHEDULE_ID);
         setField(schedule, "medicineId", MEDICINE_ID);
+        setField(schedule, "mealSlot", com.ppiyaki.medication.MealSlot.BREAKFAST);
+        // legacy "1정"/"2정"/"반정" raw 입력을 정수+단위로 정규화
         if (dosage != null) {
             setField(schedule, "dosage", dosage);
+            final java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d+(?:\\.\\d+)?)(.*)$")
+                    .matcher(dosage);
+            if (m.find()) {
+                setField(schedule, "dosageQuantity", new java.math.BigDecimal(m.group(1)));
+                setField(schedule, "dosageUnit",
+                        com.ppiyaki.medication.DosageUnit.fromInput(m.group(2).trim()).orElse(null));
+            }
         }
         when(medicationScheduleRepository.findById(SCHEDULE_ID)).thenReturn(Optional.of(schedule));
 
@@ -489,6 +549,10 @@ class MedicationLogServiceTest {
         final MedicationSchedule schedule = ctor.newInstance();
         setField(schedule, "id", SCHEDULE_ID);
         setField(schedule, "medicineId", MEDICINE_ID);
+        setField(schedule, "mealSlot", com.ppiyaki.medication.MealSlot.BREAKFAST);
+        // 기본 dosage = 1정
+        setField(schedule, "dosageQuantity", java.math.BigDecimal.ONE);
+        setField(schedule, "dosageUnit", com.ppiyaki.medication.DosageUnit.TABLET);
         when(medicationScheduleRepository.findById(SCHEDULE_ID)).thenReturn(Optional.of(schedule));
 
         final Medicine medicine = new Medicine(SENIOR_ID, null, "테스트약", 30, 30, "ITEM-1", null);

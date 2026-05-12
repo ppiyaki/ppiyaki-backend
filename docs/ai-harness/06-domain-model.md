@@ -188,7 +188,9 @@ OCR + LLM 파싱으로 추출된 약물 후보. 처방전 1건당 N행. 보호�
 | prescription_id | bigint | `prescriptions.id` 참조 |
 | ocr_raw_text | varchar nullable | OCR이 인식한 원문 약물 텍스트 |
 | extracted_name | varchar nullable | LLM이 추출한 약물명 |
-| extracted_dosage | varchar nullable | LLM이 추출한 용량 |
+| extracted_dosage | varchar nullable | LLM이 추출한 용량 (raw 문자열, deprecated 예정 — 정수+단위 분리 컬럼으로 점차 이전, spec `dosage-quantity-unit-split.md`) |
+| extracted_dosage_quantity | decimal(5,2) nullable | 1회 복용량의 수치(분수 허용, 예: `1`, `0.5`). PRN 등 정의되지 않은 케이스는 NULL |
+| extracted_dosage_unit | varchar(16) nullable | 단위 문자열(예: `정`, `캡슐`, `ml`, `mg`, `PRN`). 표준화 enum은 별도 follow-up |
 | extracted_schedule | varchar nullable | LLM이 추출한 복약 일정 |
 | matched_item_seq | varchar nullable | 식약처 DB 매칭된 품목 일련번호 |
 | matched_item_name | varchar nullable | 식약처 DB 매칭된 품목명 |
@@ -230,7 +232,9 @@ OCR + LLM 파싱으로 추출된 약물 후보. 처방전 1건당 N행. 보호�
 | id | bigint PK | |
 | medicine_id | bigint | `medicines.id` 참조 |
 | meal_slot | varchar | DB는 varchar, Java는 `MealSlot` enum(`BREAKFAST`/`LUNCH`/`DINNER`). NOT NULL. 실제 시각은 시니어 mealTimes로 동적 계산 |
-| dosage | varchar | 1회 복용량 (예: `1정`) |
+| dosage | varchar | 1회 복용량 raw 문자열 (예: `1정`). **deprecated 예정** — 정수+단위 분리 컬럼으로 점차 이전 (spec `dosage-quantity-unit-split.md`) |
+| dosage_quantity | decimal(5,2) nullable | 1회 복용량의 수치(분수 허용, 예: `1`, `0.5`). PRN 등 정의되지 않은 케이스는 NULL. release 직후 옛 row는 모두 NULL |
+| dosage_unit | varchar(16) nullable | 단위 문자열(예: `정`, `캡슐`, `ml`, `mg`, `PRN`). 표준화 enum은 별도 follow-up |
 | days_of_week | varchar | 요일 패턴 (예: `MON,TUE,WED,THU,FRI` 또는 `DAILY`). 7비트 마스크 대신 가독성 우선 |
 | start_date | date | 복약 시작일 |
 | end_date | date nullable | 복약 종료일. NULL이면 무기한 |
@@ -473,7 +477,9 @@ erDiagram
         bigint prescription_id FK
         varchar ocr_raw_text "nullable"
         varchar extracted_name "nullable"
-        varchar extracted_dosage "nullable"
+        varchar extracted_dosage "nullable, deprecated"
+        decimal extracted_dosage_quantity "nullable"
+        varchar extracted_dosage_unit "nullable"
         varchar extracted_schedule "nullable"
         varchar matched_item_seq "nullable"
         varchar matched_item_name "nullable"
@@ -502,7 +508,9 @@ erDiagram
         bigint id PK
         bigint medicine_id FK
         varchar meal_slot "BREAKFAST/LUNCH/DINNER"
-        varchar dosage
+        varchar dosage "deprecated"
+        decimal dosage_quantity "nullable"
+        varchar dosage_unit "nullable"
         varchar days_of_week
         date start_date
         date end_date

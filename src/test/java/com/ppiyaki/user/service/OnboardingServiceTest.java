@@ -1,15 +1,12 @@
 package com.ppiyaki.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import com.ppiyaki.common.exception.BusinessException;
-import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.notification.NotificationSettings;
 import com.ppiyaki.notification.repository.NotificationSettingsRepository;
 import com.ppiyaki.pet.Pet;
@@ -18,7 +15,6 @@ import com.ppiyaki.user.CareMode;
 import com.ppiyaki.user.CareRelation;
 import com.ppiyaki.user.Gender;
 import com.ppiyaki.user.User;
-import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.controller.dto.OnboardingRequest;
 import com.ppiyaki.user.controller.dto.OnboardingRequest.SeniorEntry;
 import com.ppiyaki.user.controller.dto.OnboardingResponse;
@@ -56,7 +52,6 @@ class OnboardingServiceTest {
     void onboard_success() {
         // given
         final User caregiver = mock(User.class);
-        given(caregiver.getRole()).willReturn(UserRole.CAREGIVER);
         given(caregiver.getNickname()).willReturn("보호자닉네임");
         given(userRepository.findById(1L)).willReturn(Optional.of(caregiver));
 
@@ -100,25 +95,4 @@ class OnboardingServiceTest {
         verify(senior2).changeCareMode(CareMode.MANAGED);
     }
 
-    @Test
-    @DisplayName("시니어가 온보딩을 시도하면 ROLE_MISMATCH 에러가 발생한다")
-    void onboard_bySenior_throwsRoleMismatch() {
-        // given
-        final User senior = mock(User.class);
-        given(senior.getRole()).willReturn(UserRole.SENIOR);
-        given(userRepository.findById(1L)).willReturn(Optional.of(senior));
-
-        final OnboardingRequest onboardingRequest = new OnboardingRequest(
-                "닉네임",
-                List.of(new SeniorEntry("할머니", Gender.FEMALE, CareMode.AUTONOMOUS))
-        );
-
-        // when & then
-        assertThatThrownBy(() -> onboardingService.onboard(1L, onboardingRequest))
-                .isInstanceOf(BusinessException.class)
-                .satisfies(exception -> {
-                    final BusinessException businessException = (BusinessException) exception;
-                    assertThat(businessException.getErrorCode()).isEqualTo(ErrorCode.CARE_RELATION_ROLE_MISMATCH);
-                });
-    }
 }

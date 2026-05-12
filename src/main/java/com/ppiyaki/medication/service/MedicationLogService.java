@@ -5,7 +5,6 @@ import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.common.storage.NcpStorageProperties;
 import com.ppiyaki.common.storage.PhotoUrlAssembler;
-import com.ppiyaki.medication.DosageParser;
 import com.ppiyaki.medication.LogAiStatus;
 import com.ppiyaki.medication.LogStatus;
 import com.ppiyaki.medication.MedicationLog;
@@ -19,6 +18,7 @@ import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.user.repository.CareRelationRepository;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -57,6 +57,7 @@ public class MedicationLogService {
     private final NcpStorageProperties storageProperties;
     private final S3Client s3Client;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.ppiyaki.notification.repository.NotificationRepository notificationRepository;
 
     public MedicationLogService(
             final MedicationLogRepository medicationLogRepository,
@@ -67,7 +68,8 @@ public class MedicationLogService {
             final OpenAiClient openAiClient,
             final NcpStorageProperties storageProperties,
             final S3Client s3Client,
-            final ApplicationEventPublisher eventPublisher
+            final ApplicationEventPublisher eventPublisher,
+            final com.ppiyaki.notification.repository.NotificationRepository notificationRepository
     ) {
         this.medicationLogRepository = medicationLogRepository;
         this.medicationScheduleRepository = medicationScheduleRepository;
@@ -78,6 +80,7 @@ public class MedicationLogService {
         this.storageProperties = storageProperties;
         this.s3Client = s3Client;
         this.eventPublisher = eventPublisher;
+        this.notificationRepository = notificationRepository;
     }
 
     @Transactional
@@ -119,15 +122,25 @@ public class MedicationLogService {
         }
 
         // 새로 TAKEN으로 전환되는 케이스에만 잔여분 차감 (멱등성: 이미 TAKEN이던 row 재호출 시 중복 차감 방지).
-        // 차감 단위 = schedule.dosage 정수 파싱. 비정수("반정" 등)면 1 fallback (인증했으니 최소 1정 차감).
+        // 차감 단위 = schedule.dosageQuantity (BigDecimal). null이면 차감 skip
+        // (옛 schedule이거나 PRN 같은 정의 안 된 케이스. spec dosage-quantity-unit-split.md Q7 결정).
         if (request.status() == LogStatus.TAKEN && previousStatus != LogStatus.TAKEN) {
-            final int dosageCount = MedicationSchedule.parseDosageInt(schedule.getDosage());
-            medicine.decreaseRemainingAmount(dosageCount > 0 ? dosageCount : 1);
+            final BigDecimal dosageQuantity = schedule.getDosageQuantity();
+            if (dosageQuantity != null) {
+                final int dosageCount = dosageQuantity.setScale(0, java.math.RoundingMode.CEILING).intValueExact();
+                if (dosageCount > 0) {
+                    medicine.decreaseRemainingAmount(dosageCount);
+                }
+            }
         }
 
         // 복약 성공 이벤트 발행 (TAKEN→TAKEN 중복 방지)
         if (request.status() == LogStatus.TAKEN && previousStatus != LogStatus.TAKEN) {
             eventPublisher.publishEvent(new MedicationTakenEvent(seniorId, request.targetDate()));
+            // 같은 시니어/날짜/슬롯 MEDICATION_REMINDER 알림 자동 전이 (issue #324).
+            // 시니어 본인 인증/보호자 대리 인증 모두 시니어의 알림이 대상 (userId=seniorId).
+            notificationRepository.markReminderTaken(
+                    seniorId, request.targetDate(), schedule.getMealSlot().name(), takenAt);
         }
 
         // Phase 2: 사진 + status=TAKEN일 때 약 개수 AI 검증 (spec medication-log-phase2 §5-4)
@@ -155,11 +168,11 @@ public class MedicationLogService {
 
         int expected = 0;
         for (final MedicationSchedule s : schedules) {
-            final Optional<Integer> parsed = DosageParser.parsePillCount(s.getDosage());
-            if (parsed.isEmpty()) {
+            final BigDecimal quantity = s.getDosageQuantity();
+            if (quantity == null) {
                 return LogAiStatus.COUNT_UNKNOWN;
             }
-            expected += parsed.get();
+            expected += quantity.setScale(0, java.math.RoundingMode.CEILING).intValueExact();
         }
         if (schedules.isEmpty()) {
             return LogAiStatus.COUNT_UNKNOWN;

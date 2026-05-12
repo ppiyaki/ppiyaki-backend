@@ -307,6 +307,62 @@ class DashboardServiceTest {
     }
 
     @Test
+    @DisplayName("weekly — 시니어 가입 이전 날짜는 dayStatus NOT_SCHEDULED + 모든 슬롯 NOT_SCHEDULED (issue #326)")
+    void weekly_beforeRegistration_returnsNotScheduled() throws Exception {
+        // given — 시니어 가입일이 weekStart+3 (즉 처음 3일은 가입 전)
+        final User senior = userOf(SENIOR_ID, "김장군");
+        final LocalDate weekStart = TODAY.minusDays(6);
+        final LocalDateTime registeredAt = weekStart.plusDays(3).atStartOfDay();
+        setField(senior, "createdAt", registeredAt);
+        when(userRepository.findById(SENIOR_ID)).thenReturn(Optional.of(senior));
+
+        when(scheduleRepository.findActiveByOwnerAndDateRange(eq(SENIOR_ID), any(), any())).thenReturn(List.of());
+        when(logRepository.findBySeniorIdAndTargetDateBetweenOrderByTargetDateAscIdAsc(eq(SENIOR_ID), any(), any()))
+                .thenReturn(List.of());
+
+        // when
+        final var resp = dashboardService.getWeekly(SENIOR_ID, SENIOR_ID, weekStart);
+
+        // then — 처음 3일(weekStart, +1, +2)는 NOT_SCHEDULED, 나머지 4일은 PERFECT(스케줄 없음)
+        org.assertj.core.api.Assertions.assertThat(resp.days()).hasSize(7);
+        for (int i = 0; i < 3; i++) {
+            org.assertj.core.api.Assertions.assertThat(resp.days().get(i).dayStatus())
+                    .isEqualTo(com.ppiyaki.medication.DayStatus.NOT_SCHEDULED);
+            org.assertj.core.api.Assertions.assertThat(resp.days().get(i).slots())
+                    .allMatch(s -> s.status() == SlotStatus.NOT_SCHEDULED);
+        }
+        for (int i = 3; i < 7; i++) {
+            org.assertj.core.api.Assertions.assertThat(resp.days().get(i).dayStatus())
+                    .isEqualTo(com.ppiyaki.medication.DayStatus.PERFECT);
+        }
+    }
+
+    @Test
+    @DisplayName("monthly — 시니어 가입 이전 날짜는 dayStatus NOT_SCHEDULED (issue #326)")
+    void monthly_beforeRegistration_returnsNotScheduled() throws Exception {
+        // given — 가입일 = 1월 15일, 조회는 1월
+        final User senior = userOf(SENIOR_ID, "김장군");
+        setField(senior, "createdAt", LocalDateTime.of(2026, 1, 15, 0, 0));
+        when(userRepository.findById(SENIOR_ID)).thenReturn(Optional.of(senior));
+
+        when(scheduleRepository.findActiveByOwnerAndDateRange(eq(SENIOR_ID), any(), any())).thenReturn(List.of());
+        when(logRepository.findBySeniorIdAndTargetDateBetweenOrderByTargetDateAscIdAsc(eq(SENIOR_ID), any(), any()))
+                .thenReturn(List.of());
+
+        final java.time.YearMonth ym = java.time.YearMonth.of(2026, 1);
+        final var resp = dashboardService.getMonthly(SENIOR_ID, SENIOR_ID, ym);
+
+        // then — 1~14일은 NOT_SCHEDULED, 15일부터 PERFECT
+        org.assertj.core.api.Assertions.assertThat(resp.days()).hasSize(31);
+        for (int i = 0; i < 14; i++) {
+            org.assertj.core.api.Assertions.assertThat(resp.days().get(i).dayStatus())
+                    .isEqualTo(com.ppiyaki.medication.DayStatus.NOT_SCHEDULED);
+        }
+        org.assertj.core.api.Assertions.assertThat(resp.days().get(14).dayStatus())
+                .isEqualTo(com.ppiyaki.medication.DayStatus.PERFECT);
+    }
+
+    @Test
     @DisplayName("monthly — 2월(28일)은 days.size=28")
     void monthly_february28() throws Exception {
         givenSeniorAndCaregiver();
@@ -364,6 +420,8 @@ class DashboardServiceTest {
         final User u = ctor.newInstance();
         setField(u, "id", id);
         setField(u, "nickname", nickname);
+        // 기본 createdAt = 1년 전. 가입 이전 날짜 검증 케이스에선 별도 setField로 덮음.
+        setField(u, "createdAt", LocalDateTime.now().minusYears(1));
         return u;
     }
 
@@ -377,6 +435,15 @@ class DashboardServiceTest {
         setField(s, "medicineId", medicineId);
         setField(s, "mealSlot", slot);
         setField(s, "dosage", dosage);
+        if (dosage != null) {
+            final java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d+(?:\\.\\d+)?)(.*)$")
+                    .matcher(dosage);
+            if (m.find()) {
+                setField(s, "dosageQuantity", new java.math.BigDecimal(m.group(1)));
+                setField(s, "dosageUnit",
+                        com.ppiyaki.medication.DosageUnit.fromInput(m.group(2).trim()).orElse(null));
+            }
+        }
         return s;
     }
 

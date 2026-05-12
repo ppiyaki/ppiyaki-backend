@@ -9,7 +9,6 @@ import com.ppiyaki.pet.repository.PetRepository;
 import com.ppiyaki.user.CareMode;
 import com.ppiyaki.user.CareRelation;
 import com.ppiyaki.user.User;
-import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.controller.dto.OnboardingRequest;
 import com.ppiyaki.user.controller.dto.OnboardingResponse;
 import com.ppiyaki.user.controller.dto.OnboardingResponse.SeniorResult;
@@ -44,10 +43,6 @@ public class OnboardingService {
     public OnboardingResponse onboard(final Long caregiverId, final OnboardingRequest onboardingRequest) {
         final User caregiver = userRepository.findById(caregiverId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (caregiver.getRole() != UserRole.CAREGIVER) {
-            throw new BusinessException(ErrorCode.CARE_RELATION_ROLE_MISMATCH);
-        }
 
         caregiver.updateNickname(onboardingRequest.nickname());
 

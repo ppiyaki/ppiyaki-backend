@@ -107,7 +107,8 @@ class PrescriptionConfirmAutoScheduleE2ETest {
         final List<MedicationSchedule> schedules = medicationScheduleRepository.findByMedicineId(medicineId);
         assertThat(schedules).extracting(MedicationSchedule::getMealSlot)
                 .containsExactlyInAnyOrder(MealSlot.BREAKFAST, MealSlot.LUNCH, MealSlot.DINNER);
-        assertThat(schedules).allMatch(s -> "1정".equals(s.getDosage()));
+        assertThat(schedules).allMatch(s -> java.math.BigDecimal.ONE.compareTo(s.getDosageQuantity()) == 0
+                && com.ppiyaki.medication.DosageUnit.TABLET == s.getDosageUnit());
         assertThat(schedules).allMatch(s -> "DAILY".equals(s.getDaysOfWeek()));
 
         // candidate에 created_medicine_id 채워짐
@@ -297,9 +298,26 @@ class PrescriptionConfirmAutoScheduleE2ETest {
             final String dosage,
             final List<MealSlot> confirmedSlots
     ) {
+        // dosage="1정"/"2정"/null 등 raw 입력을 BigDecimal+DosageUnit으로 정규화
+        final java.math.BigDecimal quantity;
+        final com.ppiyaki.medication.DosageUnit unit;
+        if (dosage == null) {
+            quantity = null;
+            unit = null;
+        } else {
+            final java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d+(?:\\.\\d+)?)(.*)$").matcher(
+                    dosage);
+            if (m.find()) {
+                quantity = new java.math.BigDecimal(m.group(1));
+                unit = com.ppiyaki.medication.DosageUnit.fromInput(m.group(2).trim()).orElse(null);
+            } else {
+                quantity = null;
+                unit = com.ppiyaki.medication.DosageUnit.fromInput(dosage).orElse(null);
+            }
+        }
         return transactionTemplate.execute(status -> {
             final PrescriptionMedicineCandidate candidate = new PrescriptionMedicineCandidate(
-                    prescriptionId, "raw", "타이레놀정", dosage, "1일 3회 식후",
+                    prescriptionId, "raw", "타이레놀정", quantity, unit, "1일 3회 식후",
                     "ITEM-1", "타이레놀정", MatchType.EXACT, "matched",
                     confirmedSlots
             );

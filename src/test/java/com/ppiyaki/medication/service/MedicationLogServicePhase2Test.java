@@ -60,6 +60,8 @@ class MedicationLogServicePhase2Test {
     private S3Client s3Client;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private com.ppiyaki.notification.repository.NotificationRepository notificationRepository;
 
     @InjectMocks
     private MedicationLogService service;
@@ -223,6 +225,16 @@ class MedicationLogServicePhase2Test {
         setField(s, "medicineId", MEDICINE_ID);
         setField(s, "dosage", dosage);
         setField(s, "mealSlot", MEAL_SLOT);
+        // legacy raw 입력을 정수+단위로 정규화. 정수 매칭 안 되면 quantity null (PRN/반알 등)
+        if (dosage != null) {
+            final java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d+(?:\\.\\d+)?)(.*)$")
+                    .matcher(dosage);
+            if (m.find()) {
+                setField(s, "dosageQuantity", new java.math.BigDecimal(m.group(1)));
+                setField(s, "dosageUnit",
+                        com.ppiyaki.medication.DosageUnit.fromInput(m.group(2).trim()).orElse(null));
+            }
+        }
         return s;
     }
 

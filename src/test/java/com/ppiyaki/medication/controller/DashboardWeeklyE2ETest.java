@@ -54,11 +54,12 @@ class DashboardWeeklyE2ETest {
     }
 
     @Test
-    @DisplayName("시니어 본인 호출 — schedule 없으면 days[7] 모두 PERFECT, adherenceRate=null")
+    @DisplayName("시니어 본인 호출 — 가입 후 날짜 schedule 없으면 PERTECT, 가입 이전은 NOT_SCHEDULED (issue #326)")
     void weekly_seniorSelf_emptySchedules() {
         final SignupResult senior = signup("주간시니어");
         setMealTimes(senior.userId(), LocalTime.of(8, 0), LocalTime.of(12, 30), LocalTime.of(18, 30));
-        final LocalDate weekStart = LocalDate.now().minusDays(7);
+        // weekStart를 today로 두어 days[0]이 가입 직후(또는 가입일과 동일)가 되도록 함
+        final LocalDate weekStart = LocalDate.now();
 
         RestAssured.given()
                 .header("Authorization", "Bearer " + senior.accessToken())
