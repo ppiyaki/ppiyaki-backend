@@ -62,6 +62,16 @@ public class CareRelationController {
         return ResponseEntity.ok(loginResponse);
     }
 
+    @PreAuthorize("hasRole('CAREGIVER')")
+    @DeleteMapping("/care-relations/seniors/{seniorId}")
+    public ResponseEntity<Void> removeSeniorRelation(
+            @AuthenticationPrincipal final Long userId,
+            @PathVariable final Long seniorId
+    ) {
+        careRelationService.removeSeniorRelation(userId, seniorId);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/seniors/{seniorId}/logout")
     @PreAuthorize("hasRole('CAREGIVER')")
     public ResponseEntity<Void> forceLogoutSenior(

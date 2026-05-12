@@ -66,12 +66,16 @@ public class AuthService {
                         .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)))
                 .orElseGet(() -> createNewUser(payload, providerUserId));
 
+        if (user.isDeleted()) {
+            throw new BusinessException(ErrorCode.USER_ALREADY_DELETED);
+        }
+
         final String roleName = user.getRole() != null ? user.getRole().name() : null;
         final String accessToken = jwtProvider.createAccessToken(user.getId(), roleName);
         final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
         saveRefreshToken(user.getId(), refreshTokenValue);
 
-        final boolean isOnboarded = user.getRole() != null;
+        final boolean isOnboarded = user.getNickname() != null;
 
         return new LoginResponse(accessToken, refreshTokenValue, isOnboarded);
     }
@@ -111,6 +115,10 @@ public class AuthService {
         if (user.getPassword() == null
                 || !passwordEncoder.matches(loginRequest.password(), user.getPassword())) {
             throw new BusinessException(ErrorCode.AUTH_INVALID_CREDENTIALS);
+        }
+
+        if (user.isDeleted()) {
+            throw new BusinessException(ErrorCode.USER_ALREADY_DELETED);
         }
 
         final String roleName = user.getRole() != null ? user.getRole().name() : null;

@@ -13,9 +13,14 @@ permissions:
   checks: write
   pull-requests: write
 
+# 같은 PR에 새 push 시 진행 중인 워크플로우 취소 (러너 자원 절약 + 결과 빠르게)
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     services:
       mysql:
@@ -30,6 +35,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
