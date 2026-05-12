@@ -60,6 +60,8 @@ class MedicationLogServicePhase2Test {
     private S3Client s3Client;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private com.ppiyaki.notification.repository.NotificationRepository notificationRepository;
 
     @InjectMocks
     private MedicationLogService service;
