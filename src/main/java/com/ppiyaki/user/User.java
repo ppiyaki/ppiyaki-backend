@@ -13,12 +13,14 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Objects;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
 @Table(name = "users")
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseTimeEntity {
 
@@ -68,6 +70,9 @@ public class User extends BaseTimeEntity {
 
     @Column(name = "last_active_at")
     private java.time.LocalDateTime lastActiveAt;
+
+    @Column(name = "deleted_at")
+    private java.time.LocalDateTime deletedAt;
 
     public User(
             final String loginId,
@@ -126,5 +131,13 @@ public class User extends BaseTimeEntity {
 
     public void touchActiveAt(final java.time.LocalDateTime now) {
         this.lastActiveAt = Objects.requireNonNull(now, "now must not be null");
+    }
+
+    public void softDelete(final java.time.LocalDateTime now) {
+        this.deletedAt = Objects.requireNonNull(now, "now must not be null");
+    }
+
+    public boolean isDeleted() {
+        return this.deletedAt != null;
     }
 }

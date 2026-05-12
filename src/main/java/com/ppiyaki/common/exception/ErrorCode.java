@@ -22,6 +22,7 @@ public enum ErrorCode {
     // User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_001", "User not found"),
     MEAL_TIMES_NOT_SET(HttpStatus.BAD_REQUEST, "USER_002", "Meal times are not set for the senior"),
+    USER_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "USER_003", "User already deleted"),
 
     // Medicine
     MEDICINE_NOT_FOUND(HttpStatus.NOT_FOUND, "MEDICINE_001", "Medicine not found"),
