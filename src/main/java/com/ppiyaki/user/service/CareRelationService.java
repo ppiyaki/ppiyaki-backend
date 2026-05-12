@@ -113,6 +113,15 @@ public class CareRelationService {
     }
 
     @Transactional
+    public void unlinkSenior(final Long caregiverId, final Long seniorId) {
+        final CareRelation careRelation = careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(
+                caregiverId, seniorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
+
+        careRelation.softDelete(LocalDateTime.now());
+    }
+
+    @Transactional
     public void forceLogoutSenior(final Long caregiverId, final Long seniorId) {
         careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(caregiverId, seniorId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
