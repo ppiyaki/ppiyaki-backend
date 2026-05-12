@@ -170,9 +170,7 @@ public class OpenAiClient {
 
             final List<ExtractedMedicine> result = new ArrayList<>();
             for (final JsonNode item : medicines) {
-                final BigDecimal dosageQuantity = item.path("dosageQuantity").isNumber()
-                        ? item.path("dosageQuantity").decimalValue()
-                        : null;
+                final BigDecimal dosageQuantity = parseDosageQuantity(item.path("dosageQuantity"));
                 final DosageUnit dosageUnit = DosageUnit.fromInput(item.path("dosageUnit").asText(null))
                         .orElse(null);
                 result.add(new ExtractedMedicine(
@@ -192,6 +190,22 @@ public class OpenAiClient {
         } catch (final Exception e) {
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
                     "AI response parse failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * dosageQuantity 노드를 BigDecimal로 파싱. number/string 모두 허용 (LLM 응답 흔들림 흡수).
+     * 빈 문자열·파싱 실패·null/array/object 등은 모두 null.
+     */
+    private static BigDecimal parseDosageQuantity(final JsonNode node) {
+        final String text = node.asText("").trim();
+        if (text.isEmpty()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(text);
+        } catch (final NumberFormatException ignored) {
+            return null;
         }
     }
 

@@ -86,6 +86,10 @@ public class MedicationSchedule extends CreatedTimeEntity {
             this.dosageQuantity = dosageQuantity;
         }
         if (dosageUnit != null) {
+            // PRN으로 전환 시 quantity는 의미 없음 — null로 정정 (legacy dosage 합성 시 비정상값 회피)
+            if (dosageUnit == DosageUnit.PRN) {
+                this.dosageQuantity = null;
+            }
             this.dosageUnit = dosageUnit;
         }
         if (dosageQuantity != null || dosageUnit != null) {
