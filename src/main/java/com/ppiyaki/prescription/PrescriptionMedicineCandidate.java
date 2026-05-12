@@ -11,6 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -39,6 +40,12 @@ public class PrescriptionMedicineCandidate extends CreatedTimeEntity {
 
     @Column(name = "extracted_dosage")
     private String extractedDosage;
+
+    @Column(name = "extracted_dosage_quantity", precision = 5, scale = 2)
+    private BigDecimal extractedDosageQuantity;
+
+    @Column(name = "extracted_dosage_unit", length = 16)
+    private String extractedDosageUnit;
 
     @Column(name = "extracted_schedule")
     private String extractedSchedule;

@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -38,6 +39,12 @@ public class MedicationSchedule extends CreatedTimeEntity {
 
     @Column(name = "dosage")
     private String dosage;
+
+    @Column(name = "dosage_quantity", precision = 5, scale = 2)
+    private BigDecimal dosageQuantity;
+
+    @Column(name = "dosage_unit", length = 16)
+    private String dosageUnit;
 
     @Column(name = "days_of_week")
     private String daysOfWeek;
