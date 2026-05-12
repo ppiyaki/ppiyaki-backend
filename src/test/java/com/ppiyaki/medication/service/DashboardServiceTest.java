@@ -377,6 +377,15 @@ class DashboardServiceTest {
         setField(s, "medicineId", medicineId);
         setField(s, "mealSlot", slot);
         setField(s, "dosage", dosage);
+        if (dosage != null) {
+            final java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d+(?:\\.\\d+)?)(.*)$")
+                    .matcher(dosage);
+            if (m.find()) {
+                setField(s, "dosageQuantity", new java.math.BigDecimal(m.group(1)));
+                setField(s, "dosageUnit",
+                        com.ppiyaki.medication.DosageUnit.fromInput(m.group(2).trim()).orElse(null));
+            }
+        }
         return s;
     }
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.medication.DosageUnit;
 import com.ppiyaki.medication.MealSlot;
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -172,16 +173,16 @@ public class OpenAiClient {
                 final BigDecimal dosageQuantity = item.path("dosageQuantity").isNumber()
                         ? item.path("dosageQuantity").decimalValue()
                         : null;
-                final String dosageUnit = item.path("dosageUnit").asText(null);
+                final DosageUnit dosageUnit = DosageUnit.fromInput(item.path("dosageUnit").asText(null))
+                        .orElse(null);
                 result.add(new ExtractedMedicine(
                         item.path("name").asText(null),
                         item.path("manufacturer").asText(null),
                         item.path("ingredientName").asText(null),
-                        item.path("dosage").asText(null),
-                        item.path("schedule").asText(null),
-                        parseMealSlots(item.path("mealSlots")),
                         dosageQuantity,
-                        dosageUnit
+                        dosageUnit,
+                        item.path("schedule").asText(null),
+                        parseMealSlots(item.path("mealSlots"))
                 ));
             }
 
@@ -305,11 +306,10 @@ public class OpenAiClient {
             String name,
             String manufacturer,
             String ingredientName,
-            String dosage,
-            String schedule,
-            List<MealSlot> mealSlots,
             BigDecimal dosageQuantity,
-            String dosageUnit
+            DosageUnit dosageUnit,
+            String schedule,
+            List<MealSlot> mealSlots
     ) {
     }
 }

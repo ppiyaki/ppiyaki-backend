@@ -191,10 +191,12 @@ class MedicineControllerE2ETest {
 
         medicationScheduleRepository.save(
                 new MedicationSchedule(Long.valueOf(medicineId), MealSlot.BREAKFAST,
-                        "1정", "DAILY", LocalDate.now(), null));
+                        java.math.BigDecimal.ONE, com.ppiyaki.medication.DosageUnit.TABLET,
+                        "DAILY", LocalDate.now(), null));
         medicationScheduleRepository.save(
                 new MedicationSchedule(Long.valueOf(medicineId), MealSlot.DINNER,
-                        "1정", "DAILY", LocalDate.now(), null));
+                        java.math.BigDecimal.ONE, com.ppiyaki.medication.DosageUnit.TABLET,
+                        "DAILY", LocalDate.now(), null));
 
         // when & then
         RestAssured.given()

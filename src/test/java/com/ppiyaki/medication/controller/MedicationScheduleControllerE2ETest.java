@@ -51,7 +51,7 @@ class MedicationScheduleControllerE2ETest {
                 .body("""
                         {
                             "mealSlot": "BREAKFAST",
-                            "dosage": "1정",
+                            "dosageQuantity": 1, "dosageUnit": "정",
                             "daysOfWeek": "DAILY",
                             "startDate": "2026-04-11"
                         }
@@ -64,7 +64,7 @@ class MedicationScheduleControllerE2ETest {
                 .body("medicineId", is(medicineId))
                 .body("mealSlot", is("BREAKFAST"))
                 .body("scheduledTime", is("08:00:00"))
-                .body("dosage", is("1정"))
+                .body("dosageQuantity", is(1)).body("dosageUnit", is("정"))
                 .body("daysOfWeek", is("DAILY"));
     }
 
@@ -82,7 +82,7 @@ class MedicationScheduleControllerE2ETest {
                 .body("""
                         {
                             "mealSlot": "LUNCH",
-                            "dosage": "1정"
+                            "dosageQuantity": 1, "dosageUnit": "정"
                         }
                         """)
                 .when()
@@ -107,7 +107,7 @@ class MedicationScheduleControllerE2ETest {
                 .body("""
                         {
                             "mealSlot": "MIDNIGHT",
-                            "dosage": "1정"
+                            "dosageQuantity": 1, "dosageUnit": "정"
                         }
                         """)
                 .when()
@@ -175,7 +175,7 @@ class MedicationScheduleControllerE2ETest {
                 .get("/api/v1/medicines/" + medicineId + "/schedules/" + scheduleId)
                 .then()
                 .statusCode(200)
-                .body("dosage", is("2정"))
+                .body("dosageQuantity", is(2)).body("dosageUnit", is("정"))
                 .body("mealSlot", is("LUNCH"))
                 .body("scheduledTime", is("12:30:00"));
     }
@@ -196,7 +196,7 @@ class MedicationScheduleControllerE2ETest {
                 .body("""
                         {
                             "mealSlot": "DINNER",
-                            "dosage": "2정"
+                            "dosageQuantity": 2, "dosageUnit": "정"
                         }
                         """)
                 .when()
@@ -205,7 +205,7 @@ class MedicationScheduleControllerE2ETest {
                 .statusCode(200)
                 .body("mealSlot", is("DINNER"))
                 .body("scheduledTime", is("18:30:00"))
-                .body("dosage", is("2정"));
+                .body("dosageQuantity", is(2)).body("dosageUnit", is("정"));
     }
 
     @Test
@@ -247,7 +247,7 @@ class MedicationScheduleControllerE2ETest {
                 .body("""
                         {
                             "mealSlot": "BREAKFAST",
-                            "dosage": "1정",
+                            "dosageQuantity": 1, "dosageUnit": "정",
                             "daysOfWeek": "DAILY"
                         }
                         """)
@@ -266,7 +266,7 @@ class MedicationScheduleControllerE2ETest {
                 .get("/api/v1/medicines/" + medicineId + "/schedules/" + scheduleId)
                 .then()
                 .statusCode(200)
-                .body("dosage", is("1정"))
+                .body("dosageQuantity", is(1)).body("dosageUnit", is("정"))
                 .body("scheduledTime", is("08:00:00"));
     }
 
@@ -288,7 +288,7 @@ class MedicationScheduleControllerE2ETest {
                 .body("""
                         {
                             "mealSlot": "BREAKFAST",
-                            "dosage": "1정"
+                            "dosageQuantity": 1, "dosageUnit": "정"
                         }
                         """)
                 .when()
@@ -367,15 +367,28 @@ class MedicationScheduleControllerE2ETest {
             final String mealSlot,
             final String dosage
     ) {
+        // legacy "1정" 등의 raw 입력을 dosageQuantity/dosageUnit으로 분리
+        final java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d+(?:\\.\\d+)?)(.*)$")
+                .matcher(dosage);
+        final String quantity;
+        final String unit;
+        if (m.find()) {
+            quantity = m.group(1);
+            unit = m.group(2).trim();
+        } else {
+            quantity = "1";
+            unit = "정";
+        }
         return RestAssured.given()
                 .contentType(ContentType.JSON)
                 .header("Authorization", "Bearer " + token)
                 .body("""
                         {
                             "mealSlot": "%s",
-                            "dosage": "%s"
+                            "dosageQuantity": %s,
+                            "dosageUnit": "%s"
                         }
-                        """.formatted(mealSlot, dosage))
+                        """.formatted(mealSlot, quantity, unit))
                 .when()
                 .post("/api/v1/medicines/" + medicineId + "/schedules")
                 .then()

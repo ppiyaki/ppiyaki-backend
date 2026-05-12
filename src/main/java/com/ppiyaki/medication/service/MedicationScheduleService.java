@@ -56,7 +56,8 @@ public class MedicationScheduleService {
         final MedicationSchedule schedule = new MedicationSchedule(
                 medicine.getId(),
                 scheduleCreateRequest.mealSlot(),
-                scheduleCreateRequest.dosage(),
+                scheduleCreateRequest.dosageQuantity(),
+                com.ppiyaki.medication.DosageUnit.fromInput(scheduleCreateRequest.dosageUnit()).orElse(null),
                 daysOfWeek,
                 startDate,
                 scheduleCreateRequest.endDate()
@@ -107,7 +108,8 @@ public class MedicationScheduleService {
 
         schedule.update(
                 scheduleUpdateRequest.mealSlot(),
-                scheduleUpdateRequest.dosage(),
+                scheduleUpdateRequest.dosageQuantity(),
+                com.ppiyaki.medication.DosageUnit.fromInput(scheduleUpdateRequest.dosageUnit()).orElse(null),
                 scheduleUpdateRequest.daysOfWeek(),
                 scheduleUpdateRequest.startDate(),
                 scheduleUpdateRequest.endDate()
