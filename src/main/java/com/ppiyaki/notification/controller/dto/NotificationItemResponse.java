@@ -11,7 +11,6 @@ public record NotificationItemResponse(
         String title,
         String body,
         String payload,
-        boolean isRead,
         LocalDateTime readAt,
         LocalDateTime takenAt,
         LocalDateTime createdAt
@@ -25,7 +24,6 @@ public record NotificationItemResponse(
                 notification.getTitle(),
                 notification.getBody(),
                 notification.getPayload(),
-                notification.isRead(),
                 notification.getReadAt(),
                 notification.getTakenAt(),
                 notification.getCreatedAt()
