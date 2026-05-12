@@ -34,6 +34,27 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             """)
     int markAllAsRead(@Param("userId") final Long userId, @Param("readAt") final LocalDateTime readAt);
 
+    /**
+     * 시니어가 복약 인증한 시점에 같은 날짜·슬롯의 MEDICATION_REMINDER 알림을 taken 처리.
+     * takenAt IS NULL인 row만 갱신 (멱등).
+     */
+    @Modifying
+    @Query("""
+            UPDATE Notification n
+            SET n.takenAt = :takenAt
+            WHERE n.userId = :userId
+              AND n.category = com.ppiyaki.notification.NotificationCategory.MEDICATION_REMINDER
+              AND n.targetDate = :targetDate
+              AND n.mealSlot = :mealSlot
+              AND n.takenAt IS NULL
+            """)
+    int markReminderTaken(
+            @Param("userId") final Long userId,
+            @Param("targetDate") final java.time.LocalDate targetDate,
+            @Param("mealSlot") final String mealSlot,
+            @Param("takenAt") final LocalDateTime takenAt
+    );
+
     boolean existsByUserIdAndCategoryAndTargetDateAndMealSlot(
             final Long userId,
             final NotificationCategory category,

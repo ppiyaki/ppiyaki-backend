@@ -64,6 +64,9 @@ public class Notification extends BaseTimeEntity {
     @Column(name = "read_at")
     private LocalDateTime readAt;
 
+    @Column(name = "taken_at")
+    private LocalDateTime takenAt;
+
     Notification(
             final Long userId,
             final Long seniorId,
@@ -195,6 +198,20 @@ public class Notification extends BaseTimeEntity {
     public void markAsRead(final LocalDateTime readAt) {
         if (this.readAt == null) {
             this.readAt = Objects.requireNonNull(readAt, "readAt must not be null");
+        }
+    }
+
+    public boolean isTaken() {
+        return this.takenAt != null;
+    }
+
+    /**
+     * MEDICATION_REMINDER 알림이 복약 인증으로 소비됐음을 표시. 멱등 (이미 채워져 있으면 noop).
+     * spec: PATCH/POST 직접 호출이 아니라 MedicationLogService.upsert TAKEN 신규 전환 분기에서 호출.
+     */
+    public void markTaken(final LocalDateTime takenAt) {
+        if (this.takenAt == null) {
+            this.takenAt = Objects.requireNonNull(takenAt, "takenAt must not be null");
         }
     }
 }
