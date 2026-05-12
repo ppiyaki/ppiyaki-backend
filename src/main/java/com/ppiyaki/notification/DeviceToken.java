@@ -63,6 +63,17 @@ public class DeviceToken extends BaseTimeEntity {
         this.lastSeenAt = Objects.requireNonNull(lastSeenAt, "lastSeenAt must not be null");
     }
 
+    /**
+     * 같은 device가 다른 사용자 계정으로 로그인 후 재등록되는 케이스의 소유자 이전.
+     * issue #329: token UNIQUE 제약 때문에 신규 INSERT 불가 → 같은 row의 owner를 갱신.
+     * lastSeenAt 갱신 + isActive=true.
+     */
+    public void transferTo(final Long newUserId, final LocalDateTime lastSeenAt) {
+        this.userId = Objects.requireNonNull(newUserId, "newUserId must not be null");
+        this.isActive = true;
+        this.lastSeenAt = Objects.requireNonNull(lastSeenAt, "lastSeenAt must not be null");
+    }
+
     public void deactivate() {
         this.isActive = false;
     }
