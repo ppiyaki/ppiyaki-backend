@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.is;
 import com.ppiyaki.user.repository.UserRepository;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,10 +46,12 @@ class DashboardMonthlyE2ETest {
     }
 
     @Test
-    @DisplayName("시니어 본인 호출 — schedule 없으면 days 모두 PERFECT, 길이는 해당 월 일수")
+    @DisplayName("시니어 본인 호출 — 현재 월 schedule 없으면 가입일 이후 PERFECT, 가입 이전 NOT_SCHEDULED (issue #326)")
     void monthly_seniorSelf_emptySchedules() {
         final SignupResult senior = signup("월간시니어");
-        final YearMonth ym = YearMonth.of(2026, 1);
+        // 현재 월로 조회 — 가입 후 days는 PERFECT, 가입 전 days는 NOT_SCHEDULED
+        final YearMonth ym = YearMonth.now();
+        final int today = LocalDate.now().getDayOfMonth();
 
         RestAssured.given()
                 .header("Authorization", "Bearer " + senior.accessToken())
@@ -57,11 +60,12 @@ class DashboardMonthlyE2ETest {
                 .then()
                 .statusCode(200)
                 .body("seniorId", is(senior.userId().intValue()))
-                .body("yearMonth", is("2026-01"))
-                .body("days.size()", is(31))
-                .body("days[0].date", is("2026-01-01"))
-                .body("days[0].dayStatus", is("PERFECT"))
-                .body("days[30].date", is("2026-01-31"));
+                .body("yearMonth", is(ym.toString()))
+                .body("days.size()", is(ym.lengthOfMonth()))
+                // today는 가입일과 동일 → PERFECT (schedule 없음 + 가입 이후)
+                .body("days[" + (today - 1) + "].dayStatus", is("PERFECT"))
+                // 1일은 today보다 이르면 NOT_SCHEDULED, 같으면 PERFECT
+                .body("days[0].dayStatus", is(today > 1 ? "NOT_SCHEDULED" : "PERFECT"));
     }
 
     @Test
