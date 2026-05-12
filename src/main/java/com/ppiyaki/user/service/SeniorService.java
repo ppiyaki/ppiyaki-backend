@@ -1,12 +1,9 @@
 package com.ppiyaki.user.service;
 
-import com.ppiyaki.common.exception.BusinessException;
-import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.pet.Pet;
 import com.ppiyaki.pet.repository.PetRepository;
 import com.ppiyaki.user.CareRelation;
 import com.ppiyaki.user.User;
-import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.controller.dto.SeniorCreateRequest;
 import com.ppiyaki.user.controller.dto.SeniorCreateResponse;
 import com.ppiyaki.user.repository.CareRelationRepository;
@@ -33,13 +30,6 @@ public class SeniorService {
 
     @Transactional
     public SeniorCreateResponse createSenior(final Long caregiverId, final SeniorCreateRequest seniorCreateRequest) {
-        final User caregiver = userRepository.findById(caregiverId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        if (caregiver.getRole() != UserRole.CAREGIVER) {
-            throw new BusinessException(ErrorCode.CARE_RELATION_ROLE_MISMATCH);
-        }
-
         final User senior = userRepository.save(
                 User.createSenior(seniorCreateRequest.nickname(), seniorCreateRequest.dob()));
 
