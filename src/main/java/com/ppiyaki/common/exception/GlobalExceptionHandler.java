@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -81,6 +82,13 @@ public class GlobalExceptionHandler {
         final ErrorResponse errorResponse = ErrorResponse.of(ErrorCode.NOT_FOUND,
                 "No endpoint " + exception.getHttpMethod() + " /" + exception.getResourcePath());
         return ResponseEntity.status(ErrorCode.NOT_FOUND.getStatus()).body(errorResponse);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(final AccessDeniedException exception) {
+        log.debug("Access denied: {}", exception.getMessage());
+        final ErrorResponse errorResponse = ErrorResponse.of(ErrorCode.FORBIDDEN);
+        return ResponseEntity.status(ErrorCode.FORBIDDEN.getStatus()).body(errorResponse);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)

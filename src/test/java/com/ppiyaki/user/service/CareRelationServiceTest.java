@@ -62,9 +62,6 @@ class CareRelationServiceTest {
     @DisplayName("보호자가 시니어의 초대 코드를 발급하면 6자리 코드를 반환한다")
     void createInviteCode_success() {
         // given
-        final User caregiver = mockUser(1L, UserRole.CAREGIVER);
-        given(userRepository.findById(1L)).willReturn(Optional.of(caregiver));
-
         final CareRelation existingRelation = CareRelation.createLinked(2L, 1L);
         given(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(1L, 2L))
                 .willReturn(Optional.of(existingRelation));
@@ -83,8 +80,6 @@ class CareRelationServiceTest {
     @DisplayName("연동 관계가 없는 시니어의 코드 발급을 시도하면 CARE_RELATION_NOT_FOUND 에러")
     void createInviteCode_noRelation_throwsNotFound() {
         // given
-        final User caregiver = mockUser(1L, UserRole.CAREGIVER);
-        given(userRepository.findById(1L)).willReturn(Optional.of(caregiver));
         given(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(1L, 2L))
                 .willReturn(Optional.empty());
 

@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,6 +32,7 @@ public class CareRelationController {
     }
 
     @GetMapping("/care-relations/seniors")
+    @PreAuthorize("hasRole('CAREGIVER')")
     public ResponseEntity<List<SeniorSummaryResponse>> readSeniors(
             @AuthenticationPrincipal final Long userId
     ) {
@@ -39,6 +41,7 @@ public class CareRelationController {
     }
 
     @PostMapping("/care-relations/invite")
+    @PreAuthorize("hasRole('CAREGIVER')")
     public ResponseEntity<InviteCodeResponse> createInviteCode(
             @AuthenticationPrincipal final Long userId,
             @Valid @RequestBody final InviteCodeRequest inviteCodeRequest
@@ -60,6 +63,7 @@ public class CareRelationController {
     }
 
     @DeleteMapping("/seniors/{seniorId}/logout")
+    @PreAuthorize("hasRole('CAREGIVER')")
     public ResponseEntity<Void> forceLogoutSenior(
             @AuthenticationPrincipal final Long userId,
             @PathVariable final Long seniorId

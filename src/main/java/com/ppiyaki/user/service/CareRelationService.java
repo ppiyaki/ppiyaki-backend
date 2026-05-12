@@ -8,7 +8,6 @@ import com.ppiyaki.user.CareRelation;
 import com.ppiyaki.user.InviteCode;
 import com.ppiyaki.user.InviteCode.InviteCodeWithRaw;
 import com.ppiyaki.user.User;
-import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
 import com.ppiyaki.user.controller.dto.SeniorSummaryResponse;
@@ -54,9 +53,6 @@ public class CareRelationService {
 
     @Transactional(readOnly = true)
     public List<SeniorSummaryResponse> readSeniors(final Long caregiverId) {
-        final User caregiver = findUserById(caregiverId);
-        validateRole(caregiver, UserRole.CAREGIVER);
-
         final List<CareRelation> careRelations = careRelationRepository.findByCaregiverIdAndDeletedAtIsNull(
                 caregiverId);
 
@@ -75,9 +71,6 @@ public class CareRelationService {
 
     @Transactional
     public InviteCodeResponse createInviteCode(final Long caregiverId, final Long seniorId) {
-        final User caregiver = findUserById(caregiverId);
-        validateRole(caregiver, UserRole.CAREGIVER);
-
         careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(caregiverId, seniorId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
 
@@ -121,9 +114,6 @@ public class CareRelationService {
 
     @Transactional
     public void forceLogoutSenior(final Long caregiverId, final Long seniorId) {
-        final User caregiver = findUserById(caregiverId);
-        validateRole(caregiver, UserRole.CAREGIVER);
-
         careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(caregiverId, seniorId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
 
@@ -133,11 +123,5 @@ public class CareRelationService {
     private User findUserById(final Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-    }
-
-    private void validateRole(final User user, final UserRole expectedRole) {
-        if (user.getRole() != expectedRole) {
-            throw new BusinessException(ErrorCode.CARE_RELATION_ROLE_MISMATCH);
-        }
     }
 }
