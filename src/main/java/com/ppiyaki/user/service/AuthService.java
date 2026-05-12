@@ -70,12 +70,15 @@ public class AuthService {
             throw new BusinessException(ErrorCode.USER_ALREADY_DELETED);
         }
 
-        final String roleName = user.getRole() != null ? user.getRole().name() : null;
-        final String accessToken = jwtProvider.createAccessToken(user.getId(), roleName);
+        if (user.getRole() == null) {
+            user.assignRole(UserRole.CAREGIVER);
+        }
+
+        final String accessToken = jwtProvider.createAccessToken(user.getId(), user.getRole().name());
         final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
         saveRefreshToken(user.getId(), refreshTokenValue);
 
-        final boolean isOnboarded = user.getRole() != null;
+        final boolean isOnboarded = user.getNickname() != null;
 
         return new LoginResponse(accessToken, refreshTokenValue, isOnboarded);
     }
