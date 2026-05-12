@@ -1,11 +1,14 @@
 package com.ppiyaki.common.exception;
 
 import jakarta.validation.ConstraintViolationException;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -78,6 +81,20 @@ public class GlobalExceptionHandler {
         final ErrorResponse errorResponse = ErrorResponse.of(ErrorCode.NOT_FOUND,
                 "No endpoint " + exception.getHttpMethod() + " /" + exception.getResourcePath());
         return ResponseEntity.status(ErrorCode.NOT_FOUND.getStatus()).body(errorResponse);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(
+            final HttpRequestMethodNotSupportedException exception) {
+        log.debug("Method not allowed: {}", exception.getMessage());
+        final ErrorResponse errorResponse = ErrorResponse.of(ErrorCode.METHOD_NOT_ALLOWED,
+                "Method " + exception.getMethod() + " not allowed");
+        final ResponseEntity.BodyBuilder builder = ResponseEntity.status(ErrorCode.METHOD_NOT_ALLOWED.getStatus());
+        final Set<HttpMethod> supportedMethods = exception.getSupportedHttpMethods();
+        if (supportedMethods != null && !supportedMethods.isEmpty()) {
+            builder.allow(supportedMethods.toArray(new HttpMethod[0]));
+        }
+        return builder.body(errorResponse);
     }
 
     @ExceptionHandler(Exception.class)

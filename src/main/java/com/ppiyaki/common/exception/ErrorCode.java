@@ -11,6 +11,7 @@ public enum ErrorCode {
     FORBIDDEN(HttpStatus.FORBIDDEN, "COMMON_004", "Access denied"),
     NOT_FOUND(HttpStatus.NOT_FOUND, "COMMON_005", "Resource not found"),
     RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "COMMON_006", "Too many requests"),
+    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "COMMON_007", "Method not allowed"),
 
     // Auth
     AUTH_INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_001", "Invalid token"),
