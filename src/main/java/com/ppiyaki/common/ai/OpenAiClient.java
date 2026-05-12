@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.medication.MealSlot;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -99,7 +100,7 @@ public class OpenAiClient {
                     - 약물이 없으면 빈 배열 반환.
 
                     ## 출력 형식
-                    {"medicines": [{"name": "약물명", "manufacturer": "제약사명", "ingredientName": "성분명", "dosage": "용량", "schedule": "복약주기", "mealSlots": ["BREAKFAST","LUNCH","DINNER"]}]}
+                    {"medicines": [{"name": "약물명", "manufacturer": "제약사명", "ingredientName": "성분명", "dosageQuantity": 1, "dosageUnit": "정", "schedule": "복약주기", "mealSlots": ["BREAKFAST","LUNCH","DINNER"]}]}
                     - name: 제품명+제형+용량. 제약사명과 괄호 안 내용은 **제외**.
                       예: "위더스세파클러캡슐250밀리그람" → name: "세파클러캡슐250밀리그람", manufacturer: "위더스"
                       예: "에빅사정(메만틴염산염)_(10mg/1정)" → name: "에빅사정10밀리그램"
@@ -109,7 +110,16 @@ public class OpenAiClient {
                       예: "에빅사정(메만틴염산염)" → ingredientName: "메만틴염산염"
                       예: "타이레놀정500밀리그람" → ingredientName: null (텍스트에 성분명 없음)
                       주의: "(10mg/1정)" 같은 용량 표기는 성분명이 아님. 성분명은 한글 화학명.
-                    - dosage: 1회 투약량 (예: "1정", "0.5정", "2캡슐"). 모르면 null.
+                    - **dosageQuantity (number, nullable)**: 1회 투약 수치. 정수 또는 소수.
+                      * "1정"/"한 정"/"1캡슐" → 1
+                      * "2정"/"두 정" → 2
+                      * "반정"/"0.5정" → 0.5
+                      * 한국어 수량 표현(한/두/세/네/다섯 …)도 반드시 숫자로 변환
+                      * "PRN", "필요시", 횟수가 정의되지 않은 경우 → null
+                    - **dosageUnit (string, nullable)**: 단위 문자열. dosageQuantity 옆에 표기된 단위 그대로.
+                      * "1정" → "정", "2캡슐" → "캡슐", "5ml" → "ml", "30mg" → "mg"
+                      * "PRN"/"필요시" → "PRN" (단위 자리에 표기, dosageQuantity는 null)
+                      * 모르면 null
                     - schedule: 복약주기 (예: "1일 3회 식후 30분"). 모르면 null.
                     - mealSlots: schedule을 식사 슬롯으로 매핑한 배열. 가능한 값은 "BREAKFAST", "LUNCH", "DINNER"만.
                       매핑 규칙:
@@ -159,13 +169,19 @@ public class OpenAiClient {
 
             final List<ExtractedMedicine> result = new ArrayList<>();
             for (final JsonNode item : medicines) {
+                final BigDecimal dosageQuantity = item.path("dosageQuantity").isNumber()
+                        ? item.path("dosageQuantity").decimalValue()
+                        : null;
+                final String dosageUnit = item.path("dosageUnit").asText(null);
                 result.add(new ExtractedMedicine(
                         item.path("name").asText(null),
                         item.path("manufacturer").asText(null),
                         item.path("ingredientName").asText(null),
                         item.path("dosage").asText(null),
                         item.path("schedule").asText(null),
-                        parseMealSlots(item.path("mealSlots"))
+                        parseMealSlots(item.path("mealSlots")),
+                        dosageQuantity,
+                        dosageUnit
                 ));
             }
 
@@ -291,7 +307,9 @@ public class OpenAiClient {
             String ingredientName,
             String dosage,
             String schedule,
-            List<MealSlot> mealSlots
+            List<MealSlot> mealSlots,
+            BigDecimal dosageQuantity,
+            String dosageUnit
     ) {
     }
 }
