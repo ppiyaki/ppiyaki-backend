@@ -22,6 +22,7 @@ public enum ErrorCode {
     // User
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_001", "User not found"),
     MEAL_TIMES_NOT_SET(HttpStatus.BAD_REQUEST, "USER_002", "Meal times are not set for the senior"),
+    USER_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "USER_003", "User already deleted"),
 
     // Medicine
     MEDICINE_NOT_FOUND(HttpStatus.NOT_FOUND, "MEDICINE_001", "Medicine not found"),
@@ -62,10 +63,7 @@ public enum ErrorCode {
     NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "NOTIFICATION_001", "Notification not found"),
     NOTIFICATION_FORBIDDEN(HttpStatus.FORBIDDEN, "NOTIFICATION_002", "Cannot access another user's notification"),
     DEVICE_TOKEN_NOT_FOUND(HttpStatus.NOT_FOUND, "NOTIFICATION_003", "Device token not found"),
-    DEVICE_TOKEN_FORBIDDEN(HttpStatus.FORBIDDEN, "NOTIFICATION_004", "Cannot access another user's device token"),
-
-    // User Withdraw
-    USER_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "USER_003", "User already deleted");
+    DEVICE_TOKEN_FORBIDDEN(HttpStatus.FORBIDDEN, "NOTIFICATION_004", "Cannot access another user's device token");
 
     private final HttpStatus status;
     private final String code;
