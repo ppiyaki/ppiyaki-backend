@@ -8,6 +8,7 @@ import java.util.List;
 public record CandidateDecisionRequest(
         @NotNull CaregiverDecision decision,
         String chosenItemSeq,
-        List<MealSlot> confirmedMealSlots
+        List<MealSlot> confirmedMealSlots,
+        String dosage
 ) {
 }
