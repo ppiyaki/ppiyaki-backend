@@ -2,6 +2,7 @@ package com.ppiyaki.notification.service;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -48,10 +49,11 @@ class DeviceTokenServiceTest {
     }
 
     @Test
-    @DisplayName("기존 token이면 reactivate 호출 + save 호출 안 함")
-    void register_existing_token_reactivates() {
+    @DisplayName("기존 token + 같은 user면 reactivate 호출 + transferTo는 호출 안 함")
+    void register_existing_token_sameUser_reactivates() {
         // given
         final DeviceToken existing = mock(DeviceToken.class);
+        given(existing.getUserId()).willReturn(7L);
         given(existing.getIsActive()).willReturn(true);
         given(deviceTokenRepository.findByToken("token-123")).willReturn(Optional.of(existing));
 
@@ -60,6 +62,25 @@ class DeviceTokenServiceTest {
 
         // then
         verify(existing).reactivate(any(LocalDateTime.class));
+        verify(existing, never()).transferTo(any(), any(LocalDateTime.class));
+        verify(deviceTokenRepository, never()).save(any(DeviceToken.class));
+    }
+
+    @Test
+    @DisplayName("기존 token + 다른 user면 transferTo 호출 (소유자 이전, issue #329)")
+    void register_existing_token_differentUser_transfers() {
+        // given — 기존 row owner=7L, 신규 등록 요청 owner=30L (다른 user)
+        final DeviceToken existing = mock(DeviceToken.class);
+        given(existing.getUserId()).willReturn(7L);
+        given(existing.getIsActive()).willReturn(true);
+        given(deviceTokenRepository.findByToken("token-123")).willReturn(Optional.of(existing));
+
+        // when
+        deviceTokenService.register(30L, "token-123", DevicePlatform.ANDROID);
+
+        // then — transferTo로 owner 이전, reactivate는 호출 안 함
+        verify(existing).transferTo(eq(30L), any(LocalDateTime.class));
+        verify(existing, never()).reactivate(any(LocalDateTime.class));
         verify(deviceTokenRepository, never()).save(any(DeviceToken.class));
     }
 
