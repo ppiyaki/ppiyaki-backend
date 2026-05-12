@@ -6,6 +6,7 @@ import com.ppiyaki.user.service.OnboardingService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,6 +24,7 @@ public class OnboardingController {
     }
 
     @PostMapping("/onboarding")
+    @PreAuthorize("hasRole('CAREGIVER')")
     public ResponseEntity<OnboardingResponse> onboard(
             @AuthenticationPrincipal final Long userId,
             @Valid @RequestBody final OnboardingRequest onboardingRequest
