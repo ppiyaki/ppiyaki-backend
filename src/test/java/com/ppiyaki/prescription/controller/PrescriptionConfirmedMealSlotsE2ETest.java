@@ -149,6 +149,83 @@ class PrescriptionConfirmedMealSlotsE2ETest {
     }
 
     @Test
+    @DisplayName("PATCH로 dosage 갱신 후 GET 응답에 노출된다")
+    void patch_persists_and_exposes_dosage() {
+        // given — OCR이 dosage 누락한 candidate
+        final SignupResult senior = signup("dosage시니어");
+        setSeniorMode(senior.userId(), CareMode.AUTONOMOUS);
+        final Long prescriptionId = seedPrescription(senior.userId());
+        final Long candidateId = seedCandidateWithDosage(prescriptionId, null);
+
+        // when — 보호자가 dosage 보강
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + senior.accessToken())
+                .body("""
+                        {
+                            "decision": "ACCEPTED",
+                            "dosage": "1정"
+                        }
+                        """)
+                .when()
+                .patch("/api/v1/prescriptions/" + prescriptionId + "/medicines/" + candidateId)
+                .then()
+                .statusCode(200);
+
+        // then — GET 응답에 갱신된 dosage 노출
+        RestAssured.given()
+                .header("Authorization", "Bearer " + senior.accessToken())
+                .when()
+                .get("/api/v1/prescriptions/" + prescriptionId)
+                .then()
+                .statusCode(200)
+                .body("candidates[0].extractedDosage", is("1정"));
+    }
+
+    @Test
+    @DisplayName("PATCH 본문에 dosage 미포함/공백이면 기존 dosage 유지")
+    void patch_without_dosage_keepsExistingDosage() {
+        // given — 기존 dosage가 있는 candidate
+        final SignupResult senior = signup("dosage유지시니어");
+        setSeniorMode(senior.userId(), CareMode.AUTONOMOUS);
+        final Long prescriptionId = seedPrescription(senior.userId());
+        final Long candidateId = seedCandidateWithDosage(prescriptionId, "1정");
+
+        // when — dosage 필드 미포함
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + senior.accessToken())
+                .body("""
+                        {"decision": "ACCEPTED"}
+                        """)
+                .when()
+                .patch("/api/v1/prescriptions/" + prescriptionId + "/medicines/" + candidateId)
+                .then()
+                .statusCode(200);
+
+        // 공백 dosage 도 무시
+        RestAssured.given()
+                .contentType(ContentType.JSON)
+                .header("Authorization", "Bearer " + senior.accessToken())
+                .body("""
+                        {"decision": "ACCEPTED", "dosage": "   "}
+                        """)
+                .when()
+                .patch("/api/v1/prescriptions/" + prescriptionId + "/medicines/" + candidateId)
+                .then()
+                .statusCode(200);
+
+        // then — 기존 dosage 유지
+        RestAssured.given()
+                .header("Authorization", "Bearer " + senior.accessToken())
+                .when()
+                .get("/api/v1/prescriptions/" + prescriptionId)
+                .then()
+                .statusCode(200)
+                .body("candidates[0].extractedDosage", is("1정"));
+    }
+
+    @Test
     @DisplayName("잘못된 enum 값이면 400")
     void patch_invalidEnum_returns400() {
         final SignupResult senior = signup("잘못된슬롯시니어");
@@ -215,6 +292,20 @@ class PrescriptionConfirmedMealSlotsE2ETest {
                     prescriptionId, "raw", "타이레놀정", "1정", "1일 3회 식후",
                     "ITEM-1", "타이레놀정", MatchType.EXACT, "matched",
                     suggestedSlots
+            );
+            return candidateRepository.save(candidate).getId();
+        });
+    }
+
+    private Long seedCandidateWithDosage(
+            final Long prescriptionId,
+            final String dosage
+    ) {
+        return transactionTemplate.execute(status -> {
+            final PrescriptionMedicineCandidate candidate = new PrescriptionMedicineCandidate(
+                    prescriptionId, "raw", "타이레놀정", dosage, "1일 3회 식후",
+                    "ITEM-1", "타이레놀정", MatchType.EXACT, "matched",
+                    List.of()
             );
             return candidateRepository.save(candidate).getId();
         });
