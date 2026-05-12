@@ -9,6 +9,7 @@ import com.ppiyaki.common.ocr.ClovaOcrClient.OcrResult;
 import com.ppiyaki.common.ocr.ClovaOcrClient.OcrToken;
 import com.ppiyaki.common.storage.NcpStorageProperties;
 import com.ppiyaki.common.storage.PhotoUrlAssembler;
+import com.ppiyaki.medication.DosageUnit;
 import com.ppiyaki.medication.MealSlot;
 import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
@@ -38,6 +39,7 @@ import com.ppiyaki.user.repository.UserRepository;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -143,14 +145,16 @@ public class PrescriptionService {
 
                 final String mfr = med.manufacturer() != null ? med.manufacturer() : "";
                 final String namePrefix = mfr.isEmpty() || med.name().startsWith(mfr) ? "" : mfr;
+                final String dosageDisplay = formatDosageDisplay(med.dosageQuantity(), med.dosageUnit());
                 final String rawText = namePrefix + med.name()
-                        + (med.dosage() != null ? " " + med.dosage() : "");
+                        + (dosageDisplay != null ? " " + dosageDisplay : "");
 
                 candidateRepository.save(new PrescriptionMedicineCandidate(
                         prescription.getId(),
                         rawText,
                         med.name(),
-                        med.dosage(),
+                        med.dosageQuantity(),
+                        med.dosageUnit(),
                         med.schedule(),
                         matched != null ? matched.itemSeq() : null,
                         matched != null ? matched.itemName() : null,
@@ -158,6 +162,7 @@ public class PrescriptionService {
                         matchResult.reason(),
                         med.mealSlots()
                 ));
+                // (note) med.dosageUnit()은 OpenAiClient에서 이미 DosageUnit으로 정규화됨
             }
 
             prescription.complete(maskedObjectKey);
@@ -229,8 +234,9 @@ public class PrescriptionService {
             candidate.updateConfirmedMealSlots(request.confirmedMealSlots());
         }
 
-        if (request.dosage() != null && !request.dosage().isBlank()) {
-            candidate.updateExtractedDosage(request.dosage());
+        final DosageUnit normalizedUnit = DosageUnit.fromInput(request.dosageUnit()).orElse(null);
+        if (request.dosageQuantity() != null || normalizedUnit != null) {
+            candidate.updateExtractedDosage(request.dosageQuantity(), normalizedUnit);
         }
     }
 
@@ -252,7 +258,8 @@ public class PrescriptionService {
                 prescription.getId(),
                 request.itemSeq(),
                 request.itemName(),
-                request.dosage(),
+                request.dosageQuantity(),
+                DosageUnit.fromInput(request.dosageUnit()).orElse(null),
                 request.schedule()
         ));
 
@@ -326,15 +333,16 @@ public class PrescriptionService {
             medicineRepository.save(medicine);
             candidate.linkMedicine(medicine.getId());
 
-            // dosage가 비어있으면 schedule 자동 생성 skip — Medicine만 등록.
+            // dosage_quantity가 비어있으면 schedule 자동 생성 skip — Medicine만 등록.
             // 보호자가 후속으로 schedule CRUD API로 보완 (spec §3 Q2).
-            final String dosage = candidate.getExtractedDosage();
-            if (dosage == null || dosage.isBlank()) {
+            final BigDecimal dosageQuantity = candidate.getExtractedDosageQuantity();
+            final DosageUnit dosageUnit = candidate.getExtractedDosageUnit();
+            if (dosageQuantity == null) {
                 continue;
             }
             for (final MealSlot slot : candidate.getConfirmedMealSlotsList()) {
                 medicationScheduleRepository.save(new MedicationSchedule(
-                        medicine.getId(), slot, dosage, "DAILY", today, null));
+                        medicine.getId(), slot, dosageQuantity, dosageUnit, "DAILY", today, null));
             }
         }
 
@@ -346,6 +354,18 @@ public class PrescriptionService {
     private boolean isAcceptedOrCorrected(final PrescriptionMedicineCandidate candidate) {
         return candidate.getCaregiverDecision() == CaregiverDecision.ACCEPTED
                 || candidate.getCaregiverDecision() == CaregiverDecision.MANUALLY_CORRECTED;
+    }
+
+    /**
+     * candidate raw text 표시용 dosage 합성. 양쪽 다 null이면 null.
+     */
+    private static String formatDosageDisplay(final BigDecimal quantity, final DosageUnit unit) {
+        if (quantity == null && unit == null) {
+            return null;
+        }
+        final String quantityText = quantity != null ? quantity.stripTrailingZeros().toPlainString() : "";
+        final String unitText = unit != null ? unit.getDisplayValue() : "";
+        return quantityText + unitText;
     }
 
     @Transactional

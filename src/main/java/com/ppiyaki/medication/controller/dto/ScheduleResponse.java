@@ -3,6 +3,7 @@ package com.ppiyaki.medication.controller.dto;
 import com.ppiyaki.medication.MealSlot;
 import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.user.User;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -13,6 +14,8 @@ public record ScheduleResponse(
         MealSlot mealSlot,
         LocalTime scheduledTime,
         String dosage,
+        BigDecimal dosageQuantity,
+        String dosageUnit,
         String daysOfWeek,
         LocalDate startDate,
         LocalDate endDate,
@@ -26,6 +29,10 @@ public record ScheduleResponse(
                 schedule.getMealSlot(),
                 schedule.getMealSlot().resolveTime(owner),
                 schedule.getDosage(),
+                schedule.getDosageQuantity() != null
+                        ? schedule.getDosageQuantity().stripTrailingZeros()
+                        : null,
+                schedule.getDosageUnit() != null ? schedule.getDosageUnit().getDisplayValue() : null,
                 schedule.getDaysOfWeek(),
                 schedule.getStartDate(),
                 schedule.getEndDate(),

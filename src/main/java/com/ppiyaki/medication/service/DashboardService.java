@@ -410,7 +410,10 @@ public class DashboardService {
                     .toList();
             int dailyConsumption = 0;
             for (final MedicationSchedule s : activeSchedules) {
-                dailyConsumption += MedicationSchedule.parseDosageInt(s.getDosage());
+                final java.math.BigDecimal q = s.getDosageQuantity();
+                if (q != null) {
+                    dailyConsumption += q.setScale(0, java.math.RoundingMode.CEILING).intValueExact();
+                }
             }
             if (dailyConsumption == 0) {
                 continue;

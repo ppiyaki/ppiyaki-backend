@@ -181,7 +181,7 @@ class PrescriptionServicePermissionTest {
     }
 
     private PrescriptionMedicineAddRequest validRequest() {
-        return new PrescriptionMedicineAddRequest("199500096", "타이레놀정 500mg", null, null);
+        return new PrescriptionMedicineAddRequest("199500096", "타이레놀정 500mg", null, null, null);
     }
 
     private Prescription givenPrescription(final LocalDateTime createdAt) throws Exception {

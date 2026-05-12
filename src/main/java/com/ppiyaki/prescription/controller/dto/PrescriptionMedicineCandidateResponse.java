@@ -2,6 +2,7 @@ package com.ppiyaki.prescription.controller.dto;
 
 import com.ppiyaki.medication.MealSlot;
 import com.ppiyaki.prescription.PrescriptionMedicineCandidate;
+import java.math.BigDecimal;
 import java.util.List;
 
 public record PrescriptionMedicineCandidateResponse(
@@ -9,6 +10,8 @@ public record PrescriptionMedicineCandidateResponse(
         String ocrRawText,
         String extractedName,
         String extractedDosage,
+        BigDecimal extractedDosageQuantity,
+        String extractedDosageUnit,
         String extractedSchedule,
         String matchedItemSeq,
         String matchedItemName,
@@ -27,6 +30,11 @@ public record PrescriptionMedicineCandidateResponse(
                 candidate.getOcrRawText(),
                 candidate.getExtractedName(),
                 candidate.getExtractedDosage(),
+                candidate.getExtractedDosageQuantity() != null
+                        ? candidate.getExtractedDosageQuantity().stripTrailingZeros()
+                        : null,
+                candidate.getExtractedDosageUnit() != null ? candidate.getExtractedDosageUnit().getDisplayValue()
+                        : null,
                 candidate.getExtractedSchedule(),
                 candidate.getMatchedItemSeq(),
                 candidate.getMatchedItemName(),
