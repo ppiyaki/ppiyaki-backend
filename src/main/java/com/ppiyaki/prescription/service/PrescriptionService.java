@@ -228,6 +228,10 @@ public class PrescriptionService {
         if (request.confirmedMealSlots() != null) {
             candidate.updateConfirmedMealSlots(request.confirmedMealSlots());
         }
+
+        if (request.dosage() != null && !request.dosage().isBlank()) {
+            candidate.updateExtractedDosage(request.dosage());
+        }
     }
 
     @Transactional

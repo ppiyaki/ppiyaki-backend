@@ -154,6 +154,10 @@ public class PrescriptionMedicineCandidate extends CreatedTimeEntity {
         this.confirmedMealSlots = MealSlot.toCsv(slots);
     }
 
+    public void updateExtractedDosage(final String dosage) {
+        this.extractedDosage = dosage;
+    }
+
     public List<MealSlot> getSuggestedMealSlotsList() {
         return MealSlot.parseCsv(this.suggestedMealSlots);
     }
