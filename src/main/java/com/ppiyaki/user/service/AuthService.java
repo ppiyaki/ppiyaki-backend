@@ -70,11 +70,8 @@ public class AuthService {
             throw new BusinessException(ErrorCode.USER_ALREADY_DELETED);
         }
 
-        if (user.getRole() == null) {
-            user.assignRole(UserRole.CAREGIVER);
-        }
-
-        final String accessToken = jwtProvider.createAccessToken(user.getId(), user.getRole().name());
+        final String roleName = user.getRole() != null ? user.getRole().name() : null;
+        final String accessToken = jwtProvider.createAccessToken(user.getId(), roleName);
         final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
         saveRefreshToken(user.getId(), refreshTokenValue);
 
