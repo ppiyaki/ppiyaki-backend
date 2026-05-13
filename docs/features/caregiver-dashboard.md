@@ -93,15 +93,16 @@ last_reviewed: 2026-05-08
 일자 안의 모든 슬롯을 보고 1개 status로 축약:
 | 값 | 룰 |
 |---|---|
-| `PERFECT` | 모든 schedule된 슬롯이 PERFECT |
+| `PERFECT` | 1개 이상 schedule된 슬롯이 있고 모두 PERFECT |
 | `DELAYED` | DELAYED 슬롯 1개 이상, MISSED 0 |
 | `MISSED` | MISSED 슬롯 1개 이상 (자정 경과 후만 발생) |
 | `PENDING` | PENDING 슬롯 1개 이상, MISSED 0, DELAYED 0 (오늘 진행 중) |
 | `FUTURE` | date > today |
+| `NOT_SCHEDULED` | 가입 이전 날짜(#326) **또는** 모든 슬롯이 `NOT_SCHEDULED`인 일자(#340) |
 
 비고:
 - "오늘"의 status는 frontend isToday 플래그로 추가 강조 (디자인 image2의 25일). backend는 룰 그대로.
-- 시니어 mealTimes가 null이라 모든 슬롯이 `NOT_SCHEDULED`인 일자는 `PERFECT`로 간주(분모 0). 또는 별도 `EMPTY` 추가 — TBD(§8 Q1).
+- 모든 슬롯이 `NOT_SCHEDULED`(mealTimes null 또는 schedule 없음)인 일자는 `NOT_SCHEDULED`로 표시 — 슬롯/일자 의미가 일관되도록 §8 Q1 (c) 채택 (#340, 2026-05-13).
 
 ### 5-3) API 엔드포인트
 
@@ -238,7 +239,7 @@ weekly/monthly는 4~6 단계를 기간으로 확장, status만 도출.
 ## 8) 오픈 질문
 | # | 질문 | 선택지 | 담당/기한 |
 |---|---|---|---|
-| Q1 | 시니어 mealTimes 미설정 일자(모든 슬롯 NOT_SCHEDULED)의 dayStatus | (a) PERFECT (분모 0이라 완벽 간주) / (b) 별도 `EMPTY` enum 추가 / (c) `NOT_SCHEDULED` 그대로 사용 | @goohong / 구현 시 |
+| ~~Q1~~ | ~~시니어 mealTimes 미설정 일자(모든 슬롯 NOT_SCHEDULED)의 dayStatus~~ | **해소 — (c) `NOT_SCHEDULED` 채택 (#340, 2026-05-13). 가입 전 #326 처리와 일관된 의미.** ✅ |
 | Q2 | dosage 파싱 — "반정"(0.5정) / "2정 반"(2.5정) 같은 소수 표기 | (a) 정수만 — 비정수면 0으로 (단순) / (b) BigDecimal로 정밀 / (c) 파싱 실패 시 fallback dailyConsumption=1 | @goohong / 구현 시 |
 | Q3 | weekly의 weekStart 요일 | (a) 일요일 (한국 캘린더 기본) / (b) 월요일 (ISO 8601) — 디자인 image2 "일/월/화/수…" 순이라 (a)로 보임 | 디자인 측 / 구현 시 |
 | Q4 | monthly 응답에 통합 status 외 추가 정보(예: 슬롯별 마커) | (a) 통합 status enum만(권장) / (b) 슬롯별 마커도 — 응답 크기 증가 | @frontend / 구현 시 |
@@ -254,3 +255,4 @@ weekly/monthly는 4~6 단계를 기간으로 확장, status만 도출.
 - 2026-05-08: MISSED 자동 전환 cron은 본 spec scope 외 — dashboard 응답 시 동적 계산.
 - 2026-05-10 (#294): **Q5 해소** — DELAYED 임계 = 보호자별 `notification_settings.medication_delay_threshold_minutes` 참조. `DashboardService.DELAY_THRESHOLD_MINUTES = 60` 하드코딩 제거 → caller 보호자의 settings 조회. 시니어 본인 caller(userId == seniorId)일 때는 default 60 fallback. medication-notification.md PR 7과 동시 머지.
 - 2026-05-08: 통합 endpoint 신규(daily/weekly/monthly) — 기존 logs/medicines/schedules 합성보다 N+1 호출 부담 감소 + status 룰 일관성.
+- 2026-05-13 (#340): **Q1 해소** — 모든 슬롯이 NOT_SCHEDULED인 일자의 dayStatus를 PERFECT가 아닌 NOT_SCHEDULED로 통일. 기존 #326의 가입 전 처리와 의미적 일관성 확보. `DashboardService.deriveDayStatus(FromMarkers)` 빈 `present` 분기 PERFECT → NOT_SCHEDULED.

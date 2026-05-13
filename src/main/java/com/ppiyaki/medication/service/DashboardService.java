@@ -291,7 +291,7 @@ public class DashboardService {
             }
         }
         if (present.isEmpty()) {
-            return DayStatus.PERFECT;
+            return DayStatus.NOT_SCHEDULED;
         }
         if (present.contains(SlotStatus.MISSED)) {
             return DayStatus.MISSED;
@@ -375,7 +375,7 @@ public class DashboardService {
             }
         }
         if (present.isEmpty()) {
-            return DayStatus.PERFECT;
+            return DayStatus.NOT_SCHEDULED;
         }
         if (present.contains(SlotStatus.MISSED)) {
             return DayStatus.MISSED;

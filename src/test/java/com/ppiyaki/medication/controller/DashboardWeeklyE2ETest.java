@@ -54,7 +54,7 @@ class DashboardWeeklyE2ETest {
     }
 
     @Test
-    @DisplayName("시니어 본인 호출 — 가입 후 날짜 schedule 없으면 PERTECT, 가입 이전은 NOT_SCHEDULED (issue #326)")
+    @DisplayName("시니어 본인 호출 — 스케줄 없는 날짜는 dayStatus=NOT_SCHEDULED (issue #340)")
     void weekly_seniorSelf_emptySchedules() {
         final SignupResult senior = signup("주간시니어");
         setMealTimes(senior.userId(), LocalTime.of(8, 0), LocalTime.of(12, 30), LocalTime.of(18, 30));
@@ -72,7 +72,7 @@ class DashboardWeeklyE2ETest {
                 .body("weekEnd", is(weekStart.plusDays(6).toString()))
                 .body("adherenceRate", is(nullValue()))
                 .body("days.size()", is(7))
-                .body("days[0].dayStatus", is("PERFECT"))
+                .body("days[0].dayStatus", is("NOT_SCHEDULED"))
                 .body("days[0].slots", notNullValue())
                 .body("days[0].slots[0].status", is("NOT_SCHEDULED"));
     }
