@@ -6,6 +6,8 @@ import com.ppiyaki.medication.MedicationLog;
 import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
+import com.ppiyaki.medicine.Medicine;
+import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.notification.DeviceToken;
 import com.ppiyaki.notification.Notification;
 import com.ppiyaki.notification.NotificationCategory;
@@ -47,6 +49,7 @@ public class MedicationDelayDispatcher {
     private final CareRelationRepository careRelationRepository;
     private final MedicationScheduleRepository scheduleRepository;
     private final MedicationLogRepository logRepository;
+    private final MedicineRepository medicineRepository;
     private final NotificationSettingsRepository settingsRepository;
     private final NotificationRepository notificationRepository;
     private final DeviceTokenRepository deviceTokenRepository;
@@ -58,6 +61,7 @@ public class MedicationDelayDispatcher {
             final CareRelationRepository careRelationRepository,
             final MedicationScheduleRepository scheduleRepository,
             final MedicationLogRepository logRepository,
+            final MedicineRepository medicineRepository,
             final NotificationSettingsRepository settingsRepository,
             final NotificationRepository notificationRepository,
             final DeviceTokenRepository deviceTokenRepository,
@@ -68,6 +72,7 @@ public class MedicationDelayDispatcher {
         this.careRelationRepository = careRelationRepository;
         this.scheduleRepository = scheduleRepository;
         this.logRepository = logRepository;
+        this.medicineRepository = medicineRepository;
         this.settingsRepository = settingsRepository;
         this.notificationRepository = notificationRepository;
         this.deviceTokenRepository = deviceTokenRepository;
@@ -145,10 +150,11 @@ public class MedicationDelayDispatcher {
     ) {
         final String slotLabel = SLOT_LABELS.getOrDefault(slot, slot.name());
         final String title = "복약 지연 알림";
+        final String seniorName = senior.getNickname() == null ? "" : senior.getNickname();
+        final String medicineLabel = resolveMedicineLabel(schedule);
         final String body = String.format(
-                "%s 어르신이 %s 약 복용 시간을 %d분 넘겼습니다.",
-                senior.getNickname() == null ? "" : senior.getNickname(),
-                slotLabel, thresholdMinutes);
+                "%s 어르신이 %s에 %s을 아직 복용하지 않았어요. (%d분 경과)",
+                seniorName, slotLabel, medicineLabel, thresholdMinutes);
         final Notification saved = notificationRepository.save(
                 Notification.createForMedicationDelay(
                         caregiverId, senior.getId(), title, body, today, slot.name(), schedule.getId()));
@@ -172,5 +178,20 @@ public class MedicationDelayDispatcher {
 
     public Iterable<User> findAllSeniorsWithMealTimes() {
         return userRepository.findAllByRoleWithMealTimesSet(com.ppiyaki.user.UserRole.SENIOR);
+    }
+
+    /**
+     * 알림 메시지에 노출할 schedule 식별 라벨. "{약이름} {복용량}" 형식.
+     * 같은 슬롯에 여러 schedule 알림이 발송될 때 보호자가 어떤 약인지 구분 가능하게 함 (issue #345).
+     */
+    private String resolveMedicineLabel(final MedicationSchedule schedule) {
+        final String dosage = schedule.getDosage();
+        final String medicineName = medicineRepository.findById(schedule.getMedicineId())
+                .map(Medicine::getName)
+                .orElse("약");
+        if (dosage == null || dosage.isBlank()) {
+            return medicineName;
+        }
+        return medicineName + " " + dosage;
     }
 }
