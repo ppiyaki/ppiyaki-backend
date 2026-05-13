@@ -71,7 +71,7 @@ class DashboardServiceTest {
         final DailyDashboardResponse resp = dashboardService.getDaily(SENIOR_ID, SENIOR_ID, TODAY);
 
         assertThat(resp.seniorId()).isEqualTo(SENIOR_ID);
-        assertThat(resp.dayStatus()).isEqualTo(DayStatus.PERFECT);
+        assertThat(resp.dayStatus()).isEqualTo(DayStatus.NOT_SCHEDULED);
     }
 
     @Test
@@ -238,7 +238,7 @@ class DashboardServiceTest {
     }
 
     @Test
-    @DisplayName("weekly — 모든 일자 schedule 없음 → adherenceRate=null, days[7] 모두 PERFECT/NOT_SCHEDULED")
+    @DisplayName("weekly — 모든 일자 schedule 없음 → adherenceRate=null, days[7] 모두 NOT_SCHEDULED")
     void weekly_emptySchedules() throws Exception {
         givenSeniorAndCaregiver();
         givenSeniorMealTimes(LocalTime.of(8, 0), LocalTime.of(12, 30), LocalTime.of(18, 30));
@@ -254,7 +254,7 @@ class DashboardServiceTest {
         org.assertj.core.api.Assertions.assertThat(resp.adherenceRate()).isNull();
         org.assertj.core.api.Assertions.assertThat(resp.days()).hasSize(7);
         org.assertj.core.api.Assertions.assertThat(resp.days()).allMatch(d -> d.dayStatus()
-                == com.ppiyaki.medication.DayStatus.PERFECT
+                == com.ppiyaki.medication.DayStatus.NOT_SCHEDULED
                 && d.slots().stream().allMatch(s -> s.status() == SlotStatus.NOT_SCHEDULED));
     }
 
@@ -289,7 +289,7 @@ class DashboardServiceTest {
     }
 
     @Test
-    @DisplayName("monthly — schedule 없으면 days 모두 PERFECT (분모 0 케이스)")
+    @DisplayName("monthly — schedule 없으면 days 모두 NOT_SCHEDULED")
     void monthly_emptySchedules() throws Exception {
         givenSeniorAndCaregiver();
         givenSeniorMealTimes(LocalTime.of(8, 0), LocalTime.of(12, 30), LocalTime.of(18, 30));
@@ -303,7 +303,7 @@ class DashboardServiceTest {
         org.assertj.core.api.Assertions.assertThat(resp.yearMonth()).isEqualTo(ym);
         org.assertj.core.api.Assertions.assertThat(resp.days()).hasSize(31);
         org.assertj.core.api.Assertions.assertThat(resp.days())
-                .allMatch(d -> d.dayStatus() == com.ppiyaki.medication.DayStatus.PERFECT);
+                .allMatch(d -> d.dayStatus() == com.ppiyaki.medication.DayStatus.NOT_SCHEDULED);
     }
 
     @Test
@@ -323,7 +323,7 @@ class DashboardServiceTest {
         // when
         final var resp = dashboardService.getWeekly(SENIOR_ID, SENIOR_ID, weekStart);
 
-        // then — 처음 3일(weekStart, +1, +2)는 NOT_SCHEDULED, 나머지 4일은 PERFECT(스케줄 없음)
+        // then — 처음 3일(weekStart, +1, +2)는 가입 전 shortcut으로 NOT_SCHEDULED, 나머지 4일은 schedule 없음으로 NOT_SCHEDULED
         org.assertj.core.api.Assertions.assertThat(resp.days()).hasSize(7);
         for (int i = 0; i < 3; i++) {
             org.assertj.core.api.Assertions.assertThat(resp.days().get(i).dayStatus())
@@ -333,7 +333,7 @@ class DashboardServiceTest {
         }
         for (int i = 3; i < 7; i++) {
             org.assertj.core.api.Assertions.assertThat(resp.days().get(i).dayStatus())
-                    .isEqualTo(com.ppiyaki.medication.DayStatus.PERFECT);
+                    .isEqualTo(com.ppiyaki.medication.DayStatus.NOT_SCHEDULED);
         }
     }
 
@@ -352,14 +352,14 @@ class DashboardServiceTest {
         final java.time.YearMonth ym = java.time.YearMonth.of(2026, 1);
         final var resp = dashboardService.getMonthly(SENIOR_ID, SENIOR_ID, ym);
 
-        // then — 1~14일은 NOT_SCHEDULED, 15일부터 PERFECT
+        // then — 1~14일은 가입 전 shortcut, 15일부터 schedule 없음. 둘 다 NOT_SCHEDULED
         org.assertj.core.api.Assertions.assertThat(resp.days()).hasSize(31);
         for (int i = 0; i < 14; i++) {
             org.assertj.core.api.Assertions.assertThat(resp.days().get(i).dayStatus())
                     .isEqualTo(com.ppiyaki.medication.DayStatus.NOT_SCHEDULED);
         }
         org.assertj.core.api.Assertions.assertThat(resp.days().get(14).dayStatus())
-                .isEqualTo(com.ppiyaki.medication.DayStatus.PERFECT);
+                .isEqualTo(com.ppiyaki.medication.DayStatus.NOT_SCHEDULED);
     }
 
     @Test
