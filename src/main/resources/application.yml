@@ -33,6 +33,10 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+    # OSIV 비활성화 — SSE async 엔드포인트(ChatController.quickMessage 등)에서 EntityManager가
+    # 응답 종료까지 잡혀 Hikari connection이 누수되는 사고 방지 (issue #350).
+    # 트랜잭션 commit 직후 connection이 즉시 반환되도록 강제. Spring 공식 best practice.
+    open-in-view: false
     properties:
       hibernate:
         format_sql: true
