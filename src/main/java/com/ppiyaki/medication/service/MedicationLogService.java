@@ -148,9 +148,63 @@ public class MedicationLogService {
                 && request.photoObjectKey() != null && !request.photoObjectKey().isBlank()) {
             final LogAiStatus aiStatus = verifyPillCount(seniorId, schedule, request);
             log.updateAiStatus(aiStatus);
+            // COUNT_MATCH일 때 슬롯의 다른 active schedule도 TAKEN 전파 (issue #343).
+            // 시니어가 슬롯 전체 약을 사진 한 장에 담아 인증한 경우 == 슬롯 전체 인증으로 인정.
+            if (aiStatus == LogAiStatus.COUNT_MATCH) {
+                propagateTakenToSlotSchedules(seniorId, schedule, request, takenAt, isProxy, userId);
+            }
         }
 
         return MedicationLogResponse.from(log, photoUrlAssembler.toFullUrl(log.getPhotoObjectKey()));
+    }
+
+    /**
+     * 동일 슬롯의 다른 active schedule들에 TAKEN log 전파 (issue #343).
+     * spec medication-log-phase2 §5-4: AI COUNT_MATCH 시 슬롯 전체 인증으로 인정.
+     *
+     * <p>이미 TAKEN인 row는 skip (멱등). 새로 TAKEN 전환되는 schedule의 medicine 잔여분도 차감.
+     * propagated log의 aiStatus는 COUNT_MATCH로 마킹 (슬롯 전체가 검증된 상태이므로).
+     */
+    private void propagateTakenToSlotSchedules(
+            final Long seniorId,
+            final MedicationSchedule triggerSchedule,
+            final MedicationLogUpsertRequest request,
+            final LocalDateTime takenAt,
+            final boolean isProxy,
+            final Long recorderId
+    ) {
+        final List<MedicationSchedule> slotSchedules = medicationScheduleRepository
+                .findActiveByOwnerAndMealSlot(
+                        seniorId, request.targetDate(), triggerSchedule.getMealSlot());
+        for (final MedicationSchedule peer : slotSchedules) {
+            if (peer.getId().equals(triggerSchedule.getId())) {
+                continue;
+            }
+            final Optional<MedicationLog> existing = medicationLogRepository
+                    .findByScheduleIdAndTargetDate(peer.getId(), request.targetDate());
+            final LogStatus previousStatus = existing.map(MedicationLog::getStatus).orElse(null);
+            if (previousStatus == LogStatus.TAKEN) {
+                continue;
+            }
+            final MedicationLog peerLog = existing
+                    .map(found -> {
+                        found.updateRecord(takenAt, LogStatus.TAKEN, request.photoObjectKey(), isProxy, recorderId);
+                        return found;
+                    })
+                    .orElseGet(() -> medicationLogRepository.saveAndFlush(new MedicationLog(
+                            seniorId, peer.getId(), request.targetDate(),
+                            takenAt, LogStatus.TAKEN, request.photoObjectKey(), isProxy, recorderId)));
+            peerLog.updateAiStatus(LogAiStatus.COUNT_MATCH);
+
+            final BigDecimal dosageQuantity = peer.getDosageQuantity();
+            if (dosageQuantity != null) {
+                final int dosageCount = dosageQuantity.setScale(0, java.math.RoundingMode.CEILING).intValueExact();
+                if (dosageCount > 0) {
+                    medicineRepository.findById(peer.getMedicineId())
+                            .ifPresent(m -> m.decreaseRemainingAmount(dosageCount));
+                }
+            }
+        }
     }
 
     /**
