@@ -4,6 +4,10 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      # 60s 이상 빌려간 채 반환 안 된 connection의 stack trace 로그 (진단용, issue #346).
+      # 시연 직전 12:14~13:25 pool 고갈 사고 재발 시 leak 위치 즉시 확정 목적.
+      leak-detection-threshold: 60000
   jpa:
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:validate}

@@ -46,10 +46,10 @@ class DashboardMonthlyE2ETest {
     }
 
     @Test
-    @DisplayName("시니어 본인 호출 — 현재 월 schedule 없으면 가입일 이후 PERFECT, 가입 이전 NOT_SCHEDULED (issue #326)")
+    @DisplayName("시니어 본인 호출 — 현재 월 schedule 없으면 모든 일자 NOT_SCHEDULED (issue #340)")
     void monthly_seniorSelf_emptySchedules() {
         final SignupResult senior = signup("월간시니어");
-        // 현재 월로 조회 — 가입 후 days는 PERFECT, 가입 전 days는 NOT_SCHEDULED
+        // 현재 월로 조회 — 가입 후/전 모두 schedule이 없으므로 NOT_SCHEDULED. 미래 일자만 FUTURE
         final YearMonth ym = YearMonth.now();
         final int today = LocalDate.now().getDayOfMonth();
 
@@ -62,10 +62,8 @@ class DashboardMonthlyE2ETest {
                 .body("seniorId", is(senior.userId().intValue()))
                 .body("yearMonth", is(ym.toString()))
                 .body("days.size()", is(ym.lengthOfMonth()))
-                // today는 가입일과 동일 → PERFECT (schedule 없음 + 가입 이후)
-                .body("days[" + (today - 1) + "].dayStatus", is("PERFECT"))
-                // 1일은 today보다 이르면 NOT_SCHEDULED, 같으면 PERFECT
-                .body("days[0].dayStatus", is(today > 1 ? "NOT_SCHEDULED" : "PERFECT"));
+                .body("days[" + (today - 1) + "].dayStatus", is("NOT_SCHEDULED"))
+                .body("days[0].dayStatus", is("NOT_SCHEDULED"));
     }
 
     @Test

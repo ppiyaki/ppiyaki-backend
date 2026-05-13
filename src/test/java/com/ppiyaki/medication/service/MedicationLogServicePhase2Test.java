@@ -163,6 +163,105 @@ class MedicationLogServicePhase2Test {
     }
 
     @Test
+    @DisplayName("COUNT_MATCH 시 슬롯의 다른 active schedule도 TAKEN 전파 (issue #343)")
+    void count_match_propagates_to_peers() throws Exception {
+        // given: trigger schedule(1정) + peer schedule(2L, 1정), Vision=2 → COUNT_MATCH
+        final Long peerScheduleId = 2L;
+        final Long peerMedicineId = 11L;
+        final MedicationSchedule triggerSchedule = buildSchedule(SCHEDULE_ID, "1정");
+        final MedicationSchedule peerSchedule = buildSchedule(peerScheduleId, "1정");
+        setField(peerSchedule, "medicineId", peerMedicineId);
+
+        when(medicationScheduleRepository.findById(SCHEDULE_ID)).thenReturn(Optional.of(triggerSchedule));
+        final Medicine triggerMedicine = new Medicine(SENIOR_ID, null, "트리거약", 30, 30, "ITEM-1", null);
+        setField(triggerMedicine, "id", MEDICINE_ID);
+        when(medicineRepository.findById(MEDICINE_ID)).thenReturn(Optional.of(triggerMedicine));
+        final Medicine peerMedicine = new Medicine(SENIOR_ID, null, "피어약", 30, 30, "ITEM-2", null);
+        setField(peerMedicine, "id", peerMedicineId);
+        when(medicineRepository.findById(peerMedicineId)).thenReturn(Optional.of(peerMedicine));
+
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
+                .thenReturn(Optional.empty());
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(peerScheduleId, TARGET_DATE))
+                .thenReturn(Optional.empty());
+        when(medicationLogRepository.saveAndFlush(any(MedicationLog.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(photoUrlAssembler.toFullUrl(any())).thenReturn("https://example.com/" + VALID_OBJECT_KEY);
+        givenSiblingSchedules(List.of(triggerSchedule, peerSchedule));
+        givenS3Returns(new byte[]{1, 2, 3});
+        when(openAiClient.countPills(any(), any())).thenReturn(Optional.of(2));
+
+        // when
+        service.upsert(SENIOR_ID, new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, VALID_OBJECT_KEY));
+
+        // then — trigger + peer 모두 TAKEN log 저장 (saveAndFlush 2번)
+        final ArgumentCaptor<MedicationLog> captor = ArgumentCaptor.forClass(MedicationLog.class);
+        verify(medicationLogRepository, org.mockito.Mockito.times(2)).saveAndFlush(captor.capture());
+        final List<MedicationLog> savedLogs = captor.getAllValues();
+        assertThat(savedLogs).hasSize(2);
+        assertThat(savedLogs).allMatch(l -> l.getStatus() == LogStatus.TAKEN);
+        assertThat(savedLogs.stream().map(MedicationLog::getScheduleId))
+                .containsExactlyInAnyOrder(SCHEDULE_ID, peerScheduleId);
+        // peer의 medicine 잔여분도 차감 (30 → 29)
+        assertThat(peerMedicine.getRemainingAmount()).isEqualTo(29);
+    }
+
+    @Test
+    @DisplayName("COUNT_MISMATCH 시 슬롯의 다른 schedule에 전파 안 함")
+    void count_mismatch_no_propagate() throws Exception {
+        givenScheduleAndMedicine();
+        givenUpsertSucceeds();
+        givenSiblingSchedules(List.of(buildSchedule(SCHEDULE_ID, "1정"), buildSchedule(2L, "1정")));
+        givenS3Returns(new byte[]{1});
+        when(openAiClient.countPills(any(), any())).thenReturn(Optional.of(1));
+
+        service.upsert(SENIOR_ID, new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, VALID_OBJECT_KEY));
+
+        // saveAndFlush는 trigger schedule 1번만 호출 (peer는 호출 X)
+        verify(medicationLogRepository, org.mockito.Mockito.times(1)).saveAndFlush(any(MedicationLog.class));
+    }
+
+    @Test
+    @DisplayName("COUNT_MATCH지만 peer가 이미 TAKEN이면 skip (멱등)")
+    void count_match_skip_already_taken_peer() throws Exception {
+        // given
+        final Long peerScheduleId = 2L;
+        final Long peerMedicineId = 11L;
+        final MedicationSchedule triggerSchedule = buildSchedule(SCHEDULE_ID, "1정");
+        final MedicationSchedule peerSchedule = buildSchedule(peerScheduleId, "1정");
+        setField(peerSchedule, "medicineId", peerMedicineId);
+
+        when(medicationScheduleRepository.findById(SCHEDULE_ID)).thenReturn(Optional.of(triggerSchedule));
+        final Medicine triggerMedicine = new Medicine(SENIOR_ID, null, "트리거약", 30, 30, "ITEM-1", null);
+        setField(triggerMedicine, "id", MEDICINE_ID);
+        when(medicineRepository.findById(MEDICINE_ID)).thenReturn(Optional.of(triggerMedicine));
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
+                .thenReturn(Optional.empty());
+        // peer는 이미 TAKEN log 있음
+        final MedicationLog existingPeerLog = new MedicationLog(
+                SENIOR_ID, peerScheduleId, TARGET_DATE,
+                java.time.LocalDateTime.of(TARGET_DATE, java.time.LocalTime.of(8, 0)),
+                LogStatus.TAKEN, null, false, SENIOR_ID);
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(peerScheduleId, TARGET_DATE))
+                .thenReturn(Optional.of(existingPeerLog));
+        when(medicationLogRepository.saveAndFlush(any(MedicationLog.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(photoUrlAssembler.toFullUrl(any())).thenReturn("https://example.com/" + VALID_OBJECT_KEY);
+        givenSiblingSchedules(List.of(triggerSchedule, peerSchedule));
+        givenS3Returns(new byte[]{1, 2, 3});
+        when(openAiClient.countPills(any(), any())).thenReturn(Optional.of(2));
+
+        // when
+        service.upsert(SENIOR_ID, new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, VALID_OBJECT_KEY));
+
+        // then — trigger schedule만 save, peer는 이미 TAKEN이라 skip
+        verify(medicationLogRepository, org.mockito.Mockito.times(1)).saveAndFlush(any(MedicationLog.class));
+    }
+
+    @Test
     @DisplayName("png objectKey면 mediaType=image/png 전달")
     void png_media_type() throws Exception {
         givenScheduleAndMedicine();

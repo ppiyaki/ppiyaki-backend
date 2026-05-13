@@ -53,7 +53,7 @@ class DashboardDailyE2ETest {
     }
 
     @Test
-    @DisplayName("시니어 본인 호출 — schedule 없으면 dayStatus=PERFECT, header 채워짐")
+    @DisplayName("시니어 본인 호출 — schedule 없으면 dayStatus=NOT_SCHEDULED, header 채워짐")
     void daily_seniorSelf_emptySchedules() {
         final SignupResult senior = signup("일간시니어");
         setMealTimes(senior.userId(), LocalTime.of(8, 0), LocalTime.of(12, 30), LocalTime.of(18, 30));
@@ -67,7 +67,7 @@ class DashboardDailyE2ETest {
                 .statusCode(200)
                 .body("seniorId", is(senior.userId().intValue()))
                 .body("date", is(today.toString()))
-                .body("dayStatus", is("PERFECT"))
+                .body("dayStatus", is("NOT_SCHEDULED"))
                 .body("header.seniorName", is("일간시니어"))
                 .body("header.caregiverName", is("일간시니어"))
                 .body("slots", notNullValue())
