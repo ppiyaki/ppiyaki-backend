@@ -114,7 +114,11 @@ public enum LogAiStatus {
               ├─ actualCount == expectedCount → COUNT_MATCH
               └─ != → COUNT_MISMATCH
        5. medication_log.ai_status 갱신 후 저장
-       6. 응답 200 + aiStatus 포함 (PUT 응답 시간: 평소 + 5~10s)
+       6. ai_status == COUNT_MATCH → 슬롯의 다른 active schedule들도 TAKEN 전파 (issue #343)
+          - 각 peer schedule에 medication_log upsert (이미 TAKEN이면 skip, 멱등)
+          - 새로 TAKEN 전환되는 peer의 medicine.remainingAmount 차감
+          - peer log의 ai_status = COUNT_MATCH (슬롯 전체가 검증된 상태이므로)
+       7. 응답 200 + aiStatus 포함 (PUT 응답 시간: 평소 + 5~10s)
 ```
 
 ### 5-5) DB 마이그레이션
@@ -176,3 +180,4 @@ public enum LogAiStatus {
 - 2026-05-07: v0.9.0 (#225) — 기대 카운트 산출 키를 `scheduledTime` → `mealSlot`으로 전환. schedule 모델 변경에 따른 자연 후속.
 - 2026-04-30: **dosage 파싱 = 정규식 `(\d+)` 첫 매치** — 단순 / 실패 시 `COUNT_UNKNOWN`로 fallback. "반알" 등은 검증 불가로 처리.
 - 2026-04-30: **결과 알림은 Phase 2 범위 외** — `ai_status` 갱신만 하고, FCM 푸시는 별도 spec 의존.
+- 2026-05-13 (#343): **COUNT_MATCH 시 슬롯 전체 인증 전파** — 사용자가 사진 1장으로 슬롯 전체 약을 인증한 의도. 트리거 schedule 외 peer schedule들에도 TAKEN log 생성 + 잔여분 차감. 멱등(이미 TAKEN이면 skip). 미반영 시 보호자에게 미인증 schedule만큼 지연 알림이 발송되어 사용자 인식과 모순(prod 운영 보고).
