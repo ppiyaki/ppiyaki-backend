@@ -6,7 +6,7 @@ import com.ppiyaki.notification.NotificationSettings;
 import com.ppiyaki.notification.controller.dto.NotificationSettingsResponse;
 import com.ppiyaki.notification.controller.dto.NotificationSettingsUpdateRequest;
 import com.ppiyaki.notification.repository.NotificationSettingsRepository;
-import com.ppiyaki.user.CareMode;
+import com.ppiyaki.user.domain.CareMode;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

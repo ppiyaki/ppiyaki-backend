@@ -5,12 +5,12 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
-import com.ppiyaki.medication.MealSlot;
-import com.ppiyaki.medication.MedicationSchedule;
+import com.ppiyaki.medication.domain.MealSlot;
+import com.ppiyaki.medication.domain.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
-import com.ppiyaki.user.CareRelation;
+import com.ppiyaki.user.domain.CareRelation;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import io.restassured.RestAssured;

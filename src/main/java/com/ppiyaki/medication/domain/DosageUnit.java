@@ -1,4 +1,4 @@
-package com.ppiyaki.medication;
+package com.ppiyaki.medication.domain;
 
 import java.util.Locale;
 import java.util.Map;

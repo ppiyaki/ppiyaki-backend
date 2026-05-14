@@ -1,8 +1,8 @@
 package com.ppiyaki.user.controller.dto;
 
-import com.ppiyaki.user.CareMode;
-import com.ppiyaki.user.Gender;
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.CareMode;
+import com.ppiyaki.user.domain.Gender;
+import com.ppiyaki.user.domain.User;
 import java.time.LocalDate;
 
 public record SeniorSummaryResponse(

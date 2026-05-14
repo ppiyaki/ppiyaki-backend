@@ -10,12 +10,12 @@ import static org.mockito.Mockito.when;
 import com.ppiyaki.infrastructure.ai.OpenAiClient;
 import com.ppiyaki.infrastructure.storage.NcpStorageProperties;
 import com.ppiyaki.infrastructure.storage.PhotoUrlAssembler;
-import com.ppiyaki.medication.LogAiStatus;
-import com.ppiyaki.medication.LogStatus;
-import com.ppiyaki.medication.MealSlot;
-import com.ppiyaki.medication.MedicationLog;
-import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.controller.dto.MedicationLogUpsertRequest;
+import com.ppiyaki.medication.domain.LogAiStatus;
+import com.ppiyaki.medication.domain.LogStatus;
+import com.ppiyaki.medication.domain.MealSlot;
+import com.ppiyaki.medication.domain.MedicationLog;
+import com.ppiyaki.medication.domain.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
@@ -331,7 +331,7 @@ class MedicationLogServicePhase2Test {
             if (m.find()) {
                 setField(s, "dosageQuantity", new java.math.BigDecimal(m.group(1)));
                 setField(s, "dosageUnit",
-                        com.ppiyaki.medication.DosageUnit.fromInput(m.group(2).trim()).orElse(null));
+                        com.ppiyaki.medication.domain.DosageUnit.fromInput(m.group(2).trim()).orElse(null));
             }
         }
         return s;

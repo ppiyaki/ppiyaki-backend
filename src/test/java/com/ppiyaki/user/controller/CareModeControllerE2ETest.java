@@ -3,9 +3,9 @@ package com.ppiyaki.user.controller;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
-import com.ppiyaki.user.CareMode;
-import com.ppiyaki.user.CareRelation;
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.CareMode;
+import com.ppiyaki.user.domain.CareRelation;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import io.restassured.RestAssured;

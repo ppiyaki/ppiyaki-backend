@@ -1,8 +1,8 @@
 package com.ppiyaki.notification.service;
 
-import com.ppiyaki.medication.MealSlot;
-import com.ppiyaki.user.User;
-import com.ppiyaki.user.UserRole;
+import com.ppiyaki.medication.domain.MealSlot;
+import com.ppiyaki.user.domain.User;
+import com.ppiyaki.user.domain.UserRole;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.Clock;
 import java.time.LocalDate;

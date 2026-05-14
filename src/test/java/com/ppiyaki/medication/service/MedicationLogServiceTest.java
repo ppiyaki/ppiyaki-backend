@@ -10,16 +10,16 @@ import static org.mockito.Mockito.when;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.infrastructure.storage.PhotoUrlAssembler;
-import com.ppiyaki.medication.LogStatus;
-import com.ppiyaki.medication.MedicationLog;
-import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.controller.dto.MedicationLogUpsertRequest;
+import com.ppiyaki.medication.domain.LogStatus;
+import com.ppiyaki.medication.domain.MedicationLog;
+import com.ppiyaki.medication.domain.MedicationSchedule;
 import com.ppiyaki.medication.event.MedicationTakenEvent;
 import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
-import com.ppiyaki.user.CareRelation;
+import com.ppiyaki.user.domain.CareRelation;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
@@ -522,7 +522,7 @@ class MedicationLogServiceTest {
         final MedicationSchedule schedule = ctor.newInstance();
         setField(schedule, "id", SCHEDULE_ID);
         setField(schedule, "medicineId", MEDICINE_ID);
-        setField(schedule, "mealSlot", com.ppiyaki.medication.MealSlot.BREAKFAST);
+        setField(schedule, "mealSlot", com.ppiyaki.medication.domain.MealSlot.BREAKFAST);
         // legacy "1정"/"2정"/"반정" raw 입력을 정수+단위로 정규화
         if (dosage != null) {
             setField(schedule, "dosage", dosage);
@@ -531,7 +531,7 @@ class MedicationLogServiceTest {
             if (m.find()) {
                 setField(schedule, "dosageQuantity", new java.math.BigDecimal(m.group(1)));
                 setField(schedule, "dosageUnit",
-                        com.ppiyaki.medication.DosageUnit.fromInput(m.group(2).trim()).orElse(null));
+                        com.ppiyaki.medication.domain.DosageUnit.fromInput(m.group(2).trim()).orElse(null));
             }
         }
         when(medicationScheduleRepository.findById(SCHEDULE_ID)).thenReturn(Optional.of(schedule));
@@ -549,10 +549,10 @@ class MedicationLogServiceTest {
         final MedicationSchedule schedule = ctor.newInstance();
         setField(schedule, "id", SCHEDULE_ID);
         setField(schedule, "medicineId", MEDICINE_ID);
-        setField(schedule, "mealSlot", com.ppiyaki.medication.MealSlot.BREAKFAST);
+        setField(schedule, "mealSlot", com.ppiyaki.medication.domain.MealSlot.BREAKFAST);
         // 기본 dosage = 1정
         setField(schedule, "dosageQuantity", java.math.BigDecimal.ONE);
-        setField(schedule, "dosageUnit", com.ppiyaki.medication.DosageUnit.TABLET);
+        setField(schedule, "dosageUnit", com.ppiyaki.medication.domain.DosageUnit.TABLET);
         when(medicationScheduleRepository.findById(SCHEDULE_ID)).thenReturn(Optional.of(schedule));
 
         final Medicine medicine = new Medicine(SENIOR_ID, null, "테스트약", 30, 30, "ITEM-1", null);

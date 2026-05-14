@@ -1,6 +1,6 @@
 package com.ppiyaki.user.controller.dto;
 
-import com.ppiyaki.user.CareMode;
+import com.ppiyaki.user.domain.CareMode;
 
 public record CareModeResponse(
         Long userId,

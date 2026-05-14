@@ -1,9 +1,9 @@
-package com.ppiyaki.medication;
+package com.ppiyaki.medication.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.User;
 import java.lang.reflect.Field;
 import java.time.LocalTime;
 import org.junit.jupiter.api.DisplayName;

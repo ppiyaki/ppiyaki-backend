@@ -1,8 +1,8 @@
 package com.ppiyaki.medication.controller.dto;
 
-import com.ppiyaki.medication.LogAiStatus;
-import com.ppiyaki.medication.LogStatus;
-import com.ppiyaki.medication.MedicationLog;
+import com.ppiyaki.medication.domain.LogAiStatus;
+import com.ppiyaki.medication.domain.LogStatus;
+import com.ppiyaki.medication.domain.MedicationLog;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 

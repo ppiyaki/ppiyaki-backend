@@ -1,4 +1,4 @@
-package com.ppiyaki.user;
+package com.ppiyaki.user.domain;
 
 import com.ppiyaki.common.entity.CreatedTimeEntity;
 import jakarta.persistence.Column;
