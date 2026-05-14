@@ -1,4 +1,4 @@
-package com.ppiyaki.common.mcp;
+package com.ppiyaki.mcp;
 
 import com.ppiyaki.medicine.PillIdentification;
 import com.ppiyaki.medicine.repository.PillIdentificationRepository;

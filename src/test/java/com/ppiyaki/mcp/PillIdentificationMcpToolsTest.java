@@ -1,10 +1,10 @@
-package com.ppiyaki.common.mcp;
+package com.ppiyaki.mcp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import com.ppiyaki.common.mcp.PillIdentificationMcpTools.PillIdentifyResult;
+import com.ppiyaki.mcp.PillIdentificationMcpTools.PillIdentifyResult;
 import com.ppiyaki.medicine.PillIdentification;
 import com.ppiyaki.medicine.repository.PillIdentificationRepository;
 import java.time.LocalDateTime;

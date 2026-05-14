@@ -1,4 +1,4 @@
-package com.ppiyaki.common.mcp;
+package com.ppiyaki.mcp;
 
 import com.ppiyaki.medicine.controller.dto.MedicineCandidate;
 import com.ppiyaki.medicine.service.MatchResult;

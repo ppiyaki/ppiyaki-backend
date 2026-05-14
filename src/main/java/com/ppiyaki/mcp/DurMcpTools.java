@@ -1,4 +1,4 @@
-package com.ppiyaki.common.mcp;
+package com.ppiyaki.mcp;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;

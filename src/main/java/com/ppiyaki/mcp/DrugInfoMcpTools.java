@@ -1,4 +1,4 @@
-package com.ppiyaki.common.mcp;
+package com.ppiyaki.mcp;
 
 import com.ppiyaki.common.druginfo.DrugInfoClient;
 import com.ppiyaki.common.druginfo.DrugInfoResponse;
