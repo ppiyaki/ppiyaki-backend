@@ -126,7 +126,7 @@ last_reviewed: 2026-05-10
 - Android + iOS(APNs는 FCM 경유) 단일 인터페이스.
 - 인증: Firebase Service Account JSON.
 - 환경변수: `FCM_PROJECT_ID`, `FCM_CREDENTIALS_JSON_BASE64` (또는 path).
-- 어댑터: `com.ppiyaki.notification.push.FcmPushSender`.
+- 어댑터: `com.ppiyaki.infrastructure.messaging.fcm.FcmPushSender`.
 - 실패 처리: 3회 exponential backoff retry. 5xx/4xx 분기. `NotFoundError` (token invalid) → device token `is_active=false`.
 - API 키 관리: `.env` + CD `docker run -e` 동기화 (피야키 CD 환경변수 룰).
 
