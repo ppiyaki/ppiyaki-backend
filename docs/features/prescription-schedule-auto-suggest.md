@@ -170,7 +170,7 @@ ALTER TABLE prescription_medicine_candidates
 ### 5-6) 코드 영향 범위
 | 파일 | 변경 |
 |---|---|
-| `common/ai/OpenAiClient.java` | 시스템 프롬프트에 mealSlots 매핑 규칙. `ExtractedMedicine` record에 `List<MealSlot> mealSlots` 추가. 응답 파싱에 enum 검증 |
+| `infrastructure/ai/OpenAiClient.java` | 시스템 프롬프트에 mealSlots 매핑 규칙. `ExtractedMedicine` record에 `List<MealSlot> mealSlots` 추가. 응답 파싱에 enum 검증 |
 | `prescription/PrescriptionMedicineCandidate.java` | 컬럼 2개 + setter/도메인 메서드 |
 | `prescription/PrescriptionMedicineCandidateResponse.java` | 응답 필드 2개 |
 | `prescription/controller/dto/CandidateDecisionRequest.java` | `confirmedMealSlots` 추가 |

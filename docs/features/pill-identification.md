@@ -259,11 +259,11 @@ CREATE INDEX idx_pill_item_name ON pill_identifications (item_name);
 |---|---|
 | `medicine/PillIdentification.java` | **신규** 엔티티 |
 | `medicine/repository/PillIdentificationRepository.java` | **신규** + searchByAppearance 동적 쿼리 |
-| `common/mfds/MdcinGrnIdntfcInfoClient.java` | **신규** 식약처 OpenAPI 클라이언트 |
+| `infrastructure/mfds/MdcinGrnIdntfcInfoClient.java` | **신규** 식약처 OpenAPI 클라이언트 |
 | `medicine/service/PillIdentificationSyncService.java` | **신규** batch 동기화 |
 | `medicine/scheduler/PillIdentificationSyncScheduler.java` | **신규** `@Scheduled` cron |
 | `medicine/controller/AdminPillSyncController.java` | **신규** 수동 트리거 (비공개) |
-| `common/mcp/PillIdentificationMcpTools.java` | **신규** identifyPillByAppearance |
+| `mcp/PillIdentificationMcpTools.java` | **신규** identifyPillByAppearance |
 | `chat/ChatToolCallbackConfig.java` | PillIdentificationMcpTools 등록 |
 | `chat/service/ChatSessionService.java` | `PHOTO_SYSTEM_PROMPT` 갱신 (외형 묘사 추출 + 도구 호출 유도) |
 | `resources/schema.sql` | 테이블 + 인덱스 |
