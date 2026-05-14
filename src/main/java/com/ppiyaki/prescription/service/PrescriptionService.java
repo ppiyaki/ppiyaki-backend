@@ -1,14 +1,14 @@
 package com.ppiyaki.prescription.service;
 
-import com.ppiyaki.common.ai.OpenAiClient;
-import com.ppiyaki.common.ai.OpenAiClient.ExtractedMedicine;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.common.ocr.ClovaOcrClient;
-import com.ppiyaki.common.ocr.ClovaOcrClient.OcrResult;
-import com.ppiyaki.common.ocr.ClovaOcrClient.OcrToken;
-import com.ppiyaki.common.storage.NcpStorageProperties;
-import com.ppiyaki.common.storage.PhotoUrlAssembler;
+import com.ppiyaki.infrastructure.ai.OpenAiClient;
+import com.ppiyaki.infrastructure.ai.OpenAiClient.ExtractedMedicine;
+import com.ppiyaki.infrastructure.ocr.ClovaOcrClient;
+import com.ppiyaki.infrastructure.ocr.ClovaOcrClient.OcrResult;
+import com.ppiyaki.infrastructure.ocr.ClovaOcrClient.OcrToken;
+import com.ppiyaki.infrastructure.storage.NcpStorageProperties;
+import com.ppiyaki.infrastructure.storage.PhotoUrlAssembler;
 import com.ppiyaki.medication.DosageUnit;
 import com.ppiyaki.medication.MealSlot;
 import com.ppiyaki.medication.MedicationSchedule;

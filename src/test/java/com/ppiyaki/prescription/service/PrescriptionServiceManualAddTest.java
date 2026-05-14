@@ -7,11 +7,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.ppiyaki.common.ai.OpenAiClient;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.common.ocr.ClovaOcrClient;
-import com.ppiyaki.common.storage.NcpStorageProperties;
+import com.ppiyaki.infrastructure.ai.OpenAiClient;
+import com.ppiyaki.infrastructure.ocr.ClovaOcrClient;
+import com.ppiyaki.infrastructure.storage.NcpStorageProperties;
 import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.medicine.service.MatchType;
 import com.ppiyaki.medicine.service.MedicineMatchService;
@@ -74,7 +74,7 @@ class PrescriptionServiceManualAddTest {
     @Mock
     private S3Client s3Client;
     @Mock
-    private com.ppiyaki.common.storage.PhotoUrlAssembler photoUrlAssembler;
+    private com.ppiyaki.infrastructure.storage.PhotoUrlAssembler photoUrlAssembler;
 
     @InjectMocks
     private PrescriptionService prescriptionService;

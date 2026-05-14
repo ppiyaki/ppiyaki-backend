@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
-import com.ppiyaki.common.ai.OpenAiClient;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.common.ocr.ClovaOcrClient;
-import com.ppiyaki.common.storage.NcpStorageProperties;
+import com.ppiyaki.infrastructure.ai.OpenAiClient;
+import com.ppiyaki.infrastructure.ocr.ClovaOcrClient;
+import com.ppiyaki.infrastructure.storage.NcpStorageProperties;
 import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.medicine.service.MedicineMatchService;
 import com.ppiyaki.prescription.ImageOrientationCorrector;
@@ -68,7 +68,7 @@ class PrescriptionServicePermissionTest {
     @Mock
     private S3Client s3Client;
     @Mock
-    private com.ppiyaki.common.storage.PhotoUrlAssembler photoUrlAssembler;
+    private com.ppiyaki.infrastructure.storage.PhotoUrlAssembler photoUrlAssembler;
 
     @InjectMocks
     private PrescriptionService prescriptionService;

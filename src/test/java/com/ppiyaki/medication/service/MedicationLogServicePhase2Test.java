@@ -7,9 +7,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.ppiyaki.common.ai.OpenAiClient;
-import com.ppiyaki.common.storage.NcpStorageProperties;
-import com.ppiyaki.common.storage.PhotoUrlAssembler;
+import com.ppiyaki.infrastructure.ai.OpenAiClient;
+import com.ppiyaki.infrastructure.storage.NcpStorageProperties;
+import com.ppiyaki.infrastructure.storage.PhotoUrlAssembler;
 import com.ppiyaki.medication.LogAiStatus;
 import com.ppiyaki.medication.LogStatus;
 import com.ppiyaki.medication.MealSlot;

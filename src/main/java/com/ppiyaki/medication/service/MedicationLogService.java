@@ -1,10 +1,10 @@
 package com.ppiyaki.medication.service;
 
-import com.ppiyaki.common.ai.OpenAiClient;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.common.storage.NcpStorageProperties;
-import com.ppiyaki.common.storage.PhotoUrlAssembler;
+import com.ppiyaki.infrastructure.ai.OpenAiClient;
+import com.ppiyaki.infrastructure.storage.NcpStorageProperties;
+import com.ppiyaki.infrastructure.storage.PhotoUrlAssembler;
 import com.ppiyaki.medication.LogAiStatus;
 import com.ppiyaki.medication.LogStatus;
 import com.ppiyaki.medication.MedicationLog;

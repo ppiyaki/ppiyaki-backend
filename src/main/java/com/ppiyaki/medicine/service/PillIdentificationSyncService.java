@@ -2,9 +2,9 @@ package com.ppiyaki.medicine.service;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.common.mfds.MdcinGrnIdntfcInfoClient;
-import com.ppiyaki.common.mfds.MdcinGrnIdntfcInfoClient.PillItem;
-import com.ppiyaki.common.mfds.MdcinGrnIdntfcInfoClient.PillPage;
+import com.ppiyaki.infrastructure.mfds.MdcinGrnIdntfcInfoClient;
+import com.ppiyaki.infrastructure.mfds.MdcinGrnIdntfcInfoClient.PillItem;
+import com.ppiyaki.infrastructure.mfds.MdcinGrnIdntfcInfoClient.PillPage;
 import com.ppiyaki.medicine.PillIdentification;
 import com.ppiyaki.medicine.repository.PillIdentificationRepository;
 import java.time.LocalDateTime;
