@@ -1,5 +1,6 @@
 package com.ppiyaki.common.auth;
 
+import com.ppiyaki.common.logging.MdcRequestIdFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -16,15 +17,18 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private final MdcRequestIdFilter mdcRequestIdFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
     private final RestAccessDeniedHandler restAccessDeniedHandler;
 
     public SecurityConfig(
+            final MdcRequestIdFilter mdcRequestIdFilter,
             final JwtAuthenticationFilter jwtAuthenticationFilter,
             final RestAuthenticationEntryPoint restAuthenticationEntryPoint,
             final RestAccessDeniedHandler restAccessDeniedHandler
     ) {
+        this.mdcRequestIdFilter = mdcRequestIdFilter;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
         this.restAccessDeniedHandler = restAccessDeniedHandler;
@@ -54,6 +58,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(restAccessDeniedHandler)
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(mdcRequestIdFilter, JwtAuthenticationFilter.class)
                 .build();
     }
 }

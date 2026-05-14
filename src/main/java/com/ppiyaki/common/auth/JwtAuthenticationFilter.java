@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import org.slf4j.MDC;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -19,6 +20,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String ROLE_PREFIX = "ROLE_";
+    private static final String MDC_USER_ID = "userId";
 
     private final JwtProvider jwtProvider;
 
@@ -33,6 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             final FilterChain filterChain
     ) throws ServletException, IOException {
         final String token = extractToken(request);
+        boolean userIdSet = false;
 
         if (token != null && jwtProvider.isValid(token)) {
             final Long userId = jwtProvider.extractUserId(token);
@@ -43,9 +46,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             final UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userId,
                     null, authorities);
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            MDC.put(MDC_USER_ID, userId.toString());
+            userIdSet = true;
         }
 
-        filterChain.doFilter(request, response);
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            if (userIdSet) {
+                MDC.remove(MDC_USER_ID);
+            }
+        }
     }
 
     private String extractToken(final HttpServletRequest request) {
