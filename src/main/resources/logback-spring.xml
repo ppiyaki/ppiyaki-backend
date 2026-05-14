@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- 기본 정의 (Spring Boot 기본값을 일부 재사용) -->
+    <conversionRule conversionWord="clr"
+                    class="org.springframework.boot.logging.logback.ColorConverter"/>
+    <conversionRule conversionWord="wEx"
+                    class="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter"/>
+
+    <!-- local / default / test: 사람-친화 텍스트 (Spring Boot 기본 패턴 + MDC) -->
+    <springProfile name="!prod">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%clr(%d{HH:mm:ss.SSS}){faint} %clr(%-5level) %clr([%X{requestId:-}]){cyan} %clr([uid=%X{userId:-}]){blue} %clr(%-40.40logger{39}){magenta} : %m%n%wEx</pattern>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- prod: JSON 한 줄/이벤트 (Loki/Grafana/CloudLog 등 어떤 collector에서도 파싱) -->
+    <springProfile name="prod">
+        <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <!-- 표준 필드 외 MDC 전체를 top-level로 평탄화 -->
+                <includeMdcKeyName>requestId</includeMdcKeyName>
+                <includeMdcKeyName>userId</includeMdcKeyName>
+                <!-- 한국 timezone, ISO-8601 -->
+                <timeZone>Asia/Seoul</timeZone>
+                <customFields>{"service":"ppiyaki-backend","env":"prod"}</customFields>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="JSON_CONSOLE"/>
+        </root>
+    </springProfile>
+
+</configuration>
