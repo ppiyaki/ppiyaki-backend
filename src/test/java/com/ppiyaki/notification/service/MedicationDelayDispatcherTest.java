@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.ppiyaki.infrastructure.messaging.fcm.PushSender;
 import com.ppiyaki.medication.MealSlot;
 import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationLogRepository;
@@ -14,7 +15,6 @@ import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.notification.Notification;
-import com.ppiyaki.notification.push.PushSender;
 import com.ppiyaki.notification.repository.DeviceTokenRepository;
 import com.ppiyaki.notification.repository.NotificationRepository;
 import com.ppiyaki.notification.repository.NotificationSettingsRepository;

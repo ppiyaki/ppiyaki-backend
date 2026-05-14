@@ -1,13 +1,13 @@
 package com.ppiyaki.notification.service;
 
+import com.ppiyaki.infrastructure.messaging.fcm.PushPayload;
+import com.ppiyaki.infrastructure.messaging.fcm.PushSendResult;
+import com.ppiyaki.infrastructure.messaging.fcm.PushSender;
 import com.ppiyaki.medication.MealSlot;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.notification.DeviceToken;
 import com.ppiyaki.notification.Notification;
 import com.ppiyaki.notification.NotificationCategory;
-import com.ppiyaki.notification.push.PushPayload;
-import com.ppiyaki.notification.push.PushSendResult;
-import com.ppiyaki.notification.push.PushSender;
 import com.ppiyaki.notification.repository.DeviceTokenRepository;
 import com.ppiyaki.notification.repository.NotificationRepository;
 import com.ppiyaki.user.User;

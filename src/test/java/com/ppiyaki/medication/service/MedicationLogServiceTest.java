@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.common.storage.PhotoUrlAssembler;
+import com.ppiyaki.infrastructure.storage.PhotoUrlAssembler;
 import com.ppiyaki.medication.LogStatus;
 import com.ppiyaki.medication.MedicationLog;
 import com.ppiyaki.medication.MedicationSchedule;

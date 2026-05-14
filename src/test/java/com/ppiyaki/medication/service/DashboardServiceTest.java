@@ -7,7 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.ppiyaki.common.exception.BusinessException;
-import com.ppiyaki.common.storage.PhotoUrlAssembler;
+import com.ppiyaki.infrastructure.storage.PhotoUrlAssembler;
 import com.ppiyaki.medication.DayStatus;
 import com.ppiyaki.medication.LogStatus;
 import com.ppiyaki.medication.MealSlot;

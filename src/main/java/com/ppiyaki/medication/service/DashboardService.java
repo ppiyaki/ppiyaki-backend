@@ -2,7 +2,7 @@ package com.ppiyaki.medication.service;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.common.storage.PhotoUrlAssembler;
+import com.ppiyaki.infrastructure.storage.PhotoUrlAssembler;
 import com.ppiyaki.medication.DayStatus;
 import com.ppiyaki.medication.LogStatus;
 import com.ppiyaki.medication.MealSlot;
@@ -48,7 +48,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 보호자 대시보드 조회 서비스.
  * spec docs/features/caregiver-dashboard.md.
  *
- * <p>{@link com.ppiyaki.common.storage.PhotoUrlAssembler} 의존 — 기존 MedicationLogService 패턴과 동일하게
+ * <p>{@link com.ppiyaki.infrastructure.storage.PhotoUrlAssembler} 의존 — 기존 MedicationLogService 패턴과 동일하게
  * ncp.storage.bucket-name 설정 시에만 빈 등록 (default 컨텍스트 contextLoads 보호).
  */
 @Service
