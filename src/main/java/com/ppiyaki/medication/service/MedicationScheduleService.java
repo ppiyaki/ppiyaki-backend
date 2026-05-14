@@ -2,15 +2,15 @@ package com.ppiyaki.medication.service;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.medication.MealSlot;
-import com.ppiyaki.medication.MedicationSchedule;
 import com.ppiyaki.medication.controller.dto.ScheduleCreateRequest;
 import com.ppiyaki.medication.controller.dto.ScheduleResponse;
 import com.ppiyaki.medication.controller.dto.ScheduleUpdateRequest;
+import com.ppiyaki.medication.domain.MealSlot;
+import com.ppiyaki.medication.domain.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDate;
@@ -57,7 +57,7 @@ public class MedicationScheduleService {
                 medicine.getId(),
                 scheduleCreateRequest.mealSlot(),
                 scheduleCreateRequest.dosageQuantity(),
-                com.ppiyaki.medication.DosageUnit.fromInput(scheduleCreateRequest.dosageUnit()).orElse(null),
+                com.ppiyaki.medication.domain.DosageUnit.fromInput(scheduleCreateRequest.dosageUnit()).orElse(null),
                 daysOfWeek,
                 startDate,
                 scheduleCreateRequest.endDate()
@@ -109,7 +109,7 @@ public class MedicationScheduleService {
         schedule.update(
                 scheduleUpdateRequest.mealSlot(),
                 scheduleUpdateRequest.dosageQuantity(),
-                com.ppiyaki.medication.DosageUnit.fromInput(scheduleUpdateRequest.dosageUnit()).orElse(null),
+                com.ppiyaki.medication.domain.DosageUnit.fromInput(scheduleUpdateRequest.dosageUnit()).orElse(null),
                 scheduleUpdateRequest.daysOfWeek(),
                 scheduleUpdateRequest.startDate(),
                 scheduleUpdateRequest.endDate()

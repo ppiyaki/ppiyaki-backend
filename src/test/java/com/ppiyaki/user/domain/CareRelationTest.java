@@ -1,4 +1,4 @@
-package com.ppiyaki.user;
+package com.ppiyaki.user.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

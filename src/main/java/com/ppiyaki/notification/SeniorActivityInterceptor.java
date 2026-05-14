@@ -1,7 +1,7 @@
 package com.ppiyaki.notification;
 
-import com.ppiyaki.user.User;
-import com.ppiyaki.user.UserRole;
+import com.ppiyaki.user.domain.User;
+import com.ppiyaki.user.domain.UserRole;
 import com.ppiyaki.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

@@ -1,4 +1,4 @@
-package com.ppiyaki.medication;
+package com.ppiyaki.medication.domain;
 
 import com.ppiyaki.common.entity.CreatedTimeEntity;
 import jakarta.persistence.Column;

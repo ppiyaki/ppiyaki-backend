@@ -8,18 +8,18 @@ import static org.mockito.Mockito.when;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.infrastructure.storage.PhotoUrlAssembler;
-import com.ppiyaki.medication.DayStatus;
-import com.ppiyaki.medication.LogStatus;
-import com.ppiyaki.medication.MealSlot;
-import com.ppiyaki.medication.MedicationLog;
-import com.ppiyaki.medication.MedicationSchedule;
-import com.ppiyaki.medication.SlotStatus;
 import com.ppiyaki.medication.controller.dto.dashboard.DailyDashboardResponse;
+import com.ppiyaki.medication.domain.DayStatus;
+import com.ppiyaki.medication.domain.LogStatus;
+import com.ppiyaki.medication.domain.MealSlot;
+import com.ppiyaki.medication.domain.MedicationLog;
+import com.ppiyaki.medication.domain.MedicationSchedule;
+import com.ppiyaki.medication.domain.SlotStatus;
 import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.lang.reflect.Field;
@@ -254,7 +254,7 @@ class DashboardServiceTest {
         org.assertj.core.api.Assertions.assertThat(resp.adherenceRate()).isNull();
         org.assertj.core.api.Assertions.assertThat(resp.days()).hasSize(7);
         org.assertj.core.api.Assertions.assertThat(resp.days()).allMatch(d -> d.dayStatus()
-                == com.ppiyaki.medication.DayStatus.NOT_SCHEDULED
+                == com.ppiyaki.medication.domain.DayStatus.NOT_SCHEDULED
                 && d.slots().stream().allMatch(s -> s.status() == SlotStatus.NOT_SCHEDULED));
     }
 
@@ -285,7 +285,7 @@ class DashboardServiceTest {
         org.assertj.core.api.Assertions.assertThat(resp.adherenceRate())
                 .isEqualTo(Math.round(6.0 / 7 * 10000) / 100.0);
         org.assertj.core.api.Assertions.assertThat(resp.days().get(6).dayStatus())
-                .isEqualTo(com.ppiyaki.medication.DayStatus.PENDING);
+                .isEqualTo(com.ppiyaki.medication.domain.DayStatus.PENDING);
     }
 
     @Test
@@ -303,7 +303,7 @@ class DashboardServiceTest {
         org.assertj.core.api.Assertions.assertThat(resp.yearMonth()).isEqualTo(ym);
         org.assertj.core.api.Assertions.assertThat(resp.days()).hasSize(31);
         org.assertj.core.api.Assertions.assertThat(resp.days())
-                .allMatch(d -> d.dayStatus() == com.ppiyaki.medication.DayStatus.NOT_SCHEDULED);
+                .allMatch(d -> d.dayStatus() == com.ppiyaki.medication.domain.DayStatus.NOT_SCHEDULED);
     }
 
     @Test
@@ -327,13 +327,13 @@ class DashboardServiceTest {
         org.assertj.core.api.Assertions.assertThat(resp.days()).hasSize(7);
         for (int i = 0; i < 3; i++) {
             org.assertj.core.api.Assertions.assertThat(resp.days().get(i).dayStatus())
-                    .isEqualTo(com.ppiyaki.medication.DayStatus.NOT_SCHEDULED);
+                    .isEqualTo(com.ppiyaki.medication.domain.DayStatus.NOT_SCHEDULED);
             org.assertj.core.api.Assertions.assertThat(resp.days().get(i).slots())
                     .allMatch(s -> s.status() == SlotStatus.NOT_SCHEDULED);
         }
         for (int i = 3; i < 7; i++) {
             org.assertj.core.api.Assertions.assertThat(resp.days().get(i).dayStatus())
-                    .isEqualTo(com.ppiyaki.medication.DayStatus.NOT_SCHEDULED);
+                    .isEqualTo(com.ppiyaki.medication.domain.DayStatus.NOT_SCHEDULED);
         }
     }
 
@@ -356,10 +356,10 @@ class DashboardServiceTest {
         org.assertj.core.api.Assertions.assertThat(resp.days()).hasSize(31);
         for (int i = 0; i < 14; i++) {
             org.assertj.core.api.Assertions.assertThat(resp.days().get(i).dayStatus())
-                    .isEqualTo(com.ppiyaki.medication.DayStatus.NOT_SCHEDULED);
+                    .isEqualTo(com.ppiyaki.medication.domain.DayStatus.NOT_SCHEDULED);
         }
         org.assertj.core.api.Assertions.assertThat(resp.days().get(14).dayStatus())
-                .isEqualTo(com.ppiyaki.medication.DayStatus.NOT_SCHEDULED);
+                .isEqualTo(com.ppiyaki.medication.domain.DayStatus.NOT_SCHEDULED);
     }
 
     @Test
@@ -391,7 +391,7 @@ class DashboardServiceTest {
 
         org.assertj.core.api.Assertions.assertThat(resp.adherenceRate()).isNull();
         org.assertj.core.api.Assertions.assertThat(resp.days()).allMatch(d -> d.dayStatus()
-                == com.ppiyaki.medication.DayStatus.FUTURE);
+                == com.ppiyaki.medication.domain.DayStatus.FUTURE);
     }
 
     private MedicationLog logOnDate(final Long scheduleId, final LocalDate date,
@@ -441,7 +441,7 @@ class DashboardServiceTest {
             if (m.find()) {
                 setField(s, "dosageQuantity", new java.math.BigDecimal(m.group(1)));
                 setField(s, "dosageUnit",
-                        com.ppiyaki.medication.DosageUnit.fromInput(m.group(2).trim()).orElse(null));
+                        com.ppiyaki.medication.domain.DosageUnit.fromInput(m.group(2).trim()).orElse(null));
             }
         }
         return s;

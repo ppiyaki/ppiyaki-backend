@@ -3,10 +3,10 @@ package com.ppiyaki.notification.service;
 import com.ppiyaki.infrastructure.messaging.fcm.PushPayload;
 import com.ppiyaki.infrastructure.messaging.fcm.PushSendResult;
 import com.ppiyaki.infrastructure.messaging.fcm.PushSender;
-import com.ppiyaki.medication.LogStatus;
-import com.ppiyaki.medication.MealSlot;
-import com.ppiyaki.medication.MedicationLog;
-import com.ppiyaki.medication.MedicationSchedule;
+import com.ppiyaki.medication.domain.LogStatus;
+import com.ppiyaki.medication.domain.MealSlot;
+import com.ppiyaki.medication.domain.MedicationLog;
+import com.ppiyaki.medication.domain.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
@@ -18,8 +18,8 @@ import com.ppiyaki.notification.NotificationSettings;
 import com.ppiyaki.notification.repository.DeviceTokenRepository;
 import com.ppiyaki.notification.repository.NotificationRepository;
 import com.ppiyaki.notification.repository.NotificationSettingsRepository;
-import com.ppiyaki.user.CareRelation;
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.CareRelation;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.Clock;
@@ -177,7 +177,7 @@ public class MedicationDelayDispatcher {
     }
 
     public Iterable<User> findAllSeniorsWithMealTimes() {
-        return userRepository.findAllByRoleWithMealTimesSet(com.ppiyaki.user.UserRole.SENIOR);
+        return userRepository.findAllByRoleWithMealTimesSet(com.ppiyaki.user.domain.UserRole.SENIOR);
     }
 
     /**

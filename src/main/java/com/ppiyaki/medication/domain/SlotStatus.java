@@ -1,4 +1,4 @@
-package com.ppiyaki.medication;
+package com.ppiyaki.medication.domain;
 
 /**
  * 보호자 대시보드 슬롯 단위 인증 상태.

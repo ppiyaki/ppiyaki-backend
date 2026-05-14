@@ -1,6 +1,6 @@
 package com.ppiyaki.medication.controller.dto;
 
-import com.ppiyaki.medication.LogStatus;
+import com.ppiyaki.medication.domain.LogStatus;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

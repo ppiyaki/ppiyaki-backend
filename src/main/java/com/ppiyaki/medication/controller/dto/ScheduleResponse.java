@@ -1,8 +1,8 @@
 package com.ppiyaki.medication.controller.dto;
 
-import com.ppiyaki.medication.MealSlot;
-import com.ppiyaki.medication.MedicationSchedule;
-import com.ppiyaki.user.User;
+import com.ppiyaki.medication.domain.MealSlot;
+import com.ppiyaki.medication.domain.MedicationSchedule;
+import com.ppiyaki.user.domain.User;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

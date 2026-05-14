@@ -12,7 +12,7 @@ import com.ppiyaki.pet.Pet;
 import com.ppiyaki.pet.controller.dto.PetResponse;
 import com.ppiyaki.pet.repository.BadgeRepository;
 import com.ppiyaki.pet.repository.PetRepository;
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.UserRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;

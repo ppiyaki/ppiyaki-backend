@@ -1,6 +1,6 @@
-package com.ppiyaki.medication;
+package com.ppiyaki.medication.domain;
 
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.User;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;

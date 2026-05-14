@@ -1,6 +1,6 @@
 package com.ppiyaki.user.controller.dto;
 
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.User;
 
 public record UserMeResponse(
         Long id,
