@@ -35,9 +35,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             final FilterChain filterChain
     ) throws ServletException, IOException {
         final String token = extractToken(request);
-        boolean userIdSet = false;
+        final boolean userIdSet = token != null && jwtProvider.isValid(token);
 
-        if (token != null && jwtProvider.isValid(token)) {
+        if (userIdSet) {
             final Long userId = jwtProvider.extractUserId(token);
             final String role = jwtProvider.extractRole(token);
             final List<GrantedAuthority> authorities = role == null
@@ -47,7 +47,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     null, authorities);
             SecurityContextHolder.getContext().setAuthentication(authentication);
             MDC.put(MDC_USER_ID, userId.toString());
-            userIdSet = true;
         }
 
         try {

@@ -61,6 +61,43 @@ class MdcRequestIdFilterTest {
     }
 
     @Test
+    @DisplayName("X-Request-Id 헤더에 제어문자가 있으면 무시하고 UUID로 폴백한다")
+    void rejects_control_characters() throws ServletException, IOException {
+        // given — CRLF 인젝션 시도 헤더
+        final String malicious = "trace-abc\r\nInjected: yes";
+        final MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader(MdcRequestIdFilter.REQUEST_ID_HEADER, malicious);
+        final MockHttpServletResponse response = new MockHttpServletResponse();
+        final CapturingFilterChain chain = new CapturingFilterChain();
+
+        // when
+        filter.doFilter(request, response, chain);
+
+        // then — 인입 헤더는 무시되고, 새 UUID가 생성되어야 함
+        assertThat(chain.requestIdSeen).isNotEqualTo(malicious);
+        assertThat(chain.requestIdSeen).matches("^[A-Za-z0-9-]{36}$"); // UUID 형식
+        assertThat(response.getHeader(MdcRequestIdFilter.REQUEST_ID_HEADER))
+                .doesNotContain("\r", "\n");
+    }
+
+    @Test
+    @DisplayName("X-Request-Id 헤더가 128자 초과면 무시하고 UUID로 폴백한다")
+    void rejects_overly_long_header() throws ServletException, IOException {
+        // given
+        final String tooLong = "a".repeat(129);
+        final MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader(MdcRequestIdFilter.REQUEST_ID_HEADER, tooLong);
+        final CapturingFilterChain chain = new CapturingFilterChain();
+
+        // when
+        filter.doFilter(request, new MockHttpServletResponse(), chain);
+
+        // then
+        assertThat(chain.requestIdSeen).isNotEqualTo(tooLong);
+        assertThat(chain.requestIdSeen.length()).isLessThanOrEqualTo(128);
+    }
+
+    @Test
     @DisplayName("필터 종료 후 MDC가 정리되어 다음 요청에 누수되지 않는다")
     void clears_mdc_after_chain() throws ServletException, IOException {
         // given
