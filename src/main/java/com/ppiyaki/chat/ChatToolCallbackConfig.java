@@ -1,10 +1,10 @@
 package com.ppiyaki.chat;
 
-import com.ppiyaki.common.mcp.DrugInfoMcpTools;
-import com.ppiyaki.common.mcp.DurMcpTools;
-import com.ppiyaki.common.mcp.MedicationMcpTools;
-import com.ppiyaki.common.mcp.MedicineMcpTools;
-import com.ppiyaki.common.mcp.PillIdentificationMcpTools;
+import com.ppiyaki.mcp.DrugInfoMcpTools;
+import com.ppiyaki.mcp.DurMcpTools;
+import com.ppiyaki.mcp.MedicationMcpTools;
+import com.ppiyaki.mcp.MedicineMcpTools;
+import com.ppiyaki.mcp.PillIdentificationMcpTools;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.ai.support.ToolCallbacks;
