@@ -1,6 +1,6 @@
 package com.ppiyaki.medication.repository;
 
-import com.ppiyaki.medication.MedicationLog;
+import com.ppiyaki.medication.domain.MedicationLog;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;

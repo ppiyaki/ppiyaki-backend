@@ -1,8 +1,8 @@
 package com.ppiyaki.prescription;
 
 import com.ppiyaki.common.entity.CreatedTimeEntity;
-import com.ppiyaki.medication.DosageUnit;
-import com.ppiyaki.medication.MealSlot;
+import com.ppiyaki.medication.domain.DosageUnit;
+import com.ppiyaki.medication.domain.MealSlot;
 import com.ppiyaki.medicine.service.MatchType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

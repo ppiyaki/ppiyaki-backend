@@ -1,6 +1,6 @@
 package com.ppiyaki.medication.controller.dto.dashboard;
 
-import com.ppiyaki.medication.DayStatus;
+import com.ppiyaki.medication.domain.DayStatus;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;

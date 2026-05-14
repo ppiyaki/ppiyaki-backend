@@ -2,10 +2,10 @@ package com.ppiyaki.user.service;
 
 import com.ppiyaki.pet.Pet;
 import com.ppiyaki.pet.repository.PetRepository;
-import com.ppiyaki.user.CareRelation;
-import com.ppiyaki.user.User;
 import com.ppiyaki.user.controller.dto.SeniorCreateRequest;
 import com.ppiyaki.user.controller.dto.SeniorCreateResponse;
+import com.ppiyaki.user.domain.CareRelation;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import org.springframework.stereotype.Service;

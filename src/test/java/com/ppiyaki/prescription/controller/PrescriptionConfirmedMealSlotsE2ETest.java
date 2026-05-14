@@ -10,8 +10,8 @@ import com.ppiyaki.prescription.PrescriptionMedicineCandidate;
 import com.ppiyaki.prescription.PrescriptionStatus;
 import com.ppiyaki.prescription.repository.PrescriptionMedicineCandidateRepository;
 import com.ppiyaki.prescription.repository.PrescriptionRepository;
-import com.ppiyaki.user.CareMode;
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.CareMode;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.UserRepository;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -73,9 +73,9 @@ class PrescriptionConfirmedMealSlotsE2ETest {
         setSeniorMode(senior.userId(), CareMode.AUTONOMOUS);
         final Long prescriptionId = seedPrescription(senior.userId());
         final Long candidateId = seedCandidate(prescriptionId,
-                List.of(com.ppiyaki.medication.MealSlot.BREAKFAST,
-                        com.ppiyaki.medication.MealSlot.LUNCH,
-                        com.ppiyaki.medication.MealSlot.DINNER));
+                List.of(com.ppiyaki.medication.domain.MealSlot.BREAKFAST,
+                        com.ppiyaki.medication.domain.MealSlot.LUNCH,
+                        com.ppiyaki.medication.domain.MealSlot.DINNER));
 
         // when — 보호자 검수: ACCEPTED + confirmedMealSlots = [LUNCH, DINNER]
         RestAssured.given()
@@ -192,7 +192,7 @@ class PrescriptionConfirmedMealSlotsE2ETest {
         setSeniorMode(senior.userId(), CareMode.AUTONOMOUS);
         final Long prescriptionId = seedPrescription(senior.userId());
         final Long candidateId = seedCandidateWithDosage(prescriptionId,
-                java.math.BigDecimal.ONE, com.ppiyaki.medication.DosageUnit.TABLET);
+                java.math.BigDecimal.ONE, com.ppiyaki.medication.domain.DosageUnit.TABLET);
 
         // when — dosage 필드 미포함
         RestAssured.given()
@@ -277,12 +277,12 @@ class PrescriptionConfirmedMealSlotsE2ETest {
 
     private Long seedCandidate(
             final Long prescriptionId,
-            final List<com.ppiyaki.medication.MealSlot> suggestedSlots
+            final List<com.ppiyaki.medication.domain.MealSlot> suggestedSlots
     ) {
         return transactionTemplate.execute(status -> {
             final PrescriptionMedicineCandidate candidate = new PrescriptionMedicineCandidate(
                     prescriptionId, "raw", "타이레놀정",
-                    java.math.BigDecimal.ONE, com.ppiyaki.medication.DosageUnit.TABLET,
+                    java.math.BigDecimal.ONE, com.ppiyaki.medication.domain.DosageUnit.TABLET,
                     "1일 3회 식후",
                     "ITEM-1", "타이레놀정", MatchType.EXACT, "matched",
                     suggestedSlots
@@ -294,7 +294,7 @@ class PrescriptionConfirmedMealSlotsE2ETest {
     private Long seedCandidateWithDosage(
             final Long prescriptionId,
             final java.math.BigDecimal quantity,
-            final com.ppiyaki.medication.DosageUnit unit
+            final com.ppiyaki.medication.domain.DosageUnit unit
     ) {
         return transactionTemplate.execute(status -> {
             final PrescriptionMedicineCandidate candidate = new PrescriptionMedicineCandidate(

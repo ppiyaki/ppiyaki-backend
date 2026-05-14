@@ -4,10 +4,10 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
-import com.ppiyaki.medication.MealSlot;
-import com.ppiyaki.medication.MedicationSchedule;
+import com.ppiyaki.medication.domain.MealSlot;
+import com.ppiyaki.medication.domain.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
-import com.ppiyaki.user.CareRelation;
+import com.ppiyaki.user.domain.CareRelation;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -191,11 +191,11 @@ class MedicineControllerE2ETest {
 
         medicationScheduleRepository.save(
                 new MedicationSchedule(Long.valueOf(medicineId), MealSlot.BREAKFAST,
-                        java.math.BigDecimal.ONE, com.ppiyaki.medication.DosageUnit.TABLET,
+                        java.math.BigDecimal.ONE, com.ppiyaki.medication.domain.DosageUnit.TABLET,
                         "DAILY", LocalDate.now(), null));
         medicationScheduleRepository.save(
                 new MedicationSchedule(Long.valueOf(medicineId), MealSlot.DINNER,
-                        java.math.BigDecimal.ONE, com.ppiyaki.medication.DosageUnit.TABLET,
+                        java.math.BigDecimal.ONE, com.ppiyaki.medication.domain.DosageUnit.TABLET,
                         "DAILY", LocalDate.now(), null));
 
         // when & then

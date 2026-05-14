@@ -1,6 +1,5 @@
 package com.ppiyaki.user.controller;
 
-import com.ppiyaki.user.User;
 import com.ppiyaki.user.controller.dto.KakaoLoginRequest;
 import com.ppiyaki.user.controller.dto.LoginRequest;
 import com.ppiyaki.user.controller.dto.LoginResponse;
@@ -9,6 +8,7 @@ import com.ppiyaki.user.controller.dto.RefreshRequest;
 import com.ppiyaki.user.controller.dto.SignupRequest;
 import com.ppiyaki.user.controller.dto.TokenResponse;
 import com.ppiyaki.user.controller.dto.UserMeResponse;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

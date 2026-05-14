@@ -3,8 +3,8 @@ package com.ppiyaki.prescription.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
 
-import com.ppiyaki.medication.MealSlot;
-import com.ppiyaki.medication.MedicationSchedule;
+import com.ppiyaki.medication.domain.MealSlot;
+import com.ppiyaki.medication.domain.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
@@ -14,8 +14,8 @@ import com.ppiyaki.prescription.PrescriptionMedicineCandidate;
 import com.ppiyaki.prescription.PrescriptionStatus;
 import com.ppiyaki.prescription.repository.PrescriptionMedicineCandidateRepository;
 import com.ppiyaki.prescription.repository.PrescriptionRepository;
-import com.ppiyaki.user.CareMode;
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.CareMode;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.UserRepository;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -108,7 +108,7 @@ class PrescriptionConfirmAutoScheduleE2ETest {
         assertThat(schedules).extracting(MedicationSchedule::getMealSlot)
                 .containsExactlyInAnyOrder(MealSlot.BREAKFAST, MealSlot.LUNCH, MealSlot.DINNER);
         assertThat(schedules).allMatch(s -> java.math.BigDecimal.ONE.compareTo(s.getDosageQuantity()) == 0
-                && com.ppiyaki.medication.DosageUnit.TABLET == s.getDosageUnit());
+                && com.ppiyaki.medication.domain.DosageUnit.TABLET == s.getDosageUnit());
         assertThat(schedules).allMatch(s -> "DAILY".equals(s.getDaysOfWeek()));
 
         // candidate에 created_medicine_id 채워짐
@@ -300,7 +300,7 @@ class PrescriptionConfirmAutoScheduleE2ETest {
     ) {
         // dosage="1정"/"2정"/null 등 raw 입력을 BigDecimal+DosageUnit으로 정규화
         final java.math.BigDecimal quantity;
-        final com.ppiyaki.medication.DosageUnit unit;
+        final com.ppiyaki.medication.domain.DosageUnit unit;
         if (dosage == null) {
             quantity = null;
             unit = null;
@@ -309,10 +309,10 @@ class PrescriptionConfirmAutoScheduleE2ETest {
                     dosage);
             if (m.find()) {
                 quantity = new java.math.BigDecimal(m.group(1));
-                unit = com.ppiyaki.medication.DosageUnit.fromInput(m.group(2).trim()).orElse(null);
+                unit = com.ppiyaki.medication.domain.DosageUnit.fromInput(m.group(2).trim()).orElse(null);
             } else {
                 quantity = null;
-                unit = com.ppiyaki.medication.DosageUnit.fromInput(dosage).orElse(null);
+                unit = com.ppiyaki.medication.domain.DosageUnit.fromInput(dosage).orElse(null);
             }
         }
         return transactionTemplate.execute(status -> {

@@ -10,7 +10,7 @@ import com.ppiyaki.health.controller.dto.DurWarningItem;
 import com.ppiyaki.health.repository.DurCheckRepository;
 import com.ppiyaki.infrastructure.mfds.CachedMfdsResponse;
 import com.ppiyaki.infrastructure.mfds.MfdsApiClient;
-import com.ppiyaki.medication.MedicationSchedule;
+import com.ppiyaki.medication.domain.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;

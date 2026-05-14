@@ -1,4 +1,4 @@
-package com.ppiyaki.medication;
+package com.ppiyaki.medication.domain;
 
 import java.util.Optional;
 import java.util.regex.Matcher;

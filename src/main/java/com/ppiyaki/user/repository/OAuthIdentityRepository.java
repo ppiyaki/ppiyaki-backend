@@ -1,7 +1,7 @@
 package com.ppiyaki.user.repository;
 
-import com.ppiyaki.user.OAuthIdentity;
-import com.ppiyaki.user.OAuthProvider;
+import com.ppiyaki.user.domain.OAuthIdentity;
+import com.ppiyaki.user.domain.OAuthProvider;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

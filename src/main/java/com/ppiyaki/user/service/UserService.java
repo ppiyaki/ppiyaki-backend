@@ -2,13 +2,13 @@ package com.ppiyaki.user.service;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.user.CareMode;
-import com.ppiyaki.user.CareRelation;
-import com.ppiyaki.user.User;
-import com.ppiyaki.user.UserRole;
 import com.ppiyaki.user.controller.dto.CareModeResponse;
 import com.ppiyaki.user.controller.dto.MealTimesUpdateRequest;
 import com.ppiyaki.user.controller.dto.UserMeResponse;
+import com.ppiyaki.user.domain.CareMode;
+import com.ppiyaki.user.domain.CareRelation;
+import com.ppiyaki.user.domain.User;
+import com.ppiyaki.user.domain.UserRole;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.RefreshTokenRepository;
 import com.ppiyaki.user.repository.UserRepository;

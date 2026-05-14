@@ -1,7 +1,7 @@
 package com.ppiyaki.user.repository;
 
-import com.ppiyaki.user.User;
-import com.ppiyaki.user.UserRole;
+import com.ppiyaki.user.domain.User;
+import com.ppiyaki.user.domain.UserRole;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

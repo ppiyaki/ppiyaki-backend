@@ -7,7 +7,7 @@ import static org.hamcrest.Matchers.is;
 import com.ppiyaki.prescription.Prescription;
 import com.ppiyaki.prescription.PrescriptionStatus;
 import com.ppiyaki.prescription.repository.PrescriptionRepository;
-import com.ppiyaki.user.CareRelation;
+import com.ppiyaki.user.domain.CareRelation;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import io.restassured.RestAssured;
