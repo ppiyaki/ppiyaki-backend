@@ -9,9 +9,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.ppiyaki.common.mfds.MdcinGrnIdntfcInfoClient;
-import com.ppiyaki.common.mfds.MdcinGrnIdntfcInfoClient.PillItem;
-import com.ppiyaki.common.mfds.MdcinGrnIdntfcInfoClient.PillPage;
+import com.ppiyaki.infrastructure.mfds.MdcinGrnIdntfcInfoClient;
+import com.ppiyaki.infrastructure.mfds.MdcinGrnIdntfcInfoClient.PillItem;
+import com.ppiyaki.infrastructure.mfds.MdcinGrnIdntfcInfoClient.PillPage;
 import com.ppiyaki.medicine.PillIdentification;
 import com.ppiyaki.medicine.repository.PillIdentificationRepository;
 import com.ppiyaki.medicine.service.PillIdentificationSyncService.SyncResult;

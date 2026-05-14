@@ -1,7 +1,7 @@
 package com.ppiyaki.medicine.service;
 
-import com.ppiyaki.common.mfds.CachedMfdsResponse;
-import com.ppiyaki.common.mfds.MfdsApiClient;
+import com.ppiyaki.infrastructure.mfds.CachedMfdsResponse;
+import com.ppiyaki.infrastructure.mfds.MfdsApiClient;
 import com.ppiyaki.medicine.controller.dto.MedicineCandidate;
 import java.util.LinkedHashMap;
 import java.util.List;

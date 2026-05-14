@@ -1,6 +1,6 @@
 package com.ppiyaki.prescription;
 
-import com.ppiyaki.common.ocr.ClovaOcrClient.OcrToken;
+import com.ppiyaki.infrastructure.ocr.ClovaOcrClient.OcrToken;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;

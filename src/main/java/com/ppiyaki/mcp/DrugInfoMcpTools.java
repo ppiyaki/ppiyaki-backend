@@ -1,7 +1,7 @@
 package com.ppiyaki.mcp;
 
-import com.ppiyaki.common.druginfo.DrugInfoClient;
-import com.ppiyaki.common.druginfo.DrugInfoResponse;
+import com.ppiyaki.infrastructure.druginfo.DrugInfoClient;
+import com.ppiyaki.infrastructure.druginfo.DrugInfoResponse;
 import java.util.Optional;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
