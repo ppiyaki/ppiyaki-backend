@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.infrastructure.mfds.MfdsApiProperties;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -32,11 +34,14 @@ public class DrugInfoClient {
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
     private final Map<String, CachedDrugInfo> cache = new ConcurrentHashMap<>();
+    private final Counter cacheHitCounter;
+    private final Counter cacheMissCounter;
 
     public DrugInfoClient(
             final MfdsApiProperties properties,
             final RestClient.Builder restClientBuilder,
-            final ObjectMapper objectMapper
+            final ObjectMapper objectMapper,
+            final MeterRegistry meterRegistry
     ) {
         this.serviceKey = properties.serviceKey();
         this.objectMapper = objectMapper;
@@ -46,15 +51,26 @@ public class DrugInfoClient {
         factory.setReadTimeout(Duration.ofSeconds(5));
 
         this.restClient = restClientBuilder.requestFactory(factory).build();
+
+        this.cacheHitCounter = Counter.builder("ppiyaki.cache.hits")
+                .tag("cache", "drug_info")
+                .description("DrugInfo API 응답 캐시 hit")
+                .register(meterRegistry);
+        this.cacheMissCounter = Counter.builder("ppiyaki.cache.misses")
+                .tag("cache", "drug_info")
+                .description("DrugInfo API 응답 캐시 miss (외부 API 호출 발생)")
+                .register(meterRegistry);
     }
 
     public Optional<DrugInfoResponse> search(final String itemName) {
         final String cacheKey = itemName.strip().toLowerCase();
         final CachedDrugInfo cached = cache.get(cacheKey);
         if (cached != null && cached.expiresAt().isAfter(Instant.now())) {
+            cacheHitCounter.increment();
             return cached.response();
         }
 
+        cacheMissCounter.increment();
         log.info("DrugInfo API call: itemName={}", itemName);
         try {
             final String url = API_URL
