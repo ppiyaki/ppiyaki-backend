@@ -1,6 +1,6 @@
 package com.ppiyaki.medication.domain;
 
-public enum LogAiStatus {
+public enum LogPillCountStatus {
 
     /** Vision 추출 개수 == dosage 합 */
     COUNT_MATCH,
