@@ -11,7 +11,7 @@ import com.ppiyaki.infrastructure.ai.OpenAiClient;
 import com.ppiyaki.infrastructure.storage.NcpStorageProperties;
 import com.ppiyaki.infrastructure.storage.PhotoUrlAssembler;
 import com.ppiyaki.medication.controller.dto.MedicationLogUpsertRequest;
-import com.ppiyaki.medication.domain.LogAiStatus;
+import com.ppiyaki.medication.domain.LogPillCountStatus;
 import com.ppiyaki.medication.domain.LogStatus;
 import com.ppiyaki.medication.domain.MealSlot;
 import com.ppiyaki.medication.domain.MedicationLog;
@@ -74,7 +74,7 @@ class MedicationLogServicePhase2Test {
     private static final String VALID_OBJECT_KEY = "medication-log/100/9b3e7a1c-8d55-4f0a-b2e1-5f9a7b3d8c21.jpg";
 
     @Test
-    @DisplayName("status=MISSED면 AI 검증 스킵, ai_status=null")
+    @DisplayName("status=MISSED면 AI 검증 스킵, pill_count_status=null")
     void status_missed_skip_verification() throws Exception {
         givenScheduleAndMedicine();
         givenUpsertSucceeds();
@@ -112,7 +112,7 @@ class MedicationLogServicePhase2Test {
         service.upsert(SENIOR_ID, new MedicationLogUpsertRequest(
                 SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, VALID_OBJECT_KEY));
 
-        assertThat(saved.get().getAiStatus()).isEqualTo(LogAiStatus.COUNT_MATCH);
+        assertThat(saved.get().getPillCountStatus()).isEqualTo(LogPillCountStatus.COUNT_MATCH);
     }
 
     @Test
@@ -128,7 +128,7 @@ class MedicationLogServicePhase2Test {
         service.upsert(SENIOR_ID, new MedicationLogUpsertRequest(
                 SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, VALID_OBJECT_KEY));
 
-        assertThat(saved.get().getAiStatus()).isEqualTo(LogAiStatus.COUNT_MISMATCH);
+        assertThat(saved.get().getPillCountStatus()).isEqualTo(LogPillCountStatus.COUNT_MISMATCH);
     }
 
     @Test
@@ -142,7 +142,7 @@ class MedicationLogServicePhase2Test {
         service.upsert(SENIOR_ID, new MedicationLogUpsertRequest(
                 SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, VALID_OBJECT_KEY));
 
-        assertThat(saved.get().getAiStatus()).isEqualTo(LogAiStatus.COUNT_UNKNOWN);
+        assertThat(saved.get().getPillCountStatus()).isEqualTo(LogPillCountStatus.COUNT_UNKNOWN);
         verify(openAiClient, never()).countPills(any(), any());
     }
 
@@ -159,7 +159,7 @@ class MedicationLogServicePhase2Test {
         service.upsert(SENIOR_ID, new MedicationLogUpsertRequest(
                 SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, VALID_OBJECT_KEY));
 
-        assertThat(saved.get().getAiStatus()).isEqualTo(LogAiStatus.COUNT_FAILED);
+        assertThat(saved.get().getPillCountStatus()).isEqualTo(LogPillCountStatus.COUNT_FAILED);
     }
 
     @Test
