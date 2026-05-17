@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -32,12 +34,15 @@ public class MfdsApiClient {
     private final MfdsResponseCache cache;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
+    private final Counter cacheHitCounter;
+    private final Counter cacheMissCounter;
 
     public MfdsApiClient(
             final MfdsApiProperties properties,
             final MfdsResponseCache cache,
             final RestClient.Builder restClientBuilder,
-            final ObjectMapper objectMapper
+            final ObjectMapper objectMapper,
+            final MeterRegistry meterRegistry
     ) {
         this.properties = properties;
         this.cache = cache;
@@ -50,6 +55,15 @@ public class MfdsApiClient {
         this.restClient = restClientBuilder
                 .requestFactory(factory)
                 .build();
+
+        this.cacheHitCounter = Counter.builder("ppiyaki.cache.hits")
+                .tag("cache", "mfds")
+                .description("MFDS API 응답 캐시 hit")
+                .register(meterRegistry);
+        this.cacheMissCounter = Counter.builder("ppiyaki.cache.misses")
+                .tag("cache", "mfds")
+                .description("MFDS API 응답 캐시 miss (외부 API 호출 발생)")
+                .register(meterRegistry);
     }
 
     public CachedMfdsResponse call(
@@ -59,10 +73,12 @@ public class MfdsApiClient {
     ) {
         final Optional<CachedMfdsResponse> cached = cache.get(operation, cacheKey);
         if (cached.isPresent()) {
+            cacheHitCounter.increment();
             log.debug("MFDS cache hit: operation={} key={}", operation, cacheKey);
             return cached.get();
         }
 
+        cacheMissCounter.increment();
         log.info("MFDS API call: operation={} key={}", operation, cacheKey);
         final long startTime = System.currentTimeMillis();
 

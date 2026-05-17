@@ -68,3 +68,20 @@ openai:
 fcm:
   project-id: ${FCM_PROJECT_ID:}
   credentials-json-base64: ${FCM_CREDENTIALS_JSON_BASE64:}
+
+management:
+  server:
+    port: ${MANAGEMENT_PORT:8081}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: never
+  metrics:
+    tags:
+      application: ppiyaki-backend
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
