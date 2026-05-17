@@ -36,11 +36,11 @@ public class PetService {
         final User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        if (user.getPet() == null) {
+        if (user.getPetId() == null) {
             throw new BusinessException(ErrorCode.PET_NOT_FOUND);
         }
 
-        final Pet pet = petRepository.findById(user.getPet())
+        final Pet pet = petRepository.findById(user.getPetId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PET_NOT_FOUND));
 
         pet.checkAndResetIfInactive(LocalDate.now());

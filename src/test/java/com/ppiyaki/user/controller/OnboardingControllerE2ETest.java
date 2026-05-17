@@ -31,7 +31,7 @@ class OnboardingControllerE2ETest {
         jdbcTemplate.update("DELETE FROM care_relations WHERE caregiver_id IN "
                 + "(SELECT id FROM users WHERE login_id = 'onboard_e2e')");
         jdbcTemplate.update("DELETE FROM pets WHERE id IN "
-                + "(SELECT pet FROM users WHERE nickname IN ('온보딩할머니', '온보딩할아버지') AND pet IS NOT NULL)");
+                + "(SELECT pet_id FROM users WHERE nickname IN ('온보딩할머니', '온보딩할아버지') AND pet_id IS NOT NULL)");
         jdbcTemplate.update("DELETE FROM refresh_tokens WHERE user_id IN "
                 + "(SELECT id FROM users WHERE login_id = 'onboard_e2e')");
         jdbcTemplate.update("DELETE FROM users WHERE nickname IN ('온보딩할머니', '온보딩할아버지')");

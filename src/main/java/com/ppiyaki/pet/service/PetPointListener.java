@@ -52,14 +52,14 @@ public class PetPointListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMedicationTaken(final MedicationTakenEvent event) {
         final User user = userRepository.findById(event.seniorId()).orElse(null);
-        if (user == null || user.getPet() == null) {
+        if (user == null || user.getPetId() == null) {
             log.debug("Pet not linked for seniorId={}, skipping point", event.seniorId());
             return;
         }
 
-        final Pet pet = petRepository.findById(user.getPet()).orElse(null);
+        final Pet pet = petRepository.findById(user.getPetId()).orElse(null);
         if (pet == null) {
-            log.debug("Pet entity not found for petId={}, skipping point", user.getPet());
+            log.debug("Pet entity not found for petId={}, skipping point", user.getPetId());
             return;
         }
 
