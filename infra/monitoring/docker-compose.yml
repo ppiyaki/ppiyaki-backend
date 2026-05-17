@@ -1,0 +1,45 @@
+name: ppiyaki-monitoring
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    container_name: ppiyaki-prometheus
+    restart: always
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    networks:
+      - ppiyaki-monitoring
+    # prometheus는 외부 노출 안 함. Grafana만 외부 노출 (admin 인증).
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: ppiyaki-grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - ppiyaki-monitoring
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  ppiyaki-monitoring:
+    external: true
