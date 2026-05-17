@@ -2,15 +2,15 @@ package com.ppiyaki.health.service;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.common.mfds.CachedMfdsResponse;
-import com.ppiyaki.common.mfds.MfdsApiClient;
 import com.ppiyaki.health.DurCheck;
 import com.ppiyaki.health.DurWarningLevel;
 import com.ppiyaki.health.controller.dto.DurCheckListResponse;
 import com.ppiyaki.health.controller.dto.DurCheckResponse;
 import com.ppiyaki.health.controller.dto.DurWarningItem;
 import com.ppiyaki.health.repository.DurCheckRepository;
-import com.ppiyaki.medication.MedicationSchedule;
+import com.ppiyaki.infrastructure.mfds.CachedMfdsResponse;
+import com.ppiyaki.infrastructure.mfds.MfdsApiClient;
+import com.ppiyaki.medication.domain.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;

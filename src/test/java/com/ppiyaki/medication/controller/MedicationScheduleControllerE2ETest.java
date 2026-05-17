@@ -6,7 +6,7 @@ import static org.hamcrest.Matchers.notNullValue;
 
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
-import com.ppiyaki.user.CareRelation;
+import com.ppiyaki.user.domain.CareRelation;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;

@@ -5,9 +5,9 @@ import static org.hamcrest.Matchers.is;
 import com.ppiyaki.prescription.Prescription;
 import com.ppiyaki.prescription.PrescriptionStatus;
 import com.ppiyaki.prescription.repository.PrescriptionRepository;
-import com.ppiyaki.user.CareMode;
-import com.ppiyaki.user.CareRelation;
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.CareMode;
+import com.ppiyaki.user.domain.CareRelation;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import io.restassured.RestAssured;
@@ -175,7 +175,8 @@ class PrescriptionMutationControllerE2ETest {
                         {
                             "itemSeq": "199500096",
                             "itemName": "타이레놀정 500mg",
-                            "dosage": "1정",
+                            "dosageQuantity": 1,
+                            "dosageUnit": "TABLET",
                             "schedule": "1일 3회"
                         }
                         """)

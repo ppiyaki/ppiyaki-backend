@@ -5,6 +5,6 @@ import java.time.LocalDate;
 
 public record SeniorCreateRequest(
         @NotBlank String nickname,
-        LocalDate dob
+        LocalDate birthDate
 ) {
 }

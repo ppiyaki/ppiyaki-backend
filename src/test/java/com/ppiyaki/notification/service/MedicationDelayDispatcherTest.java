@@ -7,19 +7,19 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.ppiyaki.medication.MealSlot;
-import com.ppiyaki.medication.MedicationSchedule;
+import com.ppiyaki.infrastructure.messaging.fcm.PushSender;
+import com.ppiyaki.medication.domain.MealSlot;
+import com.ppiyaki.medication.domain.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.notification.Notification;
-import com.ppiyaki.notification.push.PushSender;
 import com.ppiyaki.notification.repository.DeviceTokenRepository;
 import com.ppiyaki.notification.repository.NotificationRepository;
 import com.ppiyaki.notification.repository.NotificationSettingsRepository;
-import com.ppiyaki.user.CareRelation;
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.CareRelation;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.lang.reflect.Field;
@@ -197,7 +197,15 @@ class MedicationDelayDispatcherTest {
         setField(s, "id", id);
         setField(s, "medicineId", medicineId);
         setField(s, "mealSlot", MealSlot.BREAKFAST);
-        setField(s, "dosage", dosage);
+        if (dosage != null) {
+            final java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d+(?:\\.\\d+)?)(.*)$")
+                    .matcher(dosage);
+            if (m.find()) {
+                setField(s, "dosageQuantity", new java.math.BigDecimal(m.group(1)));
+                setField(s, "dosageUnit",
+                        com.ppiyaki.medication.domain.DosageUnit.fromInput(m.group(2).trim()).orElse(null));
+            }
+        }
         return s;
     }
 

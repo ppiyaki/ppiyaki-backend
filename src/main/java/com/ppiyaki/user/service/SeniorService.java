@@ -2,10 +2,10 @@ package com.ppiyaki.user.service;
 
 import com.ppiyaki.pet.Pet;
 import com.ppiyaki.pet.repository.PetRepository;
-import com.ppiyaki.user.CareRelation;
-import com.ppiyaki.user.User;
 import com.ppiyaki.user.controller.dto.SeniorCreateRequest;
 import com.ppiyaki.user.controller.dto.SeniorCreateResponse;
+import com.ppiyaki.user.domain.CareRelation;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -31,7 +31,7 @@ public class SeniorService {
     @Transactional
     public SeniorCreateResponse createSenior(final Long caregiverId, final SeniorCreateRequest seniorCreateRequest) {
         final User senior = userRepository.save(
-                User.createSenior(seniorCreateRequest.nickname(), seniorCreateRequest.dob()));
+                User.createSenior(seniorCreateRequest.nickname(), seniorCreateRequest.birthDate()));
 
         final Pet pet = petRepository.save(Pet.create());
         senior.assignPet(pet.getId());

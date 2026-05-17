@@ -1,6 +1,6 @@
 package com.ppiyaki.medication.controller.dto;
 
-import com.ppiyaki.medication.MealSlot;
+import com.ppiyaki.medication.domain.MealSlot;
 import jakarta.validation.constraints.Pattern;
 import java.math.BigDecimal;
 import java.time.LocalDate;

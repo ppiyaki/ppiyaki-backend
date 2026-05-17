@@ -1,7 +1,7 @@
 package com.ppiyaki.user.controller.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.User;
 import java.time.LocalTime;
 
 public record MealTimesResponse(

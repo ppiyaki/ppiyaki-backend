@@ -1,6 +1,6 @@
 package com.ppiyaki.user.repository;
 
-import com.ppiyaki.user.RefreshToken;
+import com.ppiyaki.user.domain.RefreshToken;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

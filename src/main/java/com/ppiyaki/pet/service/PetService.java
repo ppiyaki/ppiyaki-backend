@@ -7,7 +7,7 @@ import com.ppiyaki.pet.Pet;
 import com.ppiyaki.pet.controller.dto.PetResponse;
 import com.ppiyaki.pet.repository.BadgeRepository;
 import com.ppiyaki.pet.repository.PetRepository;
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDate;
 import java.util.List;
@@ -36,11 +36,11 @@ public class PetService {
         final User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        if (user.getPet() == null) {
+        if (user.getPetId() == null) {
             throw new BusinessException(ErrorCode.PET_NOT_FOUND);
         }
 
-        final Pet pet = petRepository.findById(user.getPet())
+        final Pet pet = petRepository.findById(user.getPetId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PET_NOT_FOUND));
 
         pet.checkAndResetIfInactive(LocalDate.now());

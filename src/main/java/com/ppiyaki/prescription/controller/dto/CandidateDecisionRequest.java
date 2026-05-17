@@ -1,6 +1,6 @@
 package com.ppiyaki.prescription.controller.dto;
 
-import com.ppiyaki.medication.MealSlot;
+import com.ppiyaki.medication.domain.MealSlot;
 import com.ppiyaki.prescription.CaregiverDecision;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;

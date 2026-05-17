@@ -1,8 +1,8 @@
 package com.ppiyaki.medication.controller.dto.dashboard;
 
-import com.ppiyaki.medication.DayStatus;
-import com.ppiyaki.medication.MealSlot;
-import com.ppiyaki.medication.SlotStatus;
+import com.ppiyaki.medication.domain.DayStatus;
+import com.ppiyaki.medication.domain.MealSlot;
+import com.ppiyaki.medication.domain.SlotStatus;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;

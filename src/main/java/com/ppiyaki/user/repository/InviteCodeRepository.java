@@ -1,6 +1,6 @@
 package com.ppiyaki.user.repository;
 
-import com.ppiyaki.user.InviteCode;
+import com.ppiyaki.user.domain.InviteCode;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

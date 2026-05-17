@@ -7,11 +7,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.ppiyaki.common.ai.OpenAiClient;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.common.ocr.ClovaOcrClient;
-import com.ppiyaki.common.storage.NcpStorageProperties;
+import com.ppiyaki.infrastructure.ai.OpenAiClient;
+import com.ppiyaki.infrastructure.ocr.ClovaOcrClient;
+import com.ppiyaki.infrastructure.storage.NcpStorageProperties;
 import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.medicine.service.MatchType;
 import com.ppiyaki.medicine.service.MedicineMatchService;
@@ -24,12 +24,12 @@ import com.ppiyaki.prescription.PrescriptionStatus;
 import com.ppiyaki.prescription.controller.dto.PrescriptionMedicineAddRequest;
 import com.ppiyaki.prescription.repository.PrescriptionMedicineCandidateRepository;
 import com.ppiyaki.prescription.repository.PrescriptionRepository;
-import com.ppiyaki.user.AuthProvider;
-import com.ppiyaki.user.CareMode;
-import com.ppiyaki.user.CareRelation;
-import com.ppiyaki.user.Gender;
-import com.ppiyaki.user.User;
-import com.ppiyaki.user.UserRole;
+import com.ppiyaki.user.domain.AuthProvider;
+import com.ppiyaki.user.domain.CareMode;
+import com.ppiyaki.user.domain.CareRelation;
+import com.ppiyaki.user.domain.Gender;
+import com.ppiyaki.user.domain.User;
+import com.ppiyaki.user.domain.UserRole;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.lang.reflect.Field;
@@ -74,7 +74,7 @@ class PrescriptionServiceManualAddTest {
     @Mock
     private S3Client s3Client;
     @Mock
-    private com.ppiyaki.common.storage.PhotoUrlAssembler photoUrlAssembler;
+    private com.ppiyaki.infrastructure.storage.PhotoUrlAssembler photoUrlAssembler;
 
     @InjectMocks
     private PrescriptionService prescriptionService;

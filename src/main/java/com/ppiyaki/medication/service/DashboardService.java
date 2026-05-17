@@ -2,13 +2,7 @@ package com.ppiyaki.medication.service;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.common.storage.PhotoUrlAssembler;
-import com.ppiyaki.medication.DayStatus;
-import com.ppiyaki.medication.LogStatus;
-import com.ppiyaki.medication.MealSlot;
-import com.ppiyaki.medication.MedicationLog;
-import com.ppiyaki.medication.MedicationSchedule;
-import com.ppiyaki.medication.SlotStatus;
+import com.ppiyaki.infrastructure.storage.PhotoUrlAssembler;
 import com.ppiyaki.medication.controller.dto.dashboard.DailyDashboardResponse;
 import com.ppiyaki.medication.controller.dto.dashboard.DailyDashboardResponse.HeaderInfo;
 import com.ppiyaki.medication.controller.dto.dashboard.DailyDashboardResponse.MedicineSummary;
@@ -18,13 +12,19 @@ import com.ppiyaki.medication.controller.dto.dashboard.MonthlyDashboardResponse;
 import com.ppiyaki.medication.controller.dto.dashboard.WeeklyDashboardResponse;
 import com.ppiyaki.medication.controller.dto.dashboard.WeeklyDashboardResponse.DayEntry;
 import com.ppiyaki.medication.controller.dto.dashboard.WeeklyDashboardResponse.SlotMarker;
+import com.ppiyaki.medication.domain.DayStatus;
+import com.ppiyaki.medication.domain.LogStatus;
+import com.ppiyaki.medication.domain.MealSlot;
+import com.ppiyaki.medication.domain.MedicationLog;
+import com.ppiyaki.medication.domain.MedicationSchedule;
+import com.ppiyaki.medication.domain.SlotStatus;
 import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.notification.NotificationSettings;
 import com.ppiyaki.notification.repository.NotificationSettingsRepository;
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.Duration;
@@ -48,7 +48,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 보호자 대시보드 조회 서비스.
  * spec docs/features/caregiver-dashboard.md.
  *
- * <p>{@link com.ppiyaki.common.storage.PhotoUrlAssembler} 의존 — 기존 MedicationLogService 패턴과 동일하게
+ * <p>{@link com.ppiyaki.infrastructure.storage.PhotoUrlAssembler} 의존 — 기존 MedicationLogService 패턴과 동일하게
  * ncp.storage.bucket-name 설정 시에만 빈 등록 (default 컨텍스트 contextLoads 보호).
  */
 @Service
@@ -339,7 +339,7 @@ public class DashboardService {
         for (final MedicationSchedule s : slotSchedules) {
             final Medicine m = medicineById.get(s.getMedicineId());
             if (m != null) {
-                slotMedicines.add(new SlotMedicine(m.getId(), m.getName(), s.getDosage()));
+                slotMedicines.add(new SlotMedicine(m.getId(), m.getName(), s.composeDosageText()));
             }
         }
         return new SlotInfo(slot, status, mealTime, takenAt, photoUrl, slotMedicines);

@@ -3,7 +3,7 @@ package com.ppiyaki.medication.controller;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.UserRepository;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;

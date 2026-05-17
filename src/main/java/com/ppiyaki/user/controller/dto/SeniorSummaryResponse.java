@@ -1,14 +1,14 @@
 package com.ppiyaki.user.controller.dto;
 
-import com.ppiyaki.user.CareMode;
-import com.ppiyaki.user.Gender;
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.CareMode;
+import com.ppiyaki.user.domain.Gender;
+import com.ppiyaki.user.domain.User;
 import java.time.LocalDate;
 
 public record SeniorSummaryResponse(
         Long id,
         String nickname,
-        LocalDate dob,
+        LocalDate birthDate,
         Gender gender,
         CareMode careMode
 ) {
@@ -17,7 +17,7 @@ public record SeniorSummaryResponse(
         return new SeniorSummaryResponse(
                 user.getId(),
                 user.getNickname(),
-                user.getDob(),
+                user.getBirthDate(),
                 user.getGender(),
                 user.getCareMode()
         );

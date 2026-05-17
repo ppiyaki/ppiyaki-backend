@@ -75,7 +75,7 @@ last_reviewed: 2026-05-07
 - 컨텍스트: `medication`
 - `MedicationSchedule.scheduled_time` (LocalTime) **제거**
 - `MedicationSchedule.meal_slot` (varchar, Java `MealSlot` enum) **추가, NOT NULL**
-- `MealSlot { BREAKFAST, LUNCH, DINNER }` — `com.ppiyaki.medication.MealSlot`
+- `MealSlot { BREAKFAST, LUNCH, DINNER }` — `com.ppiyaki.medication.domain.MealSlot`
 - `User.breakfastTime/lunchTime/dinnerTime` (Phase 1) 활용. 변경 없음.
 
 ### 5-2) API 엔드포인트
@@ -183,7 +183,7 @@ ALTER TABLE medication_schedules
 | `medication/controller/dto/ScheduleUpdateRequest.java` | 동일 |
 | `medication/controller/dto/ScheduleResponse.java` | `mealSlot` + 동적 `scheduledTime` |
 | `medication/service/MedicationLogService.java` (Phase 2 약 개수 검증) | 슬롯 기준 기대 카운트 쿼리로 전환 |
-| `common/mcp/MedicationMcpTools.java` | LLM 응답 시 슬롯→시각 변환 |
+| `mcp/MedicationMcpTools.java` | LLM 응답 시 슬롯→시각 변환 |
 | `resources/schema.sql` | 컬럼 정의 변경 |
 | `test/.../MedicationScheduleControllerE2ETest.java` | 입력/응답 갱신, 신규 400 케이스 |
 | `test/.../MedicationLogControllerE2ETest.java` | 슬롯 기반 schedule fixture |

@@ -1,6 +1,6 @@
 package com.ppiyaki.notification.service;
 
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.User;
 import java.time.Clock;
 import java.time.LocalDate;
 import org.slf4j.Logger;

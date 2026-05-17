@@ -1,13 +1,13 @@
 package com.ppiyaki.pet.service;
 
-import com.ppiyaki.medication.LogStatus;
-import com.ppiyaki.medication.MedicationLog;
+import com.ppiyaki.medication.domain.LogStatus;
+import com.ppiyaki.medication.domain.MedicationLog;
 import com.ppiyaki.medication.event.MedicationTakenEvent;
 import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.pet.Pet;
 import com.ppiyaki.pet.repository.PetRepository;
-import com.ppiyaki.user.User;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDate;
 import java.util.List;
@@ -52,14 +52,14 @@ public class PetPointListener {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMedicationTaken(final MedicationTakenEvent event) {
         final User user = userRepository.findById(event.seniorId()).orElse(null);
-        if (user == null || user.getPet() == null) {
+        if (user == null || user.getPetId() == null) {
             log.debug("Pet not linked for seniorId={}, skipping point", event.seniorId());
             return;
         }
 
-        final Pet pet = petRepository.findById(user.getPet()).orElse(null);
+        final Pet pet = petRepository.findById(user.getPetId()).orElse(null);
         if (pet == null) {
-            log.debug("Pet entity not found for petId={}, skipping point", user.getPet());
+            log.debug("Pet entity not found for petId={}, skipping point", user.getPetId());
             return;
         }
 

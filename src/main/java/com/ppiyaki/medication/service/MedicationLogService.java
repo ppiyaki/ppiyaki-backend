@@ -1,17 +1,17 @@
 package com.ppiyaki.medication.service;
 
-import com.ppiyaki.common.ai.OpenAiClient;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
-import com.ppiyaki.common.storage.NcpStorageProperties;
-import com.ppiyaki.common.storage.PhotoUrlAssembler;
-import com.ppiyaki.medication.LogAiStatus;
-import com.ppiyaki.medication.LogStatus;
-import com.ppiyaki.medication.MedicationLog;
-import com.ppiyaki.medication.MedicationSchedule;
+import com.ppiyaki.infrastructure.ai.OpenAiClient;
+import com.ppiyaki.infrastructure.storage.NcpStorageProperties;
+import com.ppiyaki.infrastructure.storage.PhotoUrlAssembler;
 import com.ppiyaki.medication.controller.dto.MedicationLogListResponse;
 import com.ppiyaki.medication.controller.dto.MedicationLogResponse;
 import com.ppiyaki.medication.controller.dto.MedicationLogUpsertRequest;
+import com.ppiyaki.medication.domain.LogAiStatus;
+import com.ppiyaki.medication.domain.LogStatus;
+import com.ppiyaki.medication.domain.MedicationLog;
+import com.ppiyaki.medication.domain.MedicationSchedule;
 import com.ppiyaki.medication.event.MedicationTakenEvent;
 import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;

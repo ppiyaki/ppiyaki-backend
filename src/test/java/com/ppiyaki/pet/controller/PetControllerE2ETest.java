@@ -30,7 +30,7 @@ class PetControllerE2ETest {
         jdbcTemplate.update("DELETE FROM refresh_tokens WHERE user_id IN "
                 + "(SELECT id FROM users WHERE login_id = 'pet_e2e_user')");
         jdbcTemplate.update("DELETE FROM pets WHERE id IN "
-                + "(SELECT pet FROM users WHERE login_id = 'pet_e2e_user' AND pet IS NOT NULL)");
+                + "(SELECT pet_id FROM users WHERE login_id = 'pet_e2e_user' AND pet_id IS NOT NULL)");
         jdbcTemplate.update("DELETE FROM users WHERE login_id = 'pet_e2e_user'");
     }
 
@@ -59,7 +59,7 @@ class PetControllerE2ETest {
                 "INSERT INTO pets (point, streak, highest_stage, created_at, updated_at) VALUES (40, 0, 'EGG', NOW(6), NOW(6))");
         final Long petId = jdbcTemplate.queryForObject(
                 "SELECT id FROM pets WHERE point = 40 ORDER BY id DESC LIMIT 1", Long.class);
-        jdbcTemplate.update("UPDATE users SET pet = ? WHERE login_id = 'pet_e2e_user'", petId);
+        jdbcTemplate.update("UPDATE users SET pet_id = ? WHERE login_id = 'pet_e2e_user'", petId);
 
         // when & then
         RestAssured.given()
