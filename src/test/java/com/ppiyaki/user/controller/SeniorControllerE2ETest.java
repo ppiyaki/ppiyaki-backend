@@ -29,7 +29,7 @@ class SeniorControllerE2ETest {
         jdbcTemplate.update("DELETE FROM refresh_tokens WHERE user_id IN "
                 + "(SELECT id FROM users WHERE login_id = 'cg_senior_e2e')");
         jdbcTemplate.update("DELETE FROM pets WHERE id IN "
-                + "(SELECT pet FROM users WHERE nickname = '시니어E2E대리' AND pet IS NOT NULL)");
+                + "(SELECT pet_id FROM users WHERE nickname = '시니어E2E대리' AND pet_id IS NOT NULL)");
         jdbcTemplate.update("DELETE FROM users WHERE nickname = '시니어E2E대리'");
         jdbcTemplate.update("DELETE FROM users WHERE login_id = 'cg_senior_e2e'");
     }
@@ -61,7 +61,7 @@ class SeniorControllerE2ETest {
                 .body("""
                         {
                             "nickname": "시니어E2E대리",
-                            "dob": "1945-03-15"
+                            "birthDate": "1945-03-15"
                         }
                         """)
                 .when()

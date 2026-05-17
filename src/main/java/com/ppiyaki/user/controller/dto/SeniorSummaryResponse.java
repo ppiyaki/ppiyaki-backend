@@ -8,7 +8,7 @@ import java.time.LocalDate;
 public record SeniorSummaryResponse(
         Long id,
         String nickname,
-        LocalDate dob,
+        LocalDate birthDate,
         Gender gender,
         CareMode careMode
 ) {
@@ -17,7 +17,7 @@ public record SeniorSummaryResponse(
         return new SeniorSummaryResponse(
                 user.getId(),
                 user.getNickname(),
-                user.getDob(),
+                user.getBirthDate(),
                 user.getGender(),
                 user.getCareMode()
         );

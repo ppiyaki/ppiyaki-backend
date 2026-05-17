@@ -45,11 +45,11 @@ public class User extends BaseTimeEntity {
     @Column(name = "gender")
     private Gender gender;
 
-    @Column(name = "dob")
-    private LocalDate dob;
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
 
-    @Column(name = "pet")
-    private Long pet;
+    @Column(name = "pet_id")
+    private Long petId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "auth_provider", nullable = false)
@@ -81,8 +81,8 @@ public class User extends BaseTimeEntity {
             final AuthProvider authProvider,
             final String nickname,
             final Gender gender,
-            final LocalDate dob,
-            final Long pet
+            final LocalDate birthDate,
+            final Long petId
     ) {
         this.loginId = loginId;
         this.password = password;
@@ -90,14 +90,14 @@ public class User extends BaseTimeEntity {
         this.authProvider = Objects.requireNonNull(authProvider, "authProvider must not be null");
         this.nickname = nickname;
         this.gender = gender;
-        this.dob = dob;
-        this.pet = pet;
+        this.birthDate = birthDate;
+        this.petId = petId;
         this.careMode = CareMode.MANAGED;
     }
 
-    public static User createSenior(final String nickname, final LocalDate dob) {
+    public static User createSenior(final String nickname, final LocalDate birthDate) {
         return new User(null, null, UserRole.SENIOR, AuthProvider.INVITE_ONLY,
-                nickname, null, dob, null);
+                nickname, null, birthDate, null);
     }
 
     public static User createSenior(final String nickname, final Gender gender) {
@@ -116,7 +116,7 @@ public class User extends BaseTimeEntity {
     }
 
     public void assignPet(final Long petId) {
-        this.pet = Objects.requireNonNull(petId, "petId must not be null");
+        this.petId = Objects.requireNonNull(petId, "petId must not be null");
     }
 
     public void changeCareMode(final CareMode careMode) {

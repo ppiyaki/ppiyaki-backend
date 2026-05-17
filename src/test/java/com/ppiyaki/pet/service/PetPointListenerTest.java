@@ -56,7 +56,7 @@ class PetPointListenerTest {
     void onMedicationTaken_addsPoint() {
         // given
         final User user = mock(User.class);
-        lenient().when(user.getPet()).thenReturn(1L);
+        lenient().when(user.getPetId()).thenReturn(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
 
         final Pet pet = Pet.create();
@@ -74,7 +74,7 @@ class PetPointListenerTest {
     void onMedicationTaken_noPet_skips() {
         // given
         final User user = mock(User.class);
-        lenient().when(user.getPet()).thenReturn(null);
+        lenient().when(user.getPetId()).thenReturn(null);
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
 
         // when
@@ -100,7 +100,7 @@ class PetPointListenerTest {
     void onMedicationTaken_allTaken_incrementsStreak() {
         // given
         final User user = mock(User.class);
-        lenient().when(user.getPet()).thenReturn(1L);
+        lenient().when(user.getPetId()).thenReturn(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
 
         final Pet pet = Pet.create();
@@ -132,7 +132,7 @@ class PetPointListenerTest {
     void onMedicationTaken_moreLogsThanSchedules_noStreakIncrease() {
         // given
         final User user = mock(User.class);
-        lenient().when(user.getPet()).thenReturn(1L);
+        lenient().when(user.getPetId()).thenReturn(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
 
         final Pet pet = Pet.create();
@@ -166,7 +166,7 @@ class PetPointListenerTest {
     void onMedicationTaken_someMissed_noStreakIncrease() {
         // given
         final User user = mock(User.class);
-        lenient().when(user.getPet()).thenReturn(1L);
+        lenient().when(user.getPetId()).thenReturn(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
 
         final Pet pet = Pet.create();

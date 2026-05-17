@@ -42,7 +42,7 @@ class PetServiceTest {
     void readMyPet_success() {
         // given
         final User user = mock(User.class);
-        lenient().when(user.getPet()).thenReturn(1L);
+        lenient().when(user.getPetId()).thenReturn(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
 
         final Pet pet = Pet.create();
@@ -64,7 +64,7 @@ class PetServiceTest {
     void readMyPet_noPet_throwsNotFound() {
         // given
         final User user = mock(User.class);
-        lenient().when(user.getPet()).thenReturn(null);
+        lenient().when(user.getPetId()).thenReturn(null);
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
 
         // when & then
