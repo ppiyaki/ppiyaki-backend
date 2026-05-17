@@ -28,7 +28,7 @@ public record ScheduleResponse(
                 schedule.getMedicineId(),
                 schedule.getMealSlot(),
                 schedule.getMealSlot().resolveTime(owner),
-                schedule.getDosage(),
+                schedule.composeDosageText(),
                 schedule.getDosageQuantity() != null
                         ? schedule.getDosageQuantity().stripTrailingZeros()
                         : null,

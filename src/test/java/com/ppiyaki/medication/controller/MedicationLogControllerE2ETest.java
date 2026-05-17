@@ -258,7 +258,8 @@ class MedicationLogControllerE2ETest {
         final MedicationSchedule schedule = ctor.newInstance();
         setField(schedule, "medicineId", medicineId);
         setField(schedule, "mealSlot", MealSlot.BREAKFAST);
-        setField(schedule, "dosage", "1정");
+        setField(schedule, "dosageQuantity", new java.math.BigDecimal("1"));
+        setField(schedule, "dosageUnit", com.ppiyaki.medication.domain.DosageUnit.TABLET);
         setField(schedule, "daysOfWeek", "DAILY");
         setField(schedule, "startDate", LocalDate.of(2026, 4, 1));
         return medicationScheduleRepository.save(schedule).getId();

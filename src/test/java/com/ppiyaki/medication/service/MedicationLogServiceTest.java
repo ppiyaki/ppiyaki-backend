@@ -523,9 +523,7 @@ class MedicationLogServiceTest {
         setField(schedule, "id", SCHEDULE_ID);
         setField(schedule, "medicineId", MEDICINE_ID);
         setField(schedule, "mealSlot", com.ppiyaki.medication.domain.MealSlot.BREAKFAST);
-        // legacy "1정"/"2정"/"반정" raw 입력을 정수+단위로 정규화
         if (dosage != null) {
-            setField(schedule, "dosage", dosage);
             final java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d+(?:\\.\\d+)?)(.*)$")
                     .matcher(dosage);
             if (m.find()) {

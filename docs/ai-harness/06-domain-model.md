@@ -64,7 +64,7 @@
 | OCR 원문 | Extracted Text | Clova OCR이 추출한 텍스트(구조화 전) |
 | 파싱 결과 | Parsed Result | LLM이 OCR 원문을 구조화한 약물 목록(JSON) |
 | 약물 | Medicine | 처방전에서 파생되거나 수동 등록된 복용 대상 |
-| 복약 일정 | Medication Schedule | 특정 약물을 어떤 식사 슬롯에 복용할지(`meal_slot`, `dosage`). 실제 시각은 시니어 mealTimes로 동적 계산 |
+| 복약 일정 | Medication Schedule | 특정 약물을 어떤 식사 슬롯에 복용할지(`meal_slot`, `dosage_quantity`/`dosage_unit`). 실제 시각은 시니어 mealTimes로 동적 계산 |
 | 식사 슬롯 | Meal Slot | 복약 일정이 묶이는 식사 단위. `BREAKFAST`/`LUNCH`/`DINNER`. 실제 시각은 시니어의 `breakfast_time`/`lunch_time`/`dinner_time`을 매번 참조 |
 | 제안 슬롯 | Suggested Meal Slots | OCR 시점에 LLM이 처방전 복약주기 텍스트로부터 제안한 식사 슬롯 후보. `prescription_medicine_candidates.suggested_meal_slots`(CSV)에 저장. 보호자 검수의 출발점 (Phase 3) |
 | 확정 슬롯 | Confirmed Meal Slots | 보호자가 검수·확정한 식사 슬롯. `prescription_medicine_candidates.confirmed_meal_slots`(CSV). confirm 시 슬롯별 `medication_schedules` 자동 생성에 사용 (Phase 3) |
@@ -230,10 +230,9 @@ OCR + LLM 파싱으로 추출된 약물 후보. 처방전 1건당 N행. 보호�
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | id | bigint PK | |
-| medicine_id | bigint | `medicines.id` 참조 |
+| medicine_id | bigint NOT NULL | `medicines.id` 참조 |
 | meal_slot | varchar | DB는 varchar, Java는 `MealSlot` enum(`BREAKFAST`/`LUNCH`/`DINNER`). NOT NULL. 실제 시각은 시니어 mealTimes로 동적 계산 |
-| dosage | varchar | 1회 복용량 raw 문자열 (예: `1정`). **deprecated 예정** — 정수+단위 분리 컬럼으로 점차 이전 (spec `dosage-quantity-unit-split.md`) |
-| dosage_quantity | decimal(5,2) nullable | 1회 복용량의 수치(분수 허용, 예: `1`, `0.5`). PRN 등 정의되지 않은 케이스는 NULL. release 직후 옛 row는 모두 NULL |
+| dosage_quantity | decimal(5,2) nullable | 1회 복용량의 수치(분수 허용, 예: `1`, `0.5`). PRN 등 정의되지 않은 케이스는 NULL |
 | dosage_unit | varchar(16) nullable | 단위 문자열(예: `정`, `캡슐`, `ml`, `mg`, `PRN`). 표준화 enum은 별도 follow-up |
 | days_of_week | varchar | 요일 패턴 (예: `MON,TUE,WED,THU,FRI` 또는 `DAILY`). 7비트 마스크 대신 가독성 우선 |
 | start_date | date | 복약 시작일 |
@@ -253,7 +252,7 @@ OCR + LLM 파싱으로 추출된 약물 후보. 처방전 1건당 N행. 보호�
 | target_date | date (`LocalDate`) | 예정 복약 일자 |
 | taken_at | datetime (`LocalDateTime`) nullable | 실제 확인 시각 |
 | status | varchar | 사용자 확정 상태. Java는 `LogStatus` enum(`TAKEN`/`MISSED`/`PENDING`) |
-| photo_url | varchar nullable | 복약 인증 사진. **값은 NCP Object Storage의 `objectKey`** (예: `medication-log/{userId}/{uuid}.jpg`) — 응답 시 서버가 endpoint·bucket을 조립해 full URL로 반환. 컬럼명 리네임은 별도 리팩터 이슈 |
+| photo_object_key | varchar nullable | 복약 인증 사진의 NCP Object Storage `objectKey` (예: `medication-log/{userId}/{uuid}.jpg`). 응답 시 서버가 endpoint·bucket을 조립해 full URL(`photoUrl`)로 반환 |
 | ai_status | varchar nullable | Vision LLM 약 개수 검증 결과. Java `LogAiStatus` enum: `COUNT_MATCH` / `COUNT_MISMATCH` / `COUNT_UNKNOWN` / `COUNT_FAILED` (Phase 2). 사진 + status=TAKEN일 때만 채워짐. 컬럼명은 Phase 3(알약 식별) 추가 시 `pill_count_status`로 리네임 + `pill_identification_status` 분리 예정 |
 | is_proxy | boolean | 보호자 대리 처리 여부 (= `confirmed_by_user_id != senior_id`의 캐시) |
 | confirmed_by_user_id | bigint nullable | 실제로 상태를 확정한 사용자(`users.id` 참조). 시니어 본인일 수도, 보호자일 수도 있음 |
@@ -508,7 +507,6 @@ erDiagram
         bigint id PK
         bigint medicine_id FK
         varchar meal_slot "BREAKFAST/LUNCH/DINNER"
-        varchar dosage "deprecated"
         decimal dosage_quantity "nullable"
         varchar dosage_unit "nullable"
         varchar days_of_week
@@ -523,7 +521,7 @@ erDiagram
         date target_date
         datetime taken_at
         varchar status
-        varchar photo_url
+        varchar photo_object_key
         varchar ai_status
         boolean is_proxy
         bigint confirmed_by_user_id FK

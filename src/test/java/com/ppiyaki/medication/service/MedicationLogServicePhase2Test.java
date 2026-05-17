@@ -322,9 +322,7 @@ class MedicationLogServicePhase2Test {
         final MedicationSchedule s = ctor.newInstance();
         setField(s, "id", id);
         setField(s, "medicineId", MEDICINE_ID);
-        setField(s, "dosage", dosage);
         setField(s, "mealSlot", MEAL_SLOT);
-        // legacy raw 입력을 정수+단위로 정규화. 정수 매칭 안 되면 quantity null (PRN/반알 등)
         if (dosage != null) {
             final java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d+(?:\\.\\d+)?)(.*)$")
                     .matcher(dosage);
