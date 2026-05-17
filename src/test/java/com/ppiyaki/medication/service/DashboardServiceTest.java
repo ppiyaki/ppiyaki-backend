@@ -434,7 +434,6 @@ class DashboardServiceTest {
         setField(s, "id", id);
         setField(s, "medicineId", medicineId);
         setField(s, "mealSlot", slot);
-        setField(s, "dosage", dosage);
         if (dosage != null) {
             final java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d+(?:\\.\\d+)?)(.*)$")
                     .matcher(dosage);

@@ -44,7 +44,7 @@ class MedicationScheduleTest {
     }
 
     @Test
-    @DisplayName("update로 PRN 전환 시 dosageQuantity는 null로 강제 — legacy dosage 비정상 합성 회피")
+    @DisplayName("update로 PRN 전환 시 dosageQuantity는 null로 강제 — composeDosageText 비정상 합성 회피")
     void update_toPRN_clearsDosageQuantity() {
         final MedicationSchedule schedule = new MedicationSchedule(
                 1L, MealSlot.BREAKFAST, BigDecimal.ONE, DosageUnit.TABLET, "DAILY", LocalDate.now(), null);
@@ -53,7 +53,6 @@ class MedicationScheduleTest {
 
         assertThat(schedule.getDosageQuantity()).isNull();
         assertThat(schedule.getDosageUnit()).isEqualTo(DosageUnit.PRN);
-        // legacy dosage = "PRN" (quantity 없음)
-        assertThat(schedule.getDosage()).isEqualTo("PRN");
+        assertThat(schedule.composeDosageText()).isEqualTo("PRN");
     }
 }

@@ -185,7 +185,7 @@ public class MedicationDelayDispatcher {
      * 같은 슬롯에 여러 schedule 알림이 발송될 때 보호자가 어떤 약인지 구분 가능하게 함 (issue #345).
      */
     private String resolveMedicineLabel(final MedicationSchedule schedule) {
-        final String dosage = schedule.getDosage();
+        final String dosage = schedule.composeDosageText();
         final String medicineName = medicineRepository.findById(schedule.getMedicineId())
                 .map(Medicine::getName)
                 .orElse("약");

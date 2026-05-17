@@ -57,7 +57,7 @@ public class MedicationMcpTools {
                 result.add(new ScheduleSummary(
                         medicine.getName(),
                         resolved != null ? resolved.toString() : null,
-                        schedule.getDosage()
+                        schedule.composeDosageText()
                 ));
             }
         }

@@ -46,12 +46,7 @@ public class MedicationLog extends CreatedTimeEntity {
     @Column(name = "status", nullable = false)
     private LogStatus status;
 
-    /**
-     * `photo_url` 컬럼에 실제로는 objectKey를 저장한다 (spec medication-log §5-1, §9 Q2 결정).
-     * 응답에서는 서버가 endpoint/bucket을 조립한 full URL로 변환해 내려준다.
-     * 컬럼명 리네임은 별도 리팩터 이슈.
-     */
-    @Column(name = "photo_url")
+    @Column(name = "photo_object_key")
     private String photoObjectKey;
 
     @Enumerated(EnumType.STRING)
