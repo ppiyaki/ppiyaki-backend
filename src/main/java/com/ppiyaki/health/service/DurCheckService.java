@@ -15,6 +15,8 @@ import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.user.repository.CareRelationRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -51,6 +53,8 @@ public class DurCheckService {
     private final CareRelationRepository careRelationRepository;
     private final MfdsApiClient mfdsApiClient;
     private final com.ppiyaki.notification.service.DurWarningDispatcher durWarningDispatcher;
+    private final Counter cacheHitCounter;
+    private final Counter cacheMissCounter;
 
     public DurCheckService(
             final DurCheckRepository durCheckRepository,
@@ -58,7 +62,8 @@ public class DurCheckService {
             final MedicationScheduleRepository medicationScheduleRepository,
             final CareRelationRepository careRelationRepository,
             final MfdsApiClient mfdsApiClient,
-            final com.ppiyaki.notification.service.DurWarningDispatcher durWarningDispatcher
+            final com.ppiyaki.notification.service.DurWarningDispatcher durWarningDispatcher,
+            final MeterRegistry meterRegistry
     ) {
         this.durCheckRepository = durCheckRepository;
         this.medicineRepository = medicineRepository;
@@ -66,6 +71,14 @@ public class DurCheckService {
         this.careRelationRepository = careRelationRepository;
         this.mfdsApiClient = mfdsApiClient;
         this.durWarningDispatcher = durWarningDispatcher;
+        this.cacheHitCounter = Counter.builder("ppiyaki.cache.hits")
+                .tag("cache", "dur_check")
+                .description("DUR 점검 결과 캐시 hit (24h, DB-backed)")
+                .register(meterRegistry);
+        this.cacheMissCounter = Counter.builder("ppiyaki.cache.misses")
+                .tag("cache", "dur_check")
+                .description("DUR 점검 결과 캐시 miss (MFDS API 호출 트리거)")
+                .register(meterRegistry);
     }
 
     @Transactional
@@ -86,10 +99,12 @@ public class DurCheckService {
                     .findFirstByMedicineIdAndComboHashAndCheckedAtAfterAndWarningLevelIsNotNullOrderByCheckedAtDesc(
                             medicineId, comboHash, LocalDateTime.now().minusHours(CACHE_TTL_HOURS));
             if (cached.isPresent()) {
+                cacheHitCounter.increment();
                 log.debug("DUR Layer 2 cache hit: medicineId={} comboHash={}", medicineId, comboHash);
                 return DurCheckResponse.from(cached.get(), List.of(), true);
             }
         }
+        cacheMissCounter.increment();
 
         final List<DurWarningItem> warnings = new ArrayList<>();
 

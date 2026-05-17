@@ -18,6 +18,7 @@
 - `docs/ai-harness/07-testing-guide.md`: 레이어별 테스트 전략 및 필수 기준
 - `docs/ai-harness/08-code-conventions.md`: 코드 컨벤션 (final/어노테이션/DTO/엔티티/Lombok/null 검증 등)
 - `docs/ai-harness/09-notion-api-spec.md`: Notion API 명세 연동 가이드 (DB 구조, 갱신 규칙, NOTION_API_KEY 관리)
+- `docs/ai-harness/10-observability.md`: 관측성 (Actuator + Micrometer) 메트릭/포트/Phase 2 계획
 
 ## 3-1) 관련 자산
 - `prompts/`: 재사용 프롬프트 저장소 (운영 규칙은 `05-prompt-ops.md`)
