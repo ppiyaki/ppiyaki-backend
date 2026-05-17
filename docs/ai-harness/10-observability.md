@@ -43,8 +43,18 @@ sudo docker exec ppiyaki-server curl -s http://localhost:8081/actuator/prometheu
 sudo docker exec ppiyaki-server curl -s "http://localhost:8081/actuator/metrics/ppiyaki.cache.hits?tag=cache:mfds"
 ```
 
-## 4) Phase 2 (예정)
+## 4) Phase 2 — Prometheus + Grafana docker compose
 
-- Prometheus pull-style scrape (호스팅 위치 TBD)
-- Grafana 대시보드 (캐시 적중률, HTTP latency p95, JVM, DB)
-- 외부 노출 시 actuator 인증 추가 필요 (bearer token / basic auth / IP allowlist)
+같은 NCP 서버에 monitoring 스택을 docker compose로 동거. 백엔드와 같은 docker network(`ppiyaki-monitoring`)에 join하여 `ppiyaki-server:8081/actuator/prometheus` scrape.
+
+상세 운영 절차: `infra/monitoring/README.md`.
+
+- Prometheus 15s scrape, 30일 보관
+- Grafana 3000 포트 외부 노출 (admin 인증)
+- 백업/HA 없음 (실 서비스 아닌 PoC 단계)
+
+## 5) Phase 3 (예정/옵션)
+
+- 알림 (Alertmanager + Discord webhook)
+- 백업 (Prometheus snapshot → NCP Object Storage)
+- 대시보드 .json provisioning

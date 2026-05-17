@@ -66,6 +66,7 @@ jobs:
             echo "Starting new container..."
             docker run -d \
               --name ppiyaki-server \
+              --network ppiyaki-monitoring \
               -p 8080:8080 \
               --restart always \
               -e TZ='Asia/Seoul' \

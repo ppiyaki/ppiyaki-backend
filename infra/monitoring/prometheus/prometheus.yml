@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: ppiyaki-prod
+
+scrape_configs:
+  - job_name: ppiyaki-backend
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - ppiyaki-server:8081
+        labels:
+          application: ppiyaki-backend
+
+  - job_name: prometheus-self
+    static_configs:
+      - targets:
+          - localhost:9090
