@@ -50,8 +50,8 @@ public class MedicationLog extends CreatedTimeEntity {
     private String photoObjectKey;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "ai_status")
-    private LogAiStatus aiStatus;
+    @Column(name = "pill_count_status")
+    private LogPillCountStatus pillCountStatus;
 
     @Column(name = "is_proxy", nullable = false)
     private Boolean isProxy;
@@ -93,7 +93,7 @@ public class MedicationLog extends CreatedTimeEntity {
         this.photoObjectKey = photoObjectKey;
     }
 
-    public void updateAiStatus(final LogAiStatus aiStatus) {
-        this.aiStatus = aiStatus;
+    public void updatePillCountStatus(final LogPillCountStatus pillCountStatus) {
+        this.pillCountStatus = pillCountStatus;
     }
 }
