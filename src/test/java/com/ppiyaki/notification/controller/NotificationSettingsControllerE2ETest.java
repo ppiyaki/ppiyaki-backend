@@ -30,7 +30,7 @@ class NotificationSettingsControllerE2ETest {
         jdbcTemplate.update("DELETE FROM care_relations WHERE caregiver_id IN "
                 + "(SELECT id FROM users WHERE login_id IN ('ns_owner', 'ns_other'))");
         jdbcTemplate.update("DELETE FROM pets WHERE id IN "
-                + "(SELECT pet FROM users WHERE nickname = 'NS시니어' AND pet IS NOT NULL)");
+                + "(SELECT pet_id FROM users WHERE nickname = 'NS시니어' AND pet_id IS NOT NULL)");
         jdbcTemplate.update("DELETE FROM users WHERE nickname = 'NS시니어'");
         jdbcTemplate.update("DELETE FROM refresh_tokens WHERE user_id IN "
                 + "(SELECT id FROM users WHERE login_id IN ('ns_owner', 'ns_other'))");

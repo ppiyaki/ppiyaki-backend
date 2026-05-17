@@ -31,7 +31,7 @@ public class SeniorService {
     @Transactional
     public SeniorCreateResponse createSenior(final Long caregiverId, final SeniorCreateRequest seniorCreateRequest) {
         final User senior = userRepository.save(
-                User.createSenior(seniorCreateRequest.nickname(), seniorCreateRequest.dob()));
+                User.createSenior(seniorCreateRequest.nickname(), seniorCreateRequest.birthDate()));
 
         final Pet pet = petRepository.save(Pet.create());
         senior.assignPet(pet.getId());

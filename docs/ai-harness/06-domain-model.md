@@ -102,8 +102,8 @@
 | role | varchar | DB는 varchar로 자유도 유지, Java는 `UserRole` enum(`SENIOR`/`CAREGIVER`)로 다루며 컨버터로 변환 |
 | nickname | varchar | 사용자 표시 이름 |
 | gender | varchar | DB는 varchar, Java는 `Gender` enum(`MALE`/`FEMALE`/`OTHER`/`UNKNOWN`) |
-| dob | date | 생년월일 |
-| pet | bigint | `pets.id` PK 참조 (FK 제약 선언 여부는 §7-12) |
+| birth_date | date | 생년월일 |
+| pet_id | bigint | `pets.id` PK 참조 (FK 제약 선언 여부는 §7-12) |
 | care_mode | varchar | DB는 varchar, Java는 `CareMode` enum(`MANAGED` default / `AUTONOMOUS`). 시니어 회원에 적용. 보호자 회원도 컬럼은 갖지만 처방전 흐름에서는 `prescription.owner_id`로 참조하는 시니어 측 값만 사용 |
 | breakfast_time | time nullable | 시니어 식사 시간대(아침). Java는 `LocalTime`. 미설정 가능. Phase 1: 클라이언트가 schedule 등록 시 활용. Phase 2~3: 슬롯 매핑/자동 생성 (별도 spec) |
 | lunch_time | time nullable | 시니어 식사 시간대(점심). 동일 |
@@ -422,8 +422,8 @@ erDiagram
         varchar role
         varchar nickname
         varchar gender
-        date dob
-        bigint pet FK
+        date birth_date
+        bigint pet_id FK
         varchar care_mode "MANAGED default / AUTONOMOUS"
         time breakfast_time "nullable"
         time lunch_time "nullable"
