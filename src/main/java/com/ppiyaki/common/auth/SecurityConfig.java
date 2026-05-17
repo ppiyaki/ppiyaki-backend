@@ -49,7 +49,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/h2-console/**",
-                                "/actuator/health"
+                                "/actuator/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
