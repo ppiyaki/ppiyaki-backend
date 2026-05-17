@@ -1,6 +1,6 @@
 package com.ppiyaki.medication.controller.dto;
 
-import com.ppiyaki.medication.domain.LogAiStatus;
+import com.ppiyaki.medication.domain.LogPillCountStatus;
 import com.ppiyaki.medication.domain.LogStatus;
 import com.ppiyaki.medication.domain.MedicationLog;
 import java.time.LocalDate;
@@ -14,7 +14,7 @@ public record MedicationLogResponse(
         LocalDateTime takenAt,
         LogStatus status,
         String photoUrl,
-        LogAiStatus aiStatus,
+        LogPillCountStatus pillCountStatus,
         Boolean isProxy,
         Long confirmedByUserId,
         LocalDateTime createdAt
@@ -29,7 +29,7 @@ public record MedicationLogResponse(
                 log.getTakenAt(),
                 log.getStatus(),
                 photoUrl,
-                log.getAiStatus(),
+                log.getPillCountStatus(),
                 log.getIsProxy(),
                 log.getConfirmedByUserId(),
                 log.getCreatedAt()

@@ -68,9 +68,9 @@
 | 식사 슬롯 | Meal Slot | 복약 일정이 묶이는 식사 단위. `BREAKFAST`/`LUNCH`/`DINNER`. 실제 시각은 시니어의 `breakfast_time`/`lunch_time`/`dinner_time`을 매번 참조 |
 | 제안 슬롯 | Suggested Meal Slots | OCR 시점에 LLM이 처방전 복약주기 텍스트로부터 제안한 식사 슬롯 후보. `prescription_medicine_candidates.suggested_meal_slots`(CSV)에 저장. 보호자 검수의 출발점 (Phase 3) |
 | 확정 슬롯 | Confirmed Meal Slots | 보호자가 검수·확정한 식사 슬롯. `prescription_medicine_candidates.confirmed_meal_slots`(CSV). confirm 시 슬롯별 `medication_schedules` 자동 생성에 사용 (Phase 3) |
-| 복약 기록 | Medication Log | 실제 복용 이행 여부 기록 (`status`, `ai_status`) |
+| 복약 기록 | Medication Log | 실제 복용 이행 여부 기록 (`status`, `pill_count_status`) |
 | 복약 상태 | Log Status | 복약 기록의 사용자 확정 상태. `TAKEN` / `MISSED` / `PENDING`. `medication_logs.status`에 enum 매핑 |
-| AI 검증 상태 | Log AI Status | 복약 인증 사진 약 개수 AI 검증 결과. `COUNT_MATCH` / `COUNT_MISMATCH` / `COUNT_UNKNOWN` / `COUNT_FAILED`. `medication_logs.ai_status`에 enum 매핑 (Phase 2). 사진 + status=TAKEN일 때만 채워짐 |
+| 알약 개수 검증 상태 | Log Pill Count Status | 복약 인증 사진 약 개수 AI 검증 결과. `COUNT_MATCH` / `COUNT_MISMATCH` / `COUNT_UNKNOWN` / `COUNT_FAILED`. `medication_logs.pill_count_status`에 enum 매핑 (Phase 2). 사진 + status=TAKEN일 때만 채워짐. Phase 3(낱알 식별) 진입 시 `pill_identification_status` 컬럼 분리 예정 |
 | 복약 이행률 | Adherence Rate | 기간 내 성공 복약 / 예정 복약 |
 | 대리 처리 | Proxy Confirmation | 보호자가 시니어 대신 복용 상태를 확정 (`is_proxy=true`, `confirmed_by_user_id != senior_id`) |
 | 보호자 승인 모드 | Care Mode | 시니어의 처방전 변경 권한 정책. `MANAGED`(보호자 검증 강제, 0~72h 보호자 전용 + 72h 후 시니어 fallback) / `AUTONOMOUS`(시니어 즉시 변경 허용). `users.care_mode`에 저장. 변경은 보호자만 가능 |
@@ -253,7 +253,7 @@ OCR + LLM 파싱으로 추출된 약물 후보. 처방전 1건당 N행. 보호�
 | taken_at | datetime (`LocalDateTime`) nullable | 실제 확인 시각 |
 | status | varchar | 사용자 확정 상태. Java는 `LogStatus` enum(`TAKEN`/`MISSED`/`PENDING`) |
 | photo_object_key | varchar nullable | 복약 인증 사진의 NCP Object Storage `objectKey` (예: `medication-log/{userId}/{uuid}.jpg`). 응답 시 서버가 endpoint·bucket을 조립해 full URL(`photoUrl`)로 반환 |
-| ai_status | varchar nullable | Vision LLM 약 개수 검증 결과. Java `LogAiStatus` enum: `COUNT_MATCH` / `COUNT_MISMATCH` / `COUNT_UNKNOWN` / `COUNT_FAILED` (Phase 2). 사진 + status=TAKEN일 때만 채워짐. 컬럼명은 Phase 3(알약 식별) 추가 시 `pill_count_status`로 리네임 + `pill_identification_status` 분리 예정 |
+| pill_count_status | varchar nullable | Vision LLM 약 개수 검증 결과. Java `LogPillCountStatus` enum: `COUNT_MATCH` / `COUNT_MISMATCH` / `COUNT_UNKNOWN` / `COUNT_FAILED` (Phase 2). 사진 + status=TAKEN일 때만 채워짐. Phase 3(낱알 식별) 진입 시 `pill_identification_status` 컬럼 분리 예정 |
 | is_proxy | boolean | 보호자 대리 처리 여부 (= `confirmed_by_user_id != senior_id`의 캐시) |
 | confirmed_by_user_id | bigint nullable | 실제로 상태를 확정한 사용자(`users.id` 참조). 시니어 본인일 수도, 보호자일 수도 있음 |
 | created_at | timestamp | `CreatedTimeEntity` |
@@ -522,7 +522,7 @@ erDiagram
         datetime taken_at
         varchar status
         varchar photo_object_key
-        varchar ai_status
+        varchar pill_count_status
         boolean is_proxy
         bigint confirmed_by_user_id FK
         timestamp created_at

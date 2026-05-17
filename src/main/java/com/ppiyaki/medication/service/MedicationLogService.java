@@ -8,7 +8,7 @@ import com.ppiyaki.infrastructure.storage.PhotoUrlAssembler;
 import com.ppiyaki.medication.controller.dto.MedicationLogListResponse;
 import com.ppiyaki.medication.controller.dto.MedicationLogResponse;
 import com.ppiyaki.medication.controller.dto.MedicationLogUpsertRequest;
-import com.ppiyaki.medication.domain.LogAiStatus;
+import com.ppiyaki.medication.domain.LogPillCountStatus;
 import com.ppiyaki.medication.domain.LogStatus;
 import com.ppiyaki.medication.domain.MedicationLog;
 import com.ppiyaki.medication.domain.MedicationSchedule;
@@ -146,11 +146,11 @@ public class MedicationLogService {
         // Phase 2: 사진 + status=TAKEN일 때 약 개수 AI 검증 (spec medication-log-phase2 §5-4)
         if (request.status() == LogStatus.TAKEN
                 && request.photoObjectKey() != null && !request.photoObjectKey().isBlank()) {
-            final LogAiStatus aiStatus = verifyPillCount(seniorId, schedule, request);
-            log.updateAiStatus(aiStatus);
+            final LogPillCountStatus pillCountStatus = verifyPillCount(seniorId, schedule, request);
+            log.updatePillCountStatus(pillCountStatus);
             // COUNT_MATCH일 때 슬롯의 다른 active schedule도 TAKEN 전파 (issue #343).
             // 시니어가 슬롯 전체 약을 사진 한 장에 담아 인증한 경우 == 슬롯 전체 인증으로 인정.
-            if (aiStatus == LogAiStatus.COUNT_MATCH) {
+            if (pillCountStatus == LogPillCountStatus.COUNT_MATCH) {
                 propagateTakenToSlotSchedules(seniorId, schedule, request, takenAt, isProxy, userId);
             }
         }
@@ -163,7 +163,7 @@ public class MedicationLogService {
      * spec medication-log-phase2 §5-4: AI COUNT_MATCH 시 슬롯 전체 인증으로 인정.
      *
      * <p>이미 TAKEN인 row는 skip (멱등). 새로 TAKEN 전환되는 schedule의 medicine 잔여분도 차감.
-     * propagated log의 aiStatus는 COUNT_MATCH로 마킹 (슬롯 전체가 검증된 상태이므로).
+     * propagated log의 pillCountStatus는 COUNT_MATCH로 마킹 (슬롯 전체가 검증된 상태이므로).
      */
     private void propagateTakenToSlotSchedules(
             final Long seniorId,
@@ -194,7 +194,7 @@ public class MedicationLogService {
                     .orElseGet(() -> medicationLogRepository.saveAndFlush(new MedicationLog(
                             seniorId, peer.getId(), request.targetDate(),
                             takenAt, LogStatus.TAKEN, request.photoObjectKey(), isProxy, recorderId)));
-            peerLog.updateAiStatus(LogAiStatus.COUNT_MATCH);
+            peerLog.updatePillCountStatus(LogPillCountStatus.COUNT_MATCH);
 
             final BigDecimal dosageQuantity = peer.getDosageQuantity();
             if (dosageQuantity != null) {
@@ -211,7 +211,7 @@ public class MedicationLogService {
      * 동일 식사 슬롯 schedule들의 dosage 합 vs Vision 추출 개수 비교.
      * spec medication-log-phase2 §5-4.
      */
-    private LogAiStatus verifyPillCount(
+    private LogPillCountStatus verifyPillCount(
             final Long seniorId,
             final MedicationSchedule triggerSchedule,
             final MedicationLogUpsertRequest request
@@ -224,12 +224,12 @@ public class MedicationLogService {
         for (final MedicationSchedule s : schedules) {
             final BigDecimal quantity = s.getDosageQuantity();
             if (quantity == null) {
-                return LogAiStatus.COUNT_UNKNOWN;
+                return LogPillCountStatus.COUNT_UNKNOWN;
             }
             expected += quantity.setScale(0, java.math.RoundingMode.CEILING).intValueExact();
         }
         if (schedules.isEmpty()) {
-            return LogAiStatus.COUNT_UNKNOWN;
+            return LogPillCountStatus.COUNT_UNKNOWN;
         }
 
         final byte[] imageBytes;
@@ -239,14 +239,14 @@ public class MedicationLogService {
                     .key(request.photoObjectKey())
                     .build()).asByteArray();
         } catch (final Exception e) {
-            return LogAiStatus.COUNT_FAILED;
+            return LogPillCountStatus.COUNT_FAILED;
         }
         final String mediaType = guessMediaType(request.photoObjectKey());
         final Optional<Integer> actual = openAiClient.countPills(imageBytes, mediaType);
         if (actual.isEmpty()) {
-            return LogAiStatus.COUNT_FAILED;
+            return LogPillCountStatus.COUNT_FAILED;
         }
-        return actual.get() == expected ? LogAiStatus.COUNT_MATCH : LogAiStatus.COUNT_MISMATCH;
+        return actual.get() == expected ? LogPillCountStatus.COUNT_MATCH : LogPillCountStatus.COUNT_MISMATCH;
     }
 
     private String guessMediaType(final String objectKey) {
