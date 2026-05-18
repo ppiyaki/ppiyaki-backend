@@ -37,6 +37,9 @@ import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.mockito.Spy;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("MedicationLogService Phase 2 약 개수 AI 검증")
@@ -62,6 +65,8 @@ class MedicationLogServicePhase2Test {
     private ApplicationEventPublisher eventPublisher;
     @Mock
     private com.ppiyaki.notification.repository.NotificationRepository notificationRepository;
+    @Spy
+    private MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
     @InjectMocks
     private MedicationLogService service;

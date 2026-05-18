@@ -9,6 +9,7 @@ import com.ppiyaki.pet.Pet;
 import com.ppiyaki.pet.repository.PetRepository;
 import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.UserRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.LocalDate;
 import java.util.List;
 import org.slf4j.Logger;
@@ -24,12 +25,14 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class PetPointListener {
 
     private static final Logger log = LoggerFactory.getLogger(PetPointListener.class);
+    private static final String METRIC = "ppiyaki.pet.point.event.total";
 
     private final UserRepository userRepository;
     private final PetRepository petRepository;
     private final MedicationScheduleRepository medicationScheduleRepository;
     private final MedicationLogRepository medicationLogRepository;
     private final BadgeService badgeService;
+    private final MeterRegistry meterRegistry;
     private final long pointPerTaken;
 
     public PetPointListener(
@@ -38,6 +41,7 @@ public class PetPointListener {
             final MedicationScheduleRepository medicationScheduleRepository,
             final MedicationLogRepository medicationLogRepository,
             final BadgeService badgeService,
+            final MeterRegistry meterRegistry,
             @Value("${pet.points.per-taken:10}") final long pointPerTaken
     ) {
         this.userRepository = userRepository;
@@ -45,6 +49,7 @@ public class PetPointListener {
         this.medicationScheduleRepository = medicationScheduleRepository;
         this.medicationLogRepository = medicationLogRepository;
         this.badgeService = badgeService;
+        this.meterRegistry = meterRegistry;
         this.pointPerTaken = pointPerTaken;
     }
 
@@ -54,12 +59,14 @@ public class PetPointListener {
         final User user = userRepository.findById(event.seniorId()).orElse(null);
         if (user == null || user.getPetId() == null) {
             log.debug("Pet not linked for seniorId={}, skipping point", event.seniorId());
+            meterRegistry.counter(METRIC, "result", "skipped_no_pet_link").increment();
             return;
         }
 
         final Pet pet = petRepository.findById(user.getPetId()).orElse(null);
         if (pet == null) {
             log.debug("Pet entity not found for petId={}, skipping point", user.getPetId());
+            meterRegistry.counter(METRIC, "result", "skipped_pet_not_found").increment();
             return;
         }
 
@@ -71,6 +78,7 @@ public class PetPointListener {
         }
 
         badgeService.checkAndAwardBadges(pet);
+        meterRegistry.counter(METRIC, "result", "granted").increment();
     }
 
     private boolean isDayFullyTaken(final Long seniorId, final LocalDate date) {
