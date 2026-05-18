@@ -21,6 +21,8 @@ import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.user.repository.CareRelationRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.List;
@@ -31,6 +33,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import software.amazon.awssdk.core.ResponseBytes;
@@ -62,6 +65,8 @@ class MedicationLogServicePhase2Test {
     private ApplicationEventPublisher eventPublisher;
     @Mock
     private com.ppiyaki.notification.repository.NotificationRepository notificationRepository;
+    @Spy
+    private MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
     @InjectMocks
     private MedicationLogService service;

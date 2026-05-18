@@ -18,6 +18,7 @@ import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.user.repository.CareRelationRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -58,6 +59,7 @@ public class MedicationLogService {
     private final S3Client s3Client;
     private final ApplicationEventPublisher eventPublisher;
     private final com.ppiyaki.notification.repository.NotificationRepository notificationRepository;
+    private final MeterRegistry meterRegistry;
 
     public MedicationLogService(
             final MedicationLogRepository medicationLogRepository,
@@ -69,7 +71,8 @@ public class MedicationLogService {
             final NcpStorageProperties storageProperties,
             final S3Client s3Client,
             final ApplicationEventPublisher eventPublisher,
-            final com.ppiyaki.notification.repository.NotificationRepository notificationRepository
+            final com.ppiyaki.notification.repository.NotificationRepository notificationRepository,
+            final MeterRegistry meterRegistry
     ) {
         this.medicationLogRepository = medicationLogRepository;
         this.medicationScheduleRepository = medicationScheduleRepository;
@@ -81,6 +84,7 @@ public class MedicationLogService {
         this.s3Client = s3Client;
         this.eventPublisher = eventPublisher;
         this.notificationRepository = notificationRepository;
+        this.meterRegistry = meterRegistry;
     }
 
     @Transactional
@@ -148,6 +152,8 @@ public class MedicationLogService {
                 && request.photoObjectKey() != null && !request.photoObjectKey().isBlank()) {
             final LogPillCountStatus pillCountStatus = verifyPillCount(seniorId, schedule, request);
             log.updatePillCountStatus(pillCountStatus);
+            meterRegistry.counter("ppiyaki.medication.pill_count.total",
+                    "result", pillCountStatus.name()).increment();
             // COUNT_MATCH일 때 슬롯의 다른 active schedule도 TAKEN 전파 (issue #343).
             // 시니어가 슬롯 전체 약을 사진 한 장에 담아 인증한 경우 == 슬롯 전체 인증으로 인정.
             if (pillCountStatus == LogPillCountStatus.COUNT_MATCH) {
@@ -155,7 +161,23 @@ public class MedicationLogService {
             }
         }
 
+        final String transition = resolveTransition(request.status(), previousStatus);
+        meterRegistry.counter("ppiyaki.medication.log.upsert.total",
+                "status", request.status().name(),
+                "transition", transition,
+                "is_proxy", String.valueOf(isProxy)).increment();
+
         return MedicationLogResponse.from(log, photoUrlAssembler.toFullUrl(log.getPhotoObjectKey()));
+    }
+
+    private static String resolveTransition(final LogStatus current, final LogStatus previous) {
+        if (current == LogStatus.TAKEN && previous != LogStatus.TAKEN) {
+            return "new_taken";
+        }
+        if (current == LogStatus.TAKEN && previous == LogStatus.TAKEN) {
+            return "repeat";
+        }
+        return "other";
     }
 
     /**

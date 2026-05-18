@@ -15,6 +15,7 @@ import com.ppiyaki.pet.Pet;
 import com.ppiyaki.pet.repository.PetRepository;
 import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.UserRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +49,7 @@ class PetPointListenerTest {
     void setUp() {
         petPointListener = new PetPointListener(
                 userRepository, petRepository, medicationScheduleRepository,
-                medicationLogRepository, badgeService, 10L);
+                medicationLogRepository, badgeService, new SimpleMeterRegistry(), 10L);
     }
 
     @Test
