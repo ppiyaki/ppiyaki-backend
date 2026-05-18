@@ -896,6 +896,113 @@
         "overrides": []
       },
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "row",
+      "title": "외부 API + 처방전 / 뱃지",
+      "id": 110,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 132},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "외부 API 호출률 by api (1m)",
+      "id": 39,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 133},
+      "targets": [
+        {"expr": "sum by (api) (rate(ppiyaki_external_api_total{job=\"ppiyaki-backend\"}[1m]))", "legendFormat": "{{api}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "normal", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "외부 API p95 지연 by api",
+      "id": 40,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 133},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (le, api) (rate(ppiyaki_external_api_seconds_bucket{job=\"ppiyaki-backend\"}[5m])))", "legendFormat": "p95 {{api}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 0, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "stat",
+      "title": "외부 API 실패율 (15m)",
+      "id": 41,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 141},
+      "targets": [
+        {"expr": "sum(rate(ppiyaki_external_api_total{job=\"ppiyaki-backend\", result=\"failed\"}[15m])) / clamp_min(sum(rate(ppiyaki_external_api_total{job=\"ppiyaki-backend\"}[15m])), 0.0001)", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}, {"value": 0.05, "color": "orange"}, {"value": 0.15, "color": "red"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "처방전 confirm 24h",
+      "id": 42,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 141},
+      "targets": [
+        {"expr": "sum(increase(ppiyaki_prescription_confirm_total{job=\"ppiyaki-backend\", result=\"success\"}[24h]))", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "blue"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "timeseries",
+      "title": "뱃지 획득 by badge_type (1h)",
+      "id": 43,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 141},
+      "targets": [
+        {"expr": "sum by (badge_type) (increase(ppiyaki_badge_awarded_total{job=\"ppiyaki-backend\"}[1h]))", "legendFormat": "{{badge_type}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {"drawStyle": "bars", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 70, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["sum"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
     }
   ],
   "refresh": "30s",
