@@ -79,6 +79,7 @@ public class PrescriptionService {
     private final NcpStorageProperties storageProperties;
     private final S3Client s3Client;
     private final PhotoUrlAssembler photoUrlAssembler;
+    private final io.micrometer.core.instrument.MeterRegistry meterRegistry;
 
     public PrescriptionService(
             final PrescriptionRepository prescriptionRepository,
@@ -94,7 +95,8 @@ public class PrescriptionService {
             final ImageOrientationCorrector orientationCorrector,
             final NcpStorageProperties storageProperties,
             final S3Client s3Client,
-            final PhotoUrlAssembler photoUrlAssembler
+            final PhotoUrlAssembler photoUrlAssembler,
+            final io.micrometer.core.instrument.MeterRegistry meterRegistry
     ) {
         this.prescriptionRepository = prescriptionRepository;
         this.candidateRepository = candidateRepository;
@@ -110,6 +112,7 @@ public class PrescriptionService {
         this.storageProperties = storageProperties;
         this.s3Client = s3Client;
         this.photoUrlAssembler = photoUrlAssembler;
+        this.meterRegistry = meterRegistry;
     }
 
     @Transactional
@@ -347,6 +350,7 @@ public class PrescriptionService {
         }
 
         prescription.confirm();
+        meterRegistry.counter("ppiyaki.prescription.confirm.total", "result", "success").increment();
         return PrescriptionDetailResponse.from(prescription, candidates, photoUrlAssembler.toFullUrl(prescription
                 .getMaskedImageObjectKey()));
     }
