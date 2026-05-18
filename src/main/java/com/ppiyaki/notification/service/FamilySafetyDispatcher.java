@@ -65,9 +65,6 @@ public class FamilySafetyDispatcher {
         for (final User senior : userRepository.findAllByRoleWithMealTimesSet(UserRole.SENIOR)) {
             dispatched += dispatchForSenior(senior, now, today);
         }
-        if (dispatched > 0) {
-            log.info("FamilySafetyDispatcher dispatched {} alerts", dispatched);
-        }
         return dispatched;
     }
 

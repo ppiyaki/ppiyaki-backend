@@ -85,3 +85,4 @@ management:
     distribution:
       percentiles-histogram:
         http.server.requests: true
+        ppiyaki.push.send: true
