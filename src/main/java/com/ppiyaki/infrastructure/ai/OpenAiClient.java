@@ -6,6 +6,8 @@ import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.medication.domain.DosageUnit;
 import com.ppiyaki.medication.domain.MealSlot;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -28,17 +30,29 @@ public class OpenAiClient {
     private static final Logger log = LoggerFactory.getLogger(OpenAiClient.class);
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
 
+    private static final String METRIC_TOKENS = "ppiyaki.llm.tokens.total";
+    private static final String METRIC_REQUEST = "ppiyaki.llm.request.total";
+    private static final String METRIC_TIMER = "ppiyaki.llm.request.seconds";
+    private static final String OP_EXTRACT = "extract_medicines";
+    private static final String OP_COUNT_PILLS = "count_pills";
+    private static final String RESULT_SUCCESS = "success";
+    private static final String RESULT_FAILED = "failed";
+    private static final String RESULT_EMPTY = "empty";
+
     private final OpenAiProperties properties;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
 
     public OpenAiClient(
             final OpenAiProperties properties,
             final RestClient.Builder restClientBuilder,
-            final ObjectMapper objectMapper
+            final ObjectMapper objectMapper,
+            final MeterRegistry meterRegistry
     ) {
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.meterRegistry = meterRegistry;
 
         final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(5));
@@ -49,10 +63,11 @@ public class OpenAiClient {
 
     public List<ExtractedMedicine> extractMedicines(final String maskedOcrText) {
         log.info("OpenAI extractMedicines: textLength={}", maskedOcrText.length());
-        final long startTime = System.currentTimeMillis();
+        final Timer.Sample sample = Timer.start(meterRegistry);
+        final String model = properties.textModel();
 
         try {
-            final String requestBody = buildRequest(properties.textModel(), maskedOcrText);
+            final String requestBody = buildRequest(model, maskedOcrText);
 
             final String responseBody = restClient.post()
                     .uri(API_URL)
@@ -62,16 +77,16 @@ public class OpenAiClient {
                     .retrieve()
                     .body(String.class);
 
-            final long elapsed = System.currentTimeMillis() - startTime;
-            log.info("OpenAI response: elapsed={}ms", elapsed);
-
+            recordUsage(model, OP_EXTRACT, responseBody);
+            recordResult(model, OP_EXTRACT, RESULT_SUCCESS, sample);
             return parseResponse(responseBody);
 
         } catch (final BusinessException e) {
+            recordResult(model, OP_EXTRACT, RESULT_FAILED, sample);
             throw e;
         } catch (final Exception e) {
-            final long elapsed = System.currentTimeMillis() - startTime;
-            log.error("OpenAI failed: elapsed={}ms error={}", elapsed, e.getMessage());
+            recordResult(model, OP_EXTRACT, RESULT_FAILED, sample);
+            log.error("OpenAI failed: error={}", e.getMessage());
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
                     "AI extraction failed: " + e.getMessage());
         }
@@ -83,7 +98,7 @@ public class OpenAiClient {
                     당신은 한국 병원 처방전 OCR 텍스트에서 약물 정보를 추출하는 전문가입니다.
 
                     ## 입력 특성
-                    - OCR로 추출된 텍스트라 오인식·띄어쓰기 깨짐·줄바꿈 누락��� 빈번합니다.
+                    - OCR로 추출된 텍스트라 오인식·띄어쓰기 깨짐·줄바꿈 누락이 빈번합니다.
                     - 처방전은 보통 표(테이블) 형식이지만 OCR이 좌→우, 위→아래로 읽어서
                       약품명 중간에 다른 컬럼(투약량·횟수·일수) 값이 섞여 들어옵니다.
                       예: "타이레놀정500mg 1정 3회 7일 부루펜정200mg 1정 2회 5일"
@@ -241,10 +256,11 @@ public class OpenAiClient {
      */
     public Optional<Integer> countPills(final byte[] imageBytes, final String mediaType) {
         log.info("OpenAI countPills: imageSize={}bytes mediaType={}", imageBytes.length, mediaType);
+        final String model = properties.visionModel();
         for (int attempt = 1; attempt <= 2; attempt++) {
-            final long startTime = System.currentTimeMillis();
+            final Timer.Sample sample = Timer.start(meterRegistry);
             try {
-                final String requestBody = buildCountRequest(properties.visionModel(), imageBytes, mediaType);
+                final String requestBody = buildCountRequest(model, imageBytes, mediaType);
 
                 final String responseBody = restClient.post()
                         .uri(API_URL)
@@ -254,14 +270,15 @@ public class OpenAiClient {
                         .retrieve()
                         .body(String.class);
 
-                final long elapsed = System.currentTimeMillis() - startTime;
-                log.info("OpenAI countPills attempt={} elapsed={}ms", attempt, elapsed);
+                recordUsage(model, OP_COUNT_PILLS, responseBody);
+                log.info("OpenAI countPills attempt={}", attempt);
 
-                return parseCountResponse(responseBody);
+                final Optional<Integer> count = parseCountResponse(responseBody);
+                recordResult(model, OP_COUNT_PILLS, count.isPresent() ? RESULT_SUCCESS : RESULT_EMPTY, sample);
+                return count;
             } catch (final Exception e) {
-                final long elapsed = System.currentTimeMillis() - startTime;
-                log.warn("OpenAI countPills attempt={} failed elapsed={}ms error={}",
-                        attempt, elapsed, e.getMessage());
+                recordResult(model, OP_COUNT_PILLS, RESULT_FAILED, sample);
+                log.warn("OpenAI countPills attempt={} failed error={}", attempt, e.getMessage());
             }
         }
         return Optional.empty();
@@ -314,6 +331,39 @@ public class OpenAiClient {
             log.warn("OpenAI countPills parse failed: {}", e.getMessage());
             return Optional.empty();
         }
+    }
+
+    /**
+     * OpenAI 응답의 `usage` 객체에서 prompt/completion 토큰 수를 추출해 카운터 increment.
+     * 응답에 usage가 없거나 파싱 실패 시 조용히 무시 (메트릭이 본 로직 실패시키지 않음).
+     */
+    private void recordUsage(final String model, final String operation, final String responseBody) {
+        try {
+            final JsonNode usage = objectMapper.readTree(responseBody).path("usage");
+            if (usage.isMissingNode() || usage.isNull()) {
+                return;
+            }
+            final long promptTokens = usage.path("prompt_tokens").asLong(0);
+            final long completionTokens = usage.path("completion_tokens").asLong(0);
+            if (promptTokens > 0) {
+                meterRegistry.counter(METRIC_TOKENS,
+                        "model", model, "operation", operation, "direction", "prompt").increment(promptTokens);
+            }
+            if (completionTokens > 0) {
+                meterRegistry.counter(METRIC_TOKENS,
+                        "model", model, "operation", operation, "direction", "completion").increment(completionTokens);
+            }
+        } catch (final Exception ignored) {
+            // usage 파싱 실패는 본 흐름과 무관 — 조용히 통과
+        }
+    }
+
+    private void recordResult(final String model, final String operation, final String result,
+            final Timer.Sample sample) {
+        meterRegistry.counter(METRIC_REQUEST,
+                "model", model, "operation", operation, "result", result).increment();
+        sample.stop(meterRegistry.timer(METRIC_TIMER,
+                "model", model, "operation", operation, "result", result));
     }
 
     public record ExtractedMedicine(
