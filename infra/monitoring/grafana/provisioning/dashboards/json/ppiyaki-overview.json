@@ -1,0 +1,412 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Ppiyaki backend 종합 대시보드 — JVM, HTTP, Hikari, 외부 API 캐시 hit/miss",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "stat",
+      "title": "System CPU",
+      "id": 1,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+      "targets": [
+        {"expr": "system_cpu_usage{job=\"ppiyaki-backend\"} * 100", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}, {"value": 70, "color": "orange"}, {"value": 90, "color": "red"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "Process CPU",
+      "id": 2,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+      "targets": [
+        {"expr": "process_cpu_usage{job=\"ppiyaki-backend\"} * 100", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}, {"value": 70, "color": "orange"}, {"value": 90, "color": "red"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "JVM Heap Used",
+      "id": 3,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+      "targets": [
+        {"expr": "sum(jvm_memory_used_bytes{job=\"ppiyaki-backend\",area=\"heap\"})", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "HTTP Active",
+      "id": 4,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
+      "targets": [
+        {"expr": "sum(http_server_requests_active_seconds_count{job=\"ppiyaki-backend\"})", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}, {"value": 20, "color": "orange"}, {"value": 50, "color": "red"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "Hikari Active",
+      "id": 5,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 0},
+      "targets": [
+        {"expr": "sum(hikaricp_connections_active{job=\"ppiyaki-backend\"})", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}, {"value": 7, "color": "orange"}, {"value": 9, "color": "red"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "Cache Hit Ratio (15m)",
+      "id": 6,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 0},
+      "targets": [
+        {"expr": "sum(rate(ppiyaki_cache_hits_total{job=\"ppiyaki-backend\"}[15m])) / (sum(rate(ppiyaki_cache_hits_total{job=\"ppiyaki-backend\"}[15m])) + sum(rate(ppiyaki_cache_misses_total{job=\"ppiyaki-backend\"}[15m])))", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "min": 0,
+          "max": 1,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "red"}, {"value": 0.5, "color": "orange"}, {"value": 0.8, "color": "green"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "row",
+      "title": "HTTP",
+      "id": 100,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 4},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP RPS by status",
+      "id": 7,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5},
+      "targets": [
+        {"expr": "sum by (status) (rate(http_server_requests_seconds_count{job=\"ppiyaki-backend\"}[1m]))", "legendFormat": "{{status}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": {"mode": "normal", "group": "A"}, "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP latency p95 / p99 (all endpoints)",
+      "id": 8,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"ppiyaki-backend\"}[5m])))", "legendFormat": "p95", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"ppiyaki-backend\"}[5m])))", "legendFormat": "p99", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 0, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "row",
+      "title": "DB (Hikari)",
+      "id": 101,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 13},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Hikari connections by state",
+      "id": 9,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+      "targets": [
+        {"expr": "hikaricp_connections_active{job=\"ppiyaki-backend\"}", "legendFormat": "active", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "hikaricp_connections_idle{job=\"ppiyaki-backend\"}", "legendFormat": "idle", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "hikaricp_connections_pending{job=\"ppiyaki-backend\"}", "legendFormat": "pending", "refId": "C", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "hikaricp_connections_max{job=\"ppiyaki-backend\"}", "legendFormat": "max", "refId": "D", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {"drawStyle": "line", "lineInterpolation": "stepAfter", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "pending"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]},
+          {"matcher": {"id": "byName", "options": "max"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "gray"}}, {"id": "custom.lineStyle", "value": {"dash": [10, 10], "fill": "dash"}}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Hikari connection acquire / timeouts",
+      "id": 10,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+      "targets": [
+        {"expr": "rate(hikaricp_connections_acquire_seconds_sum{job=\"ppiyaki-backend\"}[1m]) / clamp_min(rate(hikaricp_connections_acquire_seconds_count{job=\"ppiyaki-backend\"}[1m]), 0.001)", "legendFormat": "acquire avg", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "hikaricp_connections_acquire_seconds_max{job=\"ppiyaki-backend\"}", "legendFormat": "acquire max", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "rate(hikaricp_connections_timeout_total{job=\"ppiyaki-backend\"}[5m])", "legendFormat": "timeout rate", "refId": "C", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 4,
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 5, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "timeout rate"}, "properties": [{"id": "unit", "value": "ops"}, {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "row",
+      "title": "JVM",
+      "id": 102,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 22},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "JVM memory used by area",
+      "id": 11,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 23},
+      "targets": [
+        {"expr": "sum by (area) (jvm_memory_used_bytes{job=\"ppiyaki-backend\"})", "legendFormat": "{{area}} used", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "sum by (area) (jvm_memory_committed_bytes{job=\"ppiyaki-backend\"})", "legendFormat": "{{area}} committed", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 5, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "GC pause time / live threads",
+      "id": 12,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 23},
+      "targets": [
+        {"expr": "rate(jvm_gc_pause_seconds_sum{job=\"ppiyaki-backend\"}[1m])", "legendFormat": "gc pause sec/sec ({{action}})", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "jvm_threads_live_threads{job=\"ppiyaki-backend\"}", "legendFormat": "live threads", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 5, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byRegexp", "options": ".*gc pause.*"}, "properties": [{"id": "unit", "value": "s"}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "row",
+      "title": "외부 API 캐시",
+      "id": 103,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 31},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Cache requests rate by cache (hits + misses, 1m)",
+      "id": 13,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+      "targets": [
+        {"expr": "sum by (cache) (rate(ppiyaki_cache_hits_total{job=\"ppiyaki-backend\"}[1m]))", "legendFormat": "{{cache}} hits", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "sum by (cache) (rate(ppiyaki_cache_misses_total{job=\"ppiyaki-backend\"}[1m]))", "legendFormat": "{{cache}} misses", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 5, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byRegexp", "options": ".*misses"}, "properties": [{"id": "custom.lineStyle", "value": {"dash": [10, 10], "fill": "dash"}}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Cache hit ratio by cache (15m)",
+      "id": 14,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+      "targets": [
+        {"expr": "sum by (cache) (rate(ppiyaki_cache_hits_total{job=\"ppiyaki-backend\"}[15m])) / clamp_min(sum by (cache) (rate(ppiyaki_cache_hits_total{job=\"ppiyaki-backend\"}[15m])) + sum by (cache) (rate(ppiyaki_cache_misses_total{job=\"ppiyaki-backend\"}[15m])), 0.0001)", "legendFormat": "{{cache}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "row",
+      "title": "로그 / Tomcat",
+      "id": 104,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 40},
+      "collapsed": true,
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "Logback events rate by level (1m)",
+          "id": 15,
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 41},
+          "targets": [
+            {"expr": "sum by (level) (rate(logback_events_total{job=\"ppiyaki-backend\"}[1m]))", "legendFormat": "{{level}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops",
+              "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "normal", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {"matcher": {"id": "byName", "options": "error"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]},
+              {"matcher": {"id": "byName", "options": "warn"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]}
+            ]
+          },
+          "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+        },
+        {
+          "type": "timeseries",
+          "title": "Tomcat sessions",
+          "id": 16,
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 41},
+          "targets": [
+            {"expr": "tomcat_sessions_active_current_sessions{job=\"ppiyaki-backend\"}", "legendFormat": "active", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+            {"expr": "rate(tomcat_sessions_created_sessions_total{job=\"ppiyaki-backend\"}[5m])", "legendFormat": "created/s (5m)", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 5, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": []
+          },
+          "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["ppiyaki", "spring-boot"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "Asia/Seoul",
+  "title": "Ppiyaki Overview",
+  "uid": "ppiyaki-overview",
+  "version": 1,
+  "weekStart": ""
+}
