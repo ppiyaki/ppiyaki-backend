@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.ppiyaki.chat.service.SttService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,7 @@ class SttServiceTest {
     @BeforeEach
     void setUp() {
         transcriptionModel = mock(OpenAiAudioTranscriptionModel.class);
-        sttService = new SttService(transcriptionModel);
+        sttService = new SttService(transcriptionModel, new SimpleMeterRegistry());
     }
 
     @Test

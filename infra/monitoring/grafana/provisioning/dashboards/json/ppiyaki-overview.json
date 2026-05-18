@@ -1,0 +1,1019 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Ppiyaki backend 종합 대시보드 — JVM, HTTP, Hikari, 외부 API 캐시 hit/miss",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "stat",
+      "title": "System CPU",
+      "id": 1,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+      "targets": [
+        {"expr": "system_cpu_usage{job=\"ppiyaki-backend\"} * 100", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}, {"value": 70, "color": "orange"}, {"value": 90, "color": "red"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "Process CPU",
+      "id": 2,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+      "targets": [
+        {"expr": "process_cpu_usage{job=\"ppiyaki-backend\"} * 100", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}, {"value": 70, "color": "orange"}, {"value": 90, "color": "red"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "JVM Heap Used",
+      "id": 3,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+      "targets": [
+        {"expr": "sum(jvm_memory_used_bytes{job=\"ppiyaki-backend\",area=\"heap\"})", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "HTTP Active",
+      "id": 4,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
+      "targets": [
+        {"expr": "sum(http_server_requests_active_seconds_count{job=\"ppiyaki-backend\"})", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}, {"value": 20, "color": "orange"}, {"value": 50, "color": "red"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "Hikari Active",
+      "id": 5,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 0},
+      "targets": [
+        {"expr": "sum(hikaricp_connections_active{job=\"ppiyaki-backend\"})", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}, {"value": 7, "color": "orange"}, {"value": 9, "color": "red"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "Cache Hit Ratio (15m)",
+      "id": 6,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 0},
+      "targets": [
+        {"expr": "sum(rate(ppiyaki_cache_hits_total{job=\"ppiyaki-backend\"}[15m])) / (sum(rate(ppiyaki_cache_hits_total{job=\"ppiyaki-backend\"}[15m])) + sum(rate(ppiyaki_cache_misses_total{job=\"ppiyaki-backend\"}[15m])))", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1,
+          "min": 0,
+          "max": 1,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "red"}, {"value": 0.5, "color": "orange"}, {"value": 0.8, "color": "green"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "row",
+      "title": "HTTP",
+      "id": 100,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 4},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP RPS by status",
+      "id": 7,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5},
+      "targets": [
+        {"expr": "sum by (status) (rate(http_server_requests_seconds_count{job=\"ppiyaki-backend\"}[1m]))", "legendFormat": "{{status}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "stacking": {"mode": "normal", "group": "A"}, "axisLabel": "", "axisPlacement": "auto", "barAlignment": 0, "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP latency p95 / p99 (all endpoints)",
+      "id": 8,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"ppiyaki-backend\"}[5m])))", "legendFormat": "p95", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"ppiyaki-backend\"}[5m])))", "legendFormat": "p99", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 0, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "row",
+      "title": "DB (Hikari)",
+      "id": 101,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 13},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Hikari connections by state",
+      "id": 9,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+      "targets": [
+        {"expr": "hikaricp_connections_active{job=\"ppiyaki-backend\"}", "legendFormat": "active", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "hikaricp_connections_idle{job=\"ppiyaki-backend\"}", "legendFormat": "idle", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "hikaricp_connections_pending{job=\"ppiyaki-backend\"}", "legendFormat": "pending", "refId": "C", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "hikaricp_connections_max{job=\"ppiyaki-backend\"}", "legendFormat": "max", "refId": "D", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {"drawStyle": "line", "lineInterpolation": "stepAfter", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "pending"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]},
+          {"matcher": {"id": "byName", "options": "max"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "gray"}}, {"id": "custom.lineStyle", "value": {"dash": [10, 10], "fill": "dash"}}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Hikari connection acquire / timeouts",
+      "id": 10,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+      "targets": [
+        {"expr": "rate(hikaricp_connections_acquire_seconds_sum{job=\"ppiyaki-backend\"}[1m]) / clamp_min(rate(hikaricp_connections_acquire_seconds_count{job=\"ppiyaki-backend\"}[1m]), 0.001)", "legendFormat": "acquire avg", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "hikaricp_connections_acquire_seconds_max{job=\"ppiyaki-backend\"}", "legendFormat": "acquire max", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "rate(hikaricp_connections_timeout_total{job=\"ppiyaki-backend\"}[5m])", "legendFormat": "timeout rate", "refId": "C", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 4,
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 5, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "timeout rate"}, "properties": [{"id": "unit", "value": "ops"}, {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "row",
+      "title": "JVM",
+      "id": 102,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 22},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "JVM memory used by area",
+      "id": 11,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 23},
+      "targets": [
+        {"expr": "sum by (area) (jvm_memory_used_bytes{job=\"ppiyaki-backend\"})", "legendFormat": "{{area}} used", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "sum by (area) (jvm_memory_committed_bytes{job=\"ppiyaki-backend\"})", "legendFormat": "{{area}} committed", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 5, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "GC pause time / live threads",
+      "id": 12,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 23},
+      "targets": [
+        {"expr": "rate(jvm_gc_pause_seconds_sum{job=\"ppiyaki-backend\"}[1m])", "legendFormat": "gc pause sec/sec ({{action}})", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "jvm_threads_live_threads{job=\"ppiyaki-backend\"}", "legendFormat": "live threads", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 5, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byRegexp", "options": ".*gc pause.*"}, "properties": [{"id": "unit", "value": "s"}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "row",
+      "title": "외부 API 캐시",
+      "id": 103,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 31},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Cache requests rate by cache (hits + misses, 1m)",
+      "id": 13,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+      "targets": [
+        {"expr": "sum by (cache) (rate(ppiyaki_cache_hits_total{job=\"ppiyaki-backend\"}[1m]))", "legendFormat": "{{cache}} hits", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "sum by (cache) (rate(ppiyaki_cache_misses_total{job=\"ppiyaki-backend\"}[1m]))", "legendFormat": "{{cache}} misses", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 5, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byRegexp", "options": ".*misses"}, "properties": [{"id": "custom.lineStyle", "value": {"dash": [10, 10], "fill": "dash"}}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Cache hit ratio by cache (15m)",
+      "id": 14,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+      "targets": [
+        {"expr": "sum by (cache) (rate(ppiyaki_cache_hits_total{job=\"ppiyaki-backend\"}[15m])) / clamp_min(sum by (cache) (rate(ppiyaki_cache_hits_total{job=\"ppiyaki-backend\"}[15m])) + sum by (cache) (rate(ppiyaki_cache_misses_total{job=\"ppiyaki-backend\"}[15m])), 0.0001)", "legendFormat": "{{cache}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "row",
+      "title": "애플리케이션 로그 (Loki)",
+      "id": 105,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 40},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "logs",
+      "title": "Recent logs (all levels)",
+      "id": 17,
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 41},
+      "targets": [
+        {"expr": "{job=\"ppiyaki-backend\"}", "refId": "A", "datasource": {"type": "loki", "uid": "loki"}}
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "prettifyLogMessage": false,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "type": "logs",
+      "title": "ERROR / WARN only",
+      "id": 18,
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 41},
+      "targets": [
+        {"expr": "{job=\"ppiyaki-backend\", level=~\"ERROR|WARN\"}", "refId": "A", "datasource": {"type": "loki", "uid": "loki"}}
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "prettifyLogMessage": false,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "type": "row",
+      "title": "로그 메트릭 / Tomcat",
+      "id": 104,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 51},
+      "collapsed": true,
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "Logback events rate by level (1m)",
+          "id": 15,
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 52},
+          "targets": [
+            {"expr": "sum by (level) (rate(logback_events_total{job=\"ppiyaki-backend\"}[1m]))", "legendFormat": "{{level}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ops",
+              "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "normal", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": [
+              {"matcher": {"id": "byName", "options": "error"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]},
+              {"matcher": {"id": "byName", "options": "warn"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]}
+            ]
+          },
+          "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+        },
+        {
+          "type": "timeseries",
+          "title": "Tomcat sessions",
+          "id": 16,
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 52},
+          "targets": [
+            {"expr": "tomcat_sessions_active_current_sessions{job=\"ppiyaki-backend\"}", "legendFormat": "active", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+            {"expr": "rate(tomcat_sessions_created_sessions_total{job=\"ppiyaki-backend\"}[5m])", "legendFormat": "created/s (5m)", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 5, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+              "color": {"mode": "palette-classic"}
+            },
+            "overrides": []
+          },
+          "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "알림 발송 (FCM Push)",
+      "id": 106,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 60},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Push 발송률 by category (1m)",
+      "id": 19,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 61},
+      "targets": [
+        {"expr": "sum by (category) (rate(ppiyaki_push_sent_total{job=\"ppiyaki-backend\"}[1m]))", "legendFormat": "{{category}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "normal", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Push 결과 분포 (success / token_invalid / failed)",
+      "id": 20,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 61},
+      "targets": [
+        {"expr": "sum by (result) (rate(ppiyaki_push_sent_total{job=\"ppiyaki-backend\"}[1m]))", "legendFormat": "{{result}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "normal", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "success"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]},
+          {"matcher": {"id": "byName", "options": "token_invalid"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]},
+          {"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max", "sum"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Push 발송 지연 p95 / p99 by category",
+      "id": 21,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 69},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (le, category) (rate(ppiyaki_push_send_seconds_bucket{job=\"ppiyaki-backend\"}[5m])))", "legendFormat": "p95 {{category}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
+        {"expr": "histogram_quantile(0.99, sum by (le, category) (rate(ppiyaki_push_send_seconds_bucket{job=\"ppiyaki-backend\"}[5m])))", "legendFormat": "p99 {{category}}", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 0, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "stat",
+      "title": "Push 실패율 (15m)",
+      "id": 22,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 69},
+      "targets": [
+        {"expr": "sum(rate(ppiyaki_push_sent_total{job=\"ppiyaki-backend\", result!=\"success\"}[15m])) / clamp_min(sum(rate(ppiyaki_push_sent_total{job=\"ppiyaki-backend\"}[15m])), 0.0001)", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}, {"value": 0.05, "color": "orange"}, {"value": 0.15, "color": "red"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "row",
+      "title": "LLM (OpenAI / STT / TTS)",
+      "id": 107,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 77},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM 호출률 by operation (1m)",
+      "id": 23,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 78},
+      "targets": [
+        {"expr": "sum by (operation) (rate(ppiyaki_llm_request_total{job=\"ppiyaki-backend\"}[1m]))", "legendFormat": "{{operation}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "normal", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM 지연 p95 by operation",
+      "id": 24,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 78},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (le, operation) (rate(ppiyaki_llm_request_seconds_bucket{job=\"ppiyaki-backend\"}[5m])))", "legendFormat": "p95 {{operation}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 2,
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 0, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM 토큰 사용량 by model + direction (1h increase)",
+      "id": 25,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 86},
+      "targets": [
+        {"expr": "sum by (model, direction) (increase(ppiyaki_llm_tokens_total{job=\"ppiyaki-backend\"}[1h]))", "legendFormat": "{{model}} {{direction}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 5, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byRegexp", "options": ".*completion.*"}, "properties": [{"id": "custom.lineStyle", "value": {"dash": [10, 10], "fill": "dash"}}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["sum", "mean"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM 결과 분포 (success / failed / empty)",
+      "id": 26,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 86},
+      "targets": [
+        {"expr": "sum by (result) (rate(ppiyaki_llm_request_total{job=\"ppiyaki-backend\"}[5m]))", "legendFormat": "{{result}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "normal", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "success"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]},
+          {"matcher": {"id": "byName", "options": "empty"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]},
+          {"matcher": {"id": "byName", "options": "failed"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "row",
+      "title": "인증",
+      "id": 108,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 94},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Auth 결과 분포 (rate by result, 5m)",
+      "id": 27,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 95},
+      "targets": [
+        {"expr": "sum by (result) (rate(ppiyaki_auth_attempts_total{job=\"ppiyaki-backend\"}[5m]))", "legendFormat": "{{result}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "normal", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "success"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]},
+          {"matcher": {"id": "byName", "options": "invalid_credentials"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]},
+          {"matcher": {"id": "byName", "options": "duplicate_id"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]},
+          {"matcher": {"id": "byName", "options": "token_expired"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "yellow"}}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Auth type + action 분포 (5m)",
+      "id": 28,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 95},
+      "targets": [
+        {"expr": "sum by (type, action) (rate(ppiyaki_auth_attempts_total{job=\"ppiyaki-backend\"}[5m]))", "legendFormat": "{{type}} {{action}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 5, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "stat",
+      "title": "Login 실패율 (15m)",
+      "id": 29,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 103},
+      "targets": [
+        {"expr": "sum(rate(ppiyaki_auth_attempts_total{job=\"ppiyaki-backend\", action=\"login\", result!=\"success\"}[15m])) / clamp_min(sum(rate(ppiyaki_auth_attempts_total{job=\"ppiyaki-backend\", action=\"login\"}[15m])), 0.0001)", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}, {"value": 0.10, "color": "orange"}, {"value": 0.30, "color": "red"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "Token refresh 실패율 (15m)",
+      "id": 30,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 103},
+      "targets": [
+        {"expr": "sum(rate(ppiyaki_auth_attempts_total{job=\"ppiyaki-backend\", action=\"refresh\", result!=\"success\"}[15m])) / clamp_min(sum(rate(ppiyaki_auth_attempts_total{job=\"ppiyaki-backend\", action=\"refresh\"}[15m])), 0.0001)", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}, {"value": 0.20, "color": "orange"}, {"value": 0.50, "color": "red"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "신규 가입 24h",
+      "id": 31,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 103},
+      "targets": [
+        {"expr": "sum(increase(ppiyaki_auth_attempts_total{job=\"ppiyaki-backend\", action=\"signup\", result=\"success\"}[24h]))", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "blue"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "row",
+      "title": "복약 / 펫 (도메인)",
+      "id": 109,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 109},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "복약 인증 status 분포 (5m)",
+      "id": 32,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 110},
+      "targets": [
+        {"expr": "sum by (status) (rate(ppiyaki_medication_log_upsert_total{job=\"ppiyaki-backend\"}[5m]))", "legendFormat": "{{status}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "normal", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "TAKEN"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]},
+          {"matcher": {"id": "byName", "options": "MISSED"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]},
+          {"matcher": {"id": "byName", "options": "PENDING"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "복약 transition (new_taken / repeat / other)",
+      "id": 33,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 110},
+      "targets": [
+        {"expr": "sum by (transition) (rate(ppiyaki_medication_log_upsert_total{job=\"ppiyaki-backend\"}[5m]))", "legendFormat": "{{transition}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "normal", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Pill count AI 검증 결과 (15m)",
+      "id": 34,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 118},
+      "targets": [
+        {"expr": "sum by (result) (rate(ppiyaki_medication_pill_count_total{job=\"ppiyaki-backend\"}[15m]))", "legendFormat": "{{result}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "normal", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "COUNT_MATCH"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]},
+          {"matcher": {"id": "byName", "options": "COUNT_MISMATCH"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]},
+          {"matcher": {"id": "byName", "options": "COUNT_UNKNOWN"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]},
+          {"matcher": {"id": "byName", "options": "COUNT_FAILED"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "yellow"}}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max", "sum"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "펫 포인트 이벤트 결과 (5m)",
+      "id": 35,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 118},
+      "targets": [
+        {"expr": "sum by (result) (rate(ppiyaki_pet_point_event_total{job=\"ppiyaki-backend\"}[5m]))", "legendFormat": "{{result}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "normal", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "granted"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "stat",
+      "title": "COUNT_MATCH 비율 (1h)",
+      "id": 36,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 126},
+      "targets": [
+        {"expr": "sum(rate(ppiyaki_medication_pill_count_total{job=\"ppiyaki-backend\", result=\"COUNT_MATCH\"}[1h])) / clamp_min(sum(rate(ppiyaki_medication_pill_count_total{job=\"ppiyaki-backend\"}[1h])), 0.0001)", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "red"}, {"value": 0.5, "color": "orange"}, {"value": 0.7, "color": "green"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "오늘 신규 TAKEN (24h)",
+      "id": 37,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 126},
+      "targets": [
+        {"expr": "sum(increase(ppiyaki_medication_log_upsert_total{job=\"ppiyaki-backend\", transition=\"new_taken\"}[24h]))", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "대리 인증 비율 (24h)",
+      "id": 38,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 126},
+      "targets": [
+        {"expr": "sum(rate(ppiyaki_medication_log_upsert_total{job=\"ppiyaki-backend\", is_proxy=\"true\"}[24h])) / clamp_min(sum(rate(ppiyaki_medication_log_upsert_total{job=\"ppiyaki-backend\"}[24h])), 0.0001)", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "blue"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "row",
+      "title": "외부 API + 처방전 / 뱃지",
+      "id": 110,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 132},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "외부 API 호출률 by api (1m)",
+      "id": 39,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 133},
+      "targets": [
+        {"expr": "sum by (api) (rate(ppiyaki_external_api_total{job=\"ppiyaki-backend\"}[1m]))", "legendFormat": "{{api}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "normal", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "외부 API p95 지연 by api",
+      "id": 40,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 133},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum by (le, api) (rate(ppiyaki_external_api_seconds_bucket{job=\"ppiyaki-backend\"}[5m])))", "legendFormat": "p95 {{api}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 0, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "stat",
+      "title": "외부 API 실패율 (15m)",
+      "id": 41,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 141},
+      "targets": [
+        {"expr": "sum(rate(ppiyaki_external_api_total{job=\"ppiyaki-backend\", result=\"failed\"}[15m])) / clamp_min(sum(rate(ppiyaki_external_api_total{job=\"ppiyaki-backend\"}[15m])), 0.0001)", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}, {"value": 0.05, "color": "orange"}, {"value": 0.15, "color": "red"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "처방전 confirm 24h",
+      "id": 42,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 141},
+      "targets": [
+        {"expr": "sum(increase(ppiyaki_prescription_confirm_total{job=\"ppiyaki-backend\", result=\"success\"}[24h]))", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "blue"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "timeseries",
+      "title": "뱃지 획득 by badge_type (1h)",
+      "id": 43,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 141},
+      "targets": [
+        {"expr": "sum by (badge_type) (increase(ppiyaki_badge_awarded_total{job=\"ppiyaki-backend\"}[1h]))", "legendFormat": "{{badge_type}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {"drawStyle": "bars", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 70, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["sum"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["ppiyaki", "spring-boot"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "Asia/Seoul",
+  "title": "Ppiyaki Overview",
+  "uid": "ppiyaki-overview",
+  "version": 1,
+  "weekStart": ""
+}

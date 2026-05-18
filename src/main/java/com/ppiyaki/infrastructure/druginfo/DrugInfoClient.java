@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.infrastructure.mfds.MfdsApiProperties;
+import com.ppiyaki.infrastructure.observability.ExternalApiMetrics;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -30,10 +32,14 @@ public class DrugInfoClient {
     private static final String API_URL = "https://apis.data.go.kr/1471000/DrbEasyDrugInfoService/getDrbEasyDrugList";
     private static final Duration CACHE_TTL = Duration.ofHours(24);
 
+    private static final String API = "drug_info";
+    private static final String OPERATION = "search";
+
     private final String serviceKey;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
     private final Map<String, CachedDrugInfo> cache = new ConcurrentHashMap<>();
+    private final MeterRegistry meterRegistry;
     private final Counter cacheHitCounter;
     private final Counter cacheMissCounter;
 
@@ -45,6 +51,7 @@ public class DrugInfoClient {
     ) {
         this.serviceKey = properties.serviceKey();
         this.objectMapper = objectMapper;
+        this.meterRegistry = meterRegistry;
 
         final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(3));
@@ -72,6 +79,7 @@ public class DrugInfoClient {
 
         cacheMissCounter.increment();
         log.info("DrugInfo API call: itemName={}", itemName);
+        final Timer.Sample sample = Timer.start(meterRegistry);
         try {
             final String url = API_URL
                     + "?serviceKey=" + serviceKey
@@ -86,9 +94,11 @@ public class DrugInfoClient {
 
             final Optional<DrugInfoResponse> result = parseResponse(responseBody);
             cache.put(cacheKey, new CachedDrugInfo(result, Instant.now().plus(CACHE_TTL)));
+            ExternalApiMetrics.record(meterRegistry, API, OPERATION, ExternalApiMetrics.RESULT_SUCCESS, sample);
             return result;
 
         } catch (final Exception e) {
+            ExternalApiMetrics.record(meterRegistry, API, OPERATION, ExternalApiMetrics.RESULT_FAILED, sample);
             log.error("DrugInfo API failed: {}", e.getMessage());
             return Optional.empty();
         }

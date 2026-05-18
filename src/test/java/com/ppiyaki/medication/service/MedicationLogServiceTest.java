@@ -53,6 +53,8 @@ class MedicationLogServiceTest {
     private ApplicationEventPublisher eventPublisher;
     @Mock
     private com.ppiyaki.notification.repository.NotificationRepository notificationRepository;
+    @org.mockito.Spy
+    private io.micrometer.core.instrument.MeterRegistry meterRegistry = new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
 
     @InjectMocks
     private MedicationLogService medicationLogService;

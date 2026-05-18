@@ -35,10 +35,44 @@ services:
       - ppiyaki-monitoring
     depends_on:
       - prometheus
+      - loki
+
+  loki:
+    image: grafana/loki:3.3.2
+    container_name: ppiyaki-loki
+    restart: always
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - ./loki/config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+    networks:
+      - ppiyaki-monitoring
+    # 외부 노출 안 함. Grafana는 같은 network에서 http://loki:3100으로 접근.
+
+  alloy:
+    image: grafana/alloy:v1.5.1
+    container_name: ppiyaki-alloy
+    restart: always
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy/data
+    networks:
+      - ppiyaki-monitoring
+    depends_on:
+      - loki
+    # docker socket은 read-only 마운트. 표준 패턴이지만 root socket 접근 권한임을 명시.
 
 volumes:
   prometheus-data:
   grafana-data:
+  loki-data:
+  alloy-data:
 
 networks:
   ppiyaki-monitoring:
