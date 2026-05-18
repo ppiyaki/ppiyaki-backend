@@ -348,9 +348,57 @@
     },
     {
       "type": "row",
-      "title": "로그 / Tomcat",
-      "id": 104,
+      "title": "애플리케이션 로그 (Loki)",
+      "id": 105,
       "gridPos": {"h": 1, "w": 24, "x": 0, "y": 40},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "logs",
+      "title": "Recent logs (all levels)",
+      "id": 17,
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 10, "w": 12, "x": 0, "y": 41},
+      "targets": [
+        {"expr": "{job=\"ppiyaki-backend\"}", "refId": "A", "datasource": {"type": "loki", "uid": "loki"}}
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "prettifyLogMessage": false,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "type": "logs",
+      "title": "ERROR / WARN only",
+      "id": 18,
+      "datasource": {"type": "loki", "uid": "loki"},
+      "gridPos": {"h": 10, "w": 12, "x": 12, "y": 41},
+      "targets": [
+        {"expr": "{job=\"ppiyaki-backend\", level=~\"ERROR|WARN\"}", "refId": "A", "datasource": {"type": "loki", "uid": "loki"}}
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "prettifyLogMessage": false,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "type": "row",
+      "title": "로그 메트릭 / Tomcat",
+      "id": 104,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 51},
       "collapsed": true,
       "panels": [
         {
@@ -358,7 +406,7 @@
           "title": "Logback events rate by level (1m)",
           "id": 15,
           "datasource": {"type": "prometheus", "uid": "prometheus"},
-          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 41},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 52},
           "targets": [
             {"expr": "sum by (level) (rate(logback_events_total{job=\"ppiyaki-backend\"}[1m]))", "legendFormat": "{{level}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
           ],
@@ -380,7 +428,7 @@
           "title": "Tomcat sessions",
           "id": 16,
           "datasource": {"type": "prometheus", "uid": "prometheus"},
-          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 41},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 52},
           "targets": [
             {"expr": "tomcat_sessions_active_current_sessions{job=\"ppiyaki-backend\"}", "legendFormat": "active", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}},
             {"expr": "rate(tomcat_sessions_created_sessions_total{job=\"ppiyaki-backend\"}[5m])", "legendFormat": "created/s (5m)", "refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}}
