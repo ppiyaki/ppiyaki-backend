@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.ppiyaki.chat.service.TtsService;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,7 @@ class TtsServiceTest {
     @BeforeEach
     void setUp() {
         speechModel = mock(OpenAiAudioSpeechModel.class);
-        ttsService = new TtsService(speechModel);
+        ttsService = new TtsService(speechModel, new SimpleMeterRegistry());
     }
 
     @Test
