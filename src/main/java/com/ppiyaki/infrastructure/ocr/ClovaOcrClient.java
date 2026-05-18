@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.infrastructure.observability.ExternalApiMetrics;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -22,18 +25,23 @@ import org.springframework.web.client.RestClient;
 public class ClovaOcrClient {
 
     private static final Logger log = LoggerFactory.getLogger(ClovaOcrClient.class);
+    private static final String API = "clova";
+    private static final String OPERATION = "ocr";
 
     private final ClovaOcrProperties properties;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
 
     public ClovaOcrClient(
             final ClovaOcrProperties properties,
             final RestClient.Builder restClientBuilder,
-            final ObjectMapper objectMapper
+            final ObjectMapper objectMapper,
+            final MeterRegistry meterRegistry
     ) {
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.meterRegistry = meterRegistry;
 
         final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(2));
@@ -44,7 +52,7 @@ public class ClovaOcrClient {
 
     public OcrResult ocr(final byte[] imageBytes, final String imageFormat) {
         log.info("Clova OCR call: format={} size={}bytes", imageFormat, imageBytes.length);
-        final long startTime = System.currentTimeMillis();
+        final Timer.Sample sample = Timer.start(meterRegistry);
 
         try {
             final String base64Image = Base64.getEncoder().encodeToString(imageBytes);
@@ -59,16 +67,16 @@ public class ClovaOcrClient {
                     .body(byte[].class);
             final String responseBody = new String(responseBytes, java.nio.charset.StandardCharsets.UTF_8);
 
-            final long elapsed = System.currentTimeMillis() - startTime;
-            log.info("Clova OCR response: elapsed={}ms", elapsed);
-
-            return parseResponse(responseBody);
+            final OcrResult result = parseResponse(responseBody);
+            ExternalApiMetrics.record(meterRegistry, API, OPERATION, ExternalApiMetrics.RESULT_SUCCESS, sample);
+            return result;
 
         } catch (final BusinessException e) {
+            ExternalApiMetrics.record(meterRegistry, API, OPERATION, ExternalApiMetrics.RESULT_FAILED, sample);
             throw e;
         } catch (final Exception e) {
-            final long elapsed = System.currentTimeMillis() - startTime;
-            log.error("Clova OCR failed: elapsed={}ms error={}", elapsed, e.getMessage());
+            ExternalApiMetrics.record(meterRegistry, API, OPERATION, ExternalApiMetrics.RESULT_FAILED, sample);
+            log.error("Clova OCR failed: error={}", e.getMessage());
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
                     "OCR failed: " + e.getMessage());
         }
