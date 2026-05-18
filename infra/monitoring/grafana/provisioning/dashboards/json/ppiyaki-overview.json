@@ -628,6 +628,118 @@
         ]
       },
       "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "row",
+      "title": "인증",
+      "id": 108,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 94},
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Auth 결과 분포 (rate by result, 5m)",
+      "id": 27,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 95},
+      "targets": [
+        {"expr": "sum by (result) (rate(ppiyaki_auth_attempts_total{job=\"ppiyaki-backend\"}[5m]))", "legendFormat": "{{result}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 10, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "normal", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "success"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "green"}}]},
+          {"matcher": {"id": "byName", "options": "invalid_credentials"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}}]},
+          {"matcher": {"id": "byName", "options": "duplicate_id"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "orange"}}]},
+          {"matcher": {"id": "byName", "options": "token_expired"}, "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": "yellow"}}]}
+        ]
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "timeseries",
+      "title": "Auth type + action 분포 (5m)",
+      "id": 28,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 95},
+      "targets": [
+        {"expr": "sum by (type, action) (rate(ppiyaki_auth_attempts_total{job=\"ppiyaki-backend\"}[5m]))", "legendFormat": "{{type}} {{action}}", "refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {"drawStyle": "line", "lineInterpolation": "linear", "lineWidth": 1, "fillOpacity": 5, "showPoints": "never", "spanNulls": true, "axisLabel": "", "axisPlacement": "auto", "gradientMode": "none", "pointSize": 5, "scaleDistribution": {"type": "linear"}, "stacking": {"mode": "none", "group": "A"}, "hideFrom": {"tooltip": false, "viz": false, "legend": false}, "thresholdsStyle": {"mode": "off"}},
+          "color": {"mode": "palette-classic"}
+        },
+        "overrides": []
+      },
+      "options": {"legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"], "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}}
+    },
+    {
+      "type": "stat",
+      "title": "Login 실패율 (15m)",
+      "id": 29,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 103},
+      "targets": [
+        {"expr": "sum(rate(ppiyaki_auth_attempts_total{job=\"ppiyaki-backend\", action=\"login\", result!=\"success\"}[15m])) / clamp_min(sum(rate(ppiyaki_auth_attempts_total{job=\"ppiyaki-backend\", action=\"login\"}[15m])), 0.0001)", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}, {"value": 0.10, "color": "orange"}, {"value": 0.30, "color": "red"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "Token refresh 실패율 (15m)",
+      "id": 30,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 103},
+      "targets": [
+        {"expr": "sum(rate(ppiyaki_auth_attempts_total{job=\"ppiyaki-backend\", action=\"refresh\", result!=\"success\"}[15m])) / clamp_min(sum(rate(ppiyaki_auth_attempts_total{job=\"ppiyaki-backend\", action=\"refresh\"}[15m])), 0.0001)", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "min": 0,
+          "max": 1,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "green"}, {"value": 0.20, "color": "orange"}, {"value": 0.50, "color": "red"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
+    },
+    {
+      "type": "stat",
+      "title": "신규 가입 24h",
+      "id": 31,
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 103},
+      "targets": [
+        {"expr": "sum(increase(ppiyaki_auth_attempts_total{job=\"ppiyaki-backend\", action=\"signup\", result=\"success\"}[24h]))", "refId": "A", "instant": true, "datasource": {"type": "prometheus", "uid": "prometheus"}}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"value": null, "color": "blue"}]}
+        },
+        "overrides": []
+      },
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"}
     }
   ],
   "refresh": "30s",
