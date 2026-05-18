@@ -4,6 +4,7 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.messaging.FirebaseMessaging;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -20,7 +21,7 @@ public class PushConfig {
     private static final Logger log = LoggerFactory.getLogger(PushConfig.class);
 
     @Bean
-    public PushSender pushSender(final FcmProperties properties) {
+    public PushSender pushSender(final FcmProperties properties, final MeterRegistry meterRegistry) {
         if (!properties.isEnabled()) {
             log.warn("FCM disabled — fcm.project-id or fcm.credentials-json-base64 missing. Push will be no-op.");
             return new NoOpPushSender();
@@ -37,7 +38,7 @@ public class PushConfig {
             final FirebaseApp app = FirebaseApp.getApps().isEmpty()
                     ? FirebaseApp.initializeApp(options)
                     : FirebaseApp.getInstance();
-            return new FcmPushSender(FirebaseMessaging.getInstance(app));
+            return new FcmPushSender(FirebaseMessaging.getInstance(app), meterRegistry);
         } catch (final Exception exception) {
             log.error("FCM initialization failed — fallback to no-op push sender", exception);
             return new NoOpPushSender();

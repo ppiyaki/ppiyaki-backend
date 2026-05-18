@@ -34,10 +34,16 @@ public class MedicationReminderScheduler {
 
     @Scheduled(cron = "0 * * * * *", zone = "Asia/Seoul")
     public void dispatchDue() {
+        final long start = System.currentTimeMillis();
         final LocalDate today = LocalDate.now(clock);
         final LocalTime now = LocalTime.now(clock).withSecond(0).withNano(0);
-        log.info("MedicationReminderScheduler tick at {}", now);
-        run(today, now);
+        final int dispatched = run(today, now);
+        final long elapsed = System.currentTimeMillis() - start;
+        if (dispatched > 0) {
+            log.info("MedicationReminderScheduler dispatched count={} elapsed={}ms", dispatched, elapsed);
+        } else {
+            log.debug("MedicationReminderScheduler tick count=0 elapsed={}ms", elapsed);
+        }
     }
 
     public int run(final LocalDate today, final LocalTime currentMinute) {
