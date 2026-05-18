@@ -7,6 +7,7 @@ Prometheus + Grafana docker compose 스택. 같은 NCP 서버에 백엔드와 �
 - **Prometheus** (`prom/prometheus:v3.0.1`) — 백엔드 `/actuator/prometheus` 엔드포인트를 15초 간격으로 scrape. 30일 보관.
 - **Grafana** (`grafana/grafana:11.4.0`) — 시각화. 3000 포트 외부 노출 (admin 패스워드 인증).
 - 백엔드와 같은 docker network (`ppiyaki-monitoring`)에 join → `ppiyaki-server:8081/actuator/prometheus` scrape.
+- **Dashboard provisioning** — `grafana/provisioning/dashboards/json/*.json`을 자동 로드 (folder: `ppiyaki`). 현재 `ppiyaki-overview` 한 개.
 
 ## 최초 셋업 (prod, 1회)
 
@@ -77,8 +78,20 @@ sudo docker exec ppiyaki-prometheus kill -HUP 1
 - **외부 노출 보안** = admin 패스워드. IP allowlist / VPN은 별도 옵션.
 - 백엔드 컨테이너가 `ppiyaki-monitoring` network에 join한 후에만 scrape 동작. 미연결 상태에선 target down.
 
+## 대시보드 갱신
+
+대시보드 JSON을 수정한 후 prod 적용:
+
+```bash
+# 로컬에서 prod로 dashboards 디렉토리 동기화
+scp -i ~/workspace/secret/ppiyaki-key.pem -r infra/monitoring/grafana/provisioning ubuntu@211.188.48.217:~/monitoring/grafana/
+
+# Grafana 재시작 (provisioning은 30s 간격 reload 설정이라 재시작 없이도 반영되지만, datasource 변경 시엔 필요)
+ssh -i ~/workspace/secret/ppiyaki-key.pem ubuntu@211.188.48.217 'cd ~/monitoring && sudo docker compose restart grafana'
+```
+
 ## Phase 3 (예정/옵션)
 
 - 알림 (Alertmanager + Discord/Slack webhook)
 - 백업 (Prometheus snapshot → NCP Object Storage)
-- 대시보드 .json provisioning (JVM, HTTP, 캐시 적중률, DB connection)
+- ~~대시보드 .json provisioning (JVM, HTTP, 캐시 적중률, DB connection)~~ ✅ done (`ppiyaki-overview`)
