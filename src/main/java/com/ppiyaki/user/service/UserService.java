@@ -60,6 +60,22 @@ public class UserService {
     }
 
     @Transactional
+    public UserMeResponse updateMealTimesForSenior(
+            final Long requesterId,
+            final Long seniorId,
+            final MealTimesUpdateRequest request
+    ) {
+        final User senior = userRepository.findById(seniorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(requesterId, seniorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
+
+        senior.updateMealTimes(request.breakfast(), request.lunch(), request.dinner());
+        return UserMeResponse.from(senior);
+    }
+
+    @Transactional
     public void withdraw(final Long userId) {
         final User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
