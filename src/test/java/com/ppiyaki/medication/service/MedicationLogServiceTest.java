@@ -3,6 +3,8 @@ package com.ppiyaki.medication.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -19,8 +21,11 @@ import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
+import com.ppiyaki.user.domain.CareMode;
 import com.ppiyaki.user.domain.CareRelation;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
+import com.ppiyaki.user.repository.UserRepository;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -47,6 +52,8 @@ class MedicationLogServiceTest {
     private MedicineRepository medicineRepository;
     @Mock
     private CareRelationRepository careRelationRepository;
+    @Mock
+    private UserRepository userRepository;
     @Mock
     private PhotoUrlAssembler photoUrlAssembler;
     @Mock
@@ -248,6 +255,46 @@ class MedicationLogServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INVALID_INPUT);
+    }
+
+    @Test
+    @DisplayName("careMode=MANAGED + status=TAKEN + photoObjectKey 누락 시 MEDICATION_LOG_PHOTO_REQUIRED")
+    void managed_senior_taken_without_photo() throws Exception {
+        // given
+        givenScheduleAndMedicine();
+        final User managedSenior = mock(User.class);
+        when(managedSenior.getCareMode()).thenReturn(CareMode.MANAGED);
+        when(userRepository.findById(SENIOR_ID)).thenReturn(Optional.of(managedSenior));
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, null);
+
+        // when & then
+        assertThatThrownBy(() -> medicationLogService.upsert(SENIOR_ID, request))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.MEDICATION_LOG_PHOTO_REQUIRED);
+    }
+
+    @Test
+    @DisplayName("careMode=MANAGED + status=MISSED는 photoObjectKey 없어도 통과")
+    void managed_senior_missed_without_photo_ok() throws Exception {
+        // given
+        givenScheduleAndMedicine();
+        final User managedSenior = mock(User.class);
+        when(managedSenior.getCareMode()).thenReturn(CareMode.MANAGED);
+        when(userRepository.findById(SENIOR_ID)).thenReturn(Optional.of(managedSenior));
+        when(medicationLogRepository.findByScheduleIdAndTargetDate(SCHEDULE_ID, TARGET_DATE))
+                .thenReturn(Optional.empty());
+        when(medicationLogRepository.saveAndFlush(any(MedicationLog.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(photoUrlAssembler.toFullUrl(any())).thenReturn(null);
+
+        final MedicationLogUpsertRequest request = new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.MISSED, null);
+
+        // when & then — 예외 없이 처리
+        medicationLogService.upsert(SENIOR_ID, request);
     }
 
     @Test
@@ -539,7 +586,14 @@ class MedicationLogServiceTest {
         final Medicine medicine = new Medicine(SENIOR_ID, null, "테스트약", total, remaining, "ITEM-1", null);
         setField(medicine, "id", MEDICINE_ID);
         when(medicineRepository.findById(MEDICINE_ID)).thenReturn(Optional.of(medicine));
+        givenAutonomousSenior();
         return medicine;
+    }
+
+    private void givenAutonomousSenior() {
+        final User senior = mock(User.class);
+        lenient().when(senior.getCareMode()).thenReturn(CareMode.AUTONOMOUS);
+        lenient().when(userRepository.findById(SENIOR_ID)).thenReturn(Optional.of(senior));
     }
 
     private void givenScheduleAndMedicine() throws Exception {
@@ -558,6 +612,7 @@ class MedicationLogServiceTest {
         final Medicine medicine = new Medicine(SENIOR_ID, null, "테스트약", 30, 30, "ITEM-1", null);
         setField(medicine, "id", MEDICINE_ID);
         when(medicineRepository.findById(MEDICINE_ID)).thenReturn(Optional.of(medicine));
+        givenAutonomousSenior();
     }
 
     private static void setField(final Object target, final String fieldName, final Object value) throws Exception {

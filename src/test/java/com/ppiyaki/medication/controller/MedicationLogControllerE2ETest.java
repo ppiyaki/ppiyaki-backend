@@ -10,7 +10,9 @@ import com.ppiyaki.medication.domain.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
+import com.ppiyaki.user.domain.CareMode;
 import com.ppiyaki.user.domain.CareRelation;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import io.restassured.RestAssured;
@@ -239,7 +241,10 @@ class MedicationLogControllerE2ETest {
                 .statusCode(201)
                 .extract()
                 .asString();
-        final Long userId = userRepository.findByLoginId(loginId).orElseThrow().getId();
+        final User user = userRepository.findByLoginId(loginId).orElseThrow();
+        user.changeCareMode(CareMode.AUTONOMOUS);
+        userRepository.save(user);
+        final Long userId = user.getId();
         final String accessToken = io.restassured.path.json.JsonPath.from(response).getString("accessToken");
         return new SignupResult(userId, accessToken);
     }
