@@ -1,6 +1,29 @@
 name: ppiyaki-monitoring
 
 services:
+  mysql:
+    image: mysql:8.4.6
+    container_name: ppiyaki-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ppiyaki}
+      MYSQL_USER: ${MYSQL_USER:?MYSQL_USER must be set}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - ppiyaki-monitoring
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    # 외부 포트 노출 안 함. backend는 같은 ppiyaki-monitoring 네트워크에서 mysql:3306 으로 접근.
+    # 데이터는 mysql-data 영속 볼륨에 보관. 외부 백업 없음 (spec db-self-hosted-migration §4 결정).
+
   prometheus:
     image: prom/prometheus:v3.0.1
     container_name: ppiyaki-prometheus
@@ -73,6 +96,7 @@ volumes:
   grafana-data:
   loki-data:
   alloy-data:
+  mysql-data:
 
 networks:
   ppiyaki-monitoring:
