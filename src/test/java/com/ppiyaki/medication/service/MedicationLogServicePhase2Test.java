@@ -3,6 +3,8 @@ package com.ppiyaki.medication.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -20,7 +22,10 @@ import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
+import com.ppiyaki.user.domain.CareMode;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
+import com.ppiyaki.user.repository.UserRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.lang.reflect.Field;
@@ -53,6 +58,8 @@ class MedicationLogServicePhase2Test {
     private MedicineRepository medicineRepository;
     @Mock
     private CareRelationRepository careRelationRepository;
+    @Mock
+    private UserRepository userRepository;
     @Mock
     private PhotoUrlAssembler photoUrlAssembler;
     @Mock
@@ -195,6 +202,7 @@ class MedicationLogServicePhase2Test {
         givenSiblingSchedules(List.of(triggerSchedule, peerSchedule));
         givenS3Returns(new byte[]{1, 2, 3});
         when(openAiClient.countPills(any(), any())).thenReturn(Optional.of(2));
+        givenAutonomousSenior();
 
         // when
         service.upsert(SENIOR_ID, new MedicationLogUpsertRequest(
@@ -257,6 +265,7 @@ class MedicationLogServicePhase2Test {
         givenSiblingSchedules(List.of(triggerSchedule, peerSchedule));
         givenS3Returns(new byte[]{1, 2, 3});
         when(openAiClient.countPills(any(), any())).thenReturn(Optional.of(2));
+        givenAutonomousSenior();
 
         // when
         service.upsert(SENIOR_ID, new MedicationLogUpsertRequest(
@@ -290,6 +299,13 @@ class MedicationLogServicePhase2Test {
         final Medicine medicine = new Medicine(SENIOR_ID, null, "테스트약", 30, 30, "ITEM-1", null);
         setField(medicine, "id", MEDICINE_ID);
         when(medicineRepository.findById(MEDICINE_ID)).thenReturn(Optional.of(medicine));
+        givenAutonomousSenior();
+    }
+
+    private void givenAutonomousSenior() {
+        final User senior = mock(User.class);
+        lenient().when(senior.getCareMode()).thenReturn(CareMode.AUTONOMOUS);
+        lenient().when(userRepository.findById(SENIOR_ID)).thenReturn(Optional.of(senior));
     }
 
     private void givenSiblingSchedules(final List<MedicationSchedule> schedules) {

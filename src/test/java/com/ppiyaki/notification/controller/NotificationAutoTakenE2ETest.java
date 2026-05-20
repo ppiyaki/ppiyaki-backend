@@ -13,6 +13,7 @@ import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.notification.Notification;
 import com.ppiyaki.notification.repository.NotificationRepository;
+import com.ppiyaki.user.domain.CareMode;
 import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.domain.UserRole;
 import com.ppiyaki.user.repository.UserRepository;
@@ -163,6 +164,7 @@ class NotificationAutoTakenE2ETest {
     private Long seedSenior() {
         return transactionTemplate.execute(status -> {
             final User senior = User.createSenior("E2E시니어" + userSequence++, (LocalDate) null);
+            senior.changeCareMode(CareMode.AUTONOMOUS);
             return userRepository.save(senior).getId();
         });
     }
