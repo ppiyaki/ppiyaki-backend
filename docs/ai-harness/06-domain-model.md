@@ -105,7 +105,7 @@
 | birth_date | date | 생년월일 |
 | pet_id | bigint | `pets.id` PK 참조 (FK 제약 선언 여부는 §7-12) |
 | care_mode | varchar | DB는 varchar, Java는 `CareMode` enum(`MANAGED` default / `AUTONOMOUS`). 시니어 회원에 적용. 보호자 회원도 컬럼은 갖지만 처방전 흐름에서는 `prescription.owner_id`로 참조하는 시니어 측 값만 사용 |
-| breakfast_time | time nullable | 시니어 식사 시간대(아침). Java는 `LocalTime`. 미설정 가능. Phase 1: 클라이언트가 schedule 등록 시 활용. Phase 2~3: 슬롯 매핑/자동 생성 (별도 spec) |
+| breakfast_time | time nullable | 시니어 식사 시간대(아침). Java는 `LocalTime`. 미설정 가능. Phase 1: 클라이언트가 schedule 등록 시 활용. Phase 2~3: 슬롯 매핑/자동 생성 (별도 spec). 변경 권한: 시니어 본인(`PUT /api/v1/users/me/meal-times`) 또는 연결된 보호자(`PUT /api/v1/users/{seniorId}/meal-times`, CareRelation 검증) |
 | lunch_time | time nullable | 시니어 식사 시간대(점심). 동일 |
 | dinner_time | time nullable | 시니어 식사 시간대(저녁). 동일 |
 | notification_mode | varchar nullable | 알림 프리셋. Java는 `NotificationMode` enum(`BASIC_ALERT`/`INTENSIVE_CARE`). 시니어에만 적용. 온보딩 시 설정, 이후 개별 조정 가능 |
