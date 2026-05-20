@@ -1,7 +1,7 @@
 ---
 feature: DB 자체 호스팅 이전 (NCP 매니지드 MySQL → backend 서버 docker MySQL)
 slug: db-self-hosted-migration
-status: ready
+status: done
 owner: @goohong
 scope: infra
 related_issues: []
@@ -131,3 +131,13 @@ sequenceDiagram
   - Q3 = NCP 매니지드 DB 해지 시점 = 마이그레이션 직후 (롤백 여지 미확보 — 단순/빠른 정리 우선)
   - Q4 = 로컬 docker 볼륨 백업만 (디스크 장애 시 데이터 손실 수용)
 - **2026-05-20**: status = draft → **ready** (Spec 합의 완료)
+- **2026-05-20**: prod 적용 완료
+  - PR #396 머지 후 `infra/monitoring/docker-compose.yml`을 prod의 `/home/ubuntu/monitoring/`에 scp 동기화. `.env`에 `MYSQL_ROOT_PASSWORD` (openssl rand -hex 24) + `MYSQL_USER`/`MYSQL_PASSWORD` (backend의 `DB_USERNAME`/`DB_PASSWORD` 재사용) 추가
+  - `docker compose up -d mysql` → `ppiyaki-mysql` healthy 확인
+  - `dump-from-ncp.sh` → 1.9MB gzip 덤프 (NCP `pill_identifications` 25,515 rows 등 22 테이블)
+  - `restore-to-docker.sh` → 데이터 import
+  - `verify-counts.sh` + 정확 `SELECT COUNT(*)` 비교 → 22 테이블 모두 일치
+  - GitHub Secret `DB_URL` 갱신 (`jdbc:mysql://mysql:3306/ppiyaki`) + `workflow_dispatch`로 backend 재배포
+  - `ppiyaki-server` 로그 검증: HikariPool 정상 연결, MySQL 8.4.6 인식, JPA `validate` 통과, Tomcat 8080/8081 정상 기동
+- **2026-05-20**: ADR 0001 → superseded by ADR 0011 (self-hosted MySQL docker)
+- **2026-05-20**: status = ready → **done**
