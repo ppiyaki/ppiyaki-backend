@@ -17,7 +17,10 @@ import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
+import com.ppiyaki.user.domain.CareMode;
+import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
+import com.ppiyaki.user.repository.UserRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -53,6 +56,7 @@ public class MedicationLogService {
     private final MedicationScheduleRepository medicationScheduleRepository;
     private final MedicineRepository medicineRepository;
     private final CareRelationRepository careRelationRepository;
+    private final UserRepository userRepository;
     private final PhotoUrlAssembler photoUrlAssembler;
     private final OpenAiClient openAiClient;
     private final NcpStorageProperties storageProperties;
@@ -66,6 +70,7 @@ public class MedicationLogService {
             final MedicationScheduleRepository medicationScheduleRepository,
             final MedicineRepository medicineRepository,
             final CareRelationRepository careRelationRepository,
+            final UserRepository userRepository,
             final PhotoUrlAssembler photoUrlAssembler,
             final OpenAiClient openAiClient,
             final NcpStorageProperties storageProperties,
@@ -78,6 +83,7 @@ public class MedicationLogService {
         this.medicationScheduleRepository = medicationScheduleRepository;
         this.medicineRepository = medicineRepository;
         this.careRelationRepository = careRelationRepository;
+        this.userRepository = userRepository;
         this.photoUrlAssembler = photoUrlAssembler;
         this.openAiClient = openAiClient;
         this.storageProperties = storageProperties;
@@ -96,6 +102,14 @@ public class MedicationLogService {
         final Long seniorId = medicine.getOwnerId();
 
         final boolean isProxy = resolveProxyFlag(userId, seniorId);
+
+        final User senior = userRepository.findById(seniorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        if (senior.getCareMode() == CareMode.MANAGED
+                && request.status() == LogStatus.TAKEN
+                && (request.photoObjectKey() == null || request.photoObjectKey().isBlank())) {
+            throw new BusinessException(ErrorCode.MEDICATION_LOG_PHOTO_REQUIRED);
+        }
 
         if (request.photoObjectKey() != null && !request.photoObjectKey().isBlank()) {
             validatePhotoObjectKey(request.photoObjectKey(), userId);
