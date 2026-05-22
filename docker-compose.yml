@@ -22,6 +22,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
+  redis: # ← 추가
+    image: redis:7
+    container_name: ppiyaki-redis-local
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ppiyaki-redis-data:/data
 volumes:
   ppiyaki-mysql-data:
+  ppiyaki-redis-data:             # ← 추가
+
