@@ -5,7 +5,7 @@ status: draft
 owner: @dohyeon
 scope: infra
 related_issues: [403]
-related_prs: []
+related_prs: [406]
 last_reviewed: 2026-05-22
 ---
 
@@ -64,7 +64,7 @@ last_reviewed: 2026-05-22
 
 ### 5-4) 데이터 흐름 / 시퀀스
 
-```
+```text
 [Spring Boot App]
       │
       ├── RedisTemplate / @Cacheable
