@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import com.ppiyaki.common.auth.JwtProvider;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.common.ratelimit.AttemptLimiter;
 import com.ppiyaki.common.ratelimit.RateLimiter;
 import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
@@ -54,6 +55,9 @@ class CareRelationServiceTest {
 
     @Mock
     private RateLimiter rateLimiter;
+
+    @Mock
+    private AttemptLimiter attemptLimiter;
 
     @InjectMocks
     private CareRelationService careRelationService;
