@@ -129,6 +129,15 @@ public class ChatSessionService {
         final SentenceBuffer sentenceBuffer = new SentenceBuffer();
 
         chatStreamExecutor.execute(() -> {
+            try {
+                final String transcriptionJson = "{\"type\":\"transcription\",\"text\":\""
+                        + escapeJson(transcribedText) + "\"}";
+                emitter.send(SseEmitter.event().data(transcriptionJson));
+            } catch (final Exception e) {
+                emitter.completeWithError(e);
+                return;
+            }
+
             final Disposable subscription = chatClient.prompt(new Prompt(promptMessages))
                     .toolContext(Map.of("userId", userId))
                     .stream()
