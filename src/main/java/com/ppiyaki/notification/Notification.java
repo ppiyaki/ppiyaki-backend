@@ -190,6 +190,25 @@ public class Notification extends BaseTimeEntity {
         );
     }
 
+    public static Notification createForPrescriptionReviewRequest(
+            final Long caregiverId,
+            final Long seniorId,
+            final String title,
+            final String body
+    ) {
+        return new Notification(
+                caregiverId,
+                seniorId,
+                NotificationCategory.PRESCRIPTION_REVIEW_REQUEST,
+                title,
+                body,
+                null,
+                null,
+                null,
+                null
+        );
+    }
+
     public boolean isRead() {
         return this.readAt != null;
     }

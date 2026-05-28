@@ -81,6 +81,7 @@
 | 채팅 세션 | Chat Session | AI 챗봇과의 대화 단위. 마지막 메시지 후 5분 경과 시 만료 |
 | 채팅 메시지 | Chat Message | 세션 내 개별 메시지. 사용자(USER) 또는 AI 응답(ASSISTANT) |
 | 안부 알림 | Wellbeing Ping | 시니어가 보호자에게 1-tap으로 "잘 지내요" 신호를 보내는 능동적 알림. `NotificationCategory.WELLBEING_PING`. 푸시만 발송하며 `notifications` row를 만들지 않는다. Redis 기반 쿨다운 1분(보호자 수신자별 독립). 시스템 자동 발송인 가족 안전망 알림(`FAMILY_SAFETY`)과는 트리거 주체가 다르다 |
+| 처방전 검토 요청 알림 | Prescription Review Request Notification | careMode=MANAGED 시니어가 처방전을 등록한 직후 활성 보호자 전원에게 발송하는 푸시 + `notifications` row. `NotificationCategory.PRESCRIPTION_REVIEW_REQUEST`. `PrescriptionService.processAndCreate` AFTER_COMMIT에서 `PrescriptionReviewRequestedEvent` 발행 → `PrescriptionReviewRequestDispatcher`가 처리. `notification_settings.prescription_review_request_enabled=false`면 해당 보호자 skip. DUR 위험 검출 시 발송되는 `DUR_WARNING`과는 독립적인 카테고리 |
 
 ## 5) 엔티티 (코드 기준)
 

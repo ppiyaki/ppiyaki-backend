@@ -131,6 +131,7 @@
         medication_complete_enabled bit not null,
         medication_delay_enabled bit not null,
         medication_delay_threshold_minutes integer not null,
+        prescription_review_request_enabled bit not null default true,
         caregiver_id bigint not null,
         created_at datetime(6),
         id bigint not null auto_increment,
