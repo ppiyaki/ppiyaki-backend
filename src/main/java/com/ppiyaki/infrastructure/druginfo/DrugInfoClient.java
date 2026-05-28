@@ -13,10 +13,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -30,7 +27,6 @@ public class DrugInfoClient {
 
     private static final Logger log = LoggerFactory.getLogger(DrugInfoClient.class);
     private static final String API_URL = "https://apis.data.go.kr/1471000/DrbEasyDrugInfoService/getDrbEasyDrugList";
-    private static final Duration CACHE_TTL = Duration.ofHours(24);
 
     private static final String API = "drug_info";
     private static final String OPERATION = "search";
@@ -38,7 +34,7 @@ public class DrugInfoClient {
     private final String serviceKey;
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
-    private final Map<String, CachedDrugInfo> cache = new ConcurrentHashMap<>();
+    private final DrugInfoCache cache;
     private final MeterRegistry meterRegistry;
     private final Counter cacheHitCounter;
     private final Counter cacheMissCounter;
@@ -47,10 +43,12 @@ public class DrugInfoClient {
             final MfdsApiProperties properties,
             final RestClient.Builder restClientBuilder,
             final ObjectMapper objectMapper,
+            final DrugInfoCache cache,
             final MeterRegistry meterRegistry
     ) {
         this.serviceKey = properties.serviceKey();
         this.objectMapper = objectMapper;
+        this.cache = cache;
         this.meterRegistry = meterRegistry;
 
         final SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -70,11 +68,10 @@ public class DrugInfoClient {
     }
 
     public Optional<DrugInfoResponse> search(final String itemName) {
-        final String cacheKey = itemName.strip().toLowerCase();
-        final CachedDrugInfo cached = cache.get(cacheKey);
-        if (cached != null && cached.expiresAt().isAfter(Instant.now())) {
+        final Optional<DrugInfoResponse> cached = cache.get(itemName);
+        if (cached != null) {
             cacheHitCounter.increment();
-            return cached.response();
+            return cached;
         }
 
         cacheMissCounter.increment();
@@ -93,7 +90,7 @@ public class DrugInfoClient {
                     .body(String.class);
 
             final Optional<DrugInfoResponse> result = parseResponse(responseBody);
-            cache.put(cacheKey, new CachedDrugInfo(result, Instant.now().plus(CACHE_TTL)));
+            cache.put(itemName, result);
             ExternalApiMetrics.record(meterRegistry, API, OPERATION, ExternalApiMetrics.RESULT_SUCCESS, sample);
             return result;
 
@@ -142,11 +139,5 @@ public class DrugInfoClient {
             return null;
         }
         return text.replaceAll("<[^>]+>", "").strip();
-    }
-
-    private record CachedDrugInfo(
-            Optional<DrugInfoResponse> response,
-            Instant expiresAt
-    ) {
     }
 }

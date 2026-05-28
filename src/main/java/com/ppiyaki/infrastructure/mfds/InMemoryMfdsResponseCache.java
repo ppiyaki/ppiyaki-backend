@@ -5,11 +5,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
 
-@Component
-@ConditionalOnProperty(prefix = "mfds.api", name = "service-key")
 public class InMemoryMfdsResponseCache implements MfdsResponseCache {
 
     private static final Duration TTL = Duration.ofHours(24);
