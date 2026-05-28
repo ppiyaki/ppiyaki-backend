@@ -21,7 +21,10 @@ public class InMemoryAttemptLimiter implements AttemptLimiter {
 
     @Override
     public void recordAttempt(final String key) {
-        attempts.computeIfAbsent(key, k -> new AtomicInteger(0)).incrementAndGet();
+        final int newCount = attempts.computeIfAbsent(key, k -> new AtomicInteger(0)).incrementAndGet();
+        if (newCount > MAX_ATTEMPTS) {
+            throw new BusinessException(ErrorCode.RATE_LIMIT_EXCEEDED);
+        }
     }
 
     @Override
