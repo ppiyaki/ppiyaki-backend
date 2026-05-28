@@ -88,7 +88,7 @@ public class InviteCode extends CreatedTimeEntity {
         this.usedAt = now;
     }
 
-    private static String generateCode() {
+    public static String generateCode() {
         final StringBuilder sb = new StringBuilder(CODE_LENGTH);
         for (int i = 0; i < CODE_LENGTH; i++) {
             sb.append(CODE_CHARS.charAt(RANDOM.nextInt(CODE_CHARS.length())));
