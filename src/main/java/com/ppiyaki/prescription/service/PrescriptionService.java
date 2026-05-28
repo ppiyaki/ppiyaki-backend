@@ -80,6 +80,7 @@ public class PrescriptionService {
     private final S3Client s3Client;
     private final PhotoUrlAssembler photoUrlAssembler;
     private final io.micrometer.core.instrument.MeterRegistry meterRegistry;
+    private final org.springframework.context.ApplicationEventPublisher applicationEventPublisher;
 
     public PrescriptionService(
             final PrescriptionRepository prescriptionRepository,
@@ -96,7 +97,8 @@ public class PrescriptionService {
             final NcpStorageProperties storageProperties,
             final S3Client s3Client,
             final PhotoUrlAssembler photoUrlAssembler,
-            final io.micrometer.core.instrument.MeterRegistry meterRegistry
+            final io.micrometer.core.instrument.MeterRegistry meterRegistry,
+            final org.springframework.context.ApplicationEventPublisher applicationEventPublisher
     ) {
         this.prescriptionRepository = prescriptionRepository;
         this.candidateRepository = candidateRepository;
@@ -113,6 +115,7 @@ public class PrescriptionService {
         this.s3Client = s3Client;
         this.photoUrlAssembler = photoUrlAssembler;
         this.meterRegistry = meterRegistry;
+        this.applicationEventPublisher = applicationEventPublisher;
     }
 
     @Transactional
@@ -170,6 +173,10 @@ public class PrescriptionService {
 
             prescription.complete(maskedObjectKey);
             deleteOriginalImage(objectKey);
+
+            applicationEventPublisher.publishEvent(
+                    new com.ppiyaki.prescription.event.PrescriptionReviewRequestedEvent(
+                            prescription.getId(), prescription.getOwnerId()));
 
             final List<PrescriptionMedicineCandidate> candidates = candidateRepository.findByPrescriptionId(prescription
                     .getId());

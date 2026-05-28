@@ -9,6 +9,7 @@ public record NotificationSettingsUpdateRequest(
         @NotNull @Min(1) Integer medicationDelayThresholdMinutes,
         @NotNull Boolean familySafetyEnabled,
         @NotNull @Min(1) Integer familySafetyThresholdHours,
-        @NotNull Boolean medicationCompleteEnabled
+        @NotNull Boolean medicationCompleteEnabled,
+        @NotNull Boolean prescriptionReviewRequestEnabled
 ) {
 }
