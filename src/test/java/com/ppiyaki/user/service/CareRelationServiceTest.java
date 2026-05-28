@@ -119,6 +119,8 @@ class CareRelationServiceTest {
         assertThat(response.refreshToken()).isEqualTo("refresh-token");
         assertThat(inviteCodeWithRaw.inviteCode().isUsed()).isTrue();
         verify(rateLimiter).clearFailures("code-login:127.0.0.1");
+        verify(attemptLimiter).checkAllowed("code:" + codeHash);
+        verify(attemptLimiter).clear("code:" + codeHash);
     }
 
     @Test
@@ -137,6 +139,8 @@ class CareRelationServiceTest {
                     assertThat(be.getErrorCode()).isEqualTo(ErrorCode.CARE_RELATION_INVITE_INVALID);
                 });
         verify(rateLimiter).recordFailure("code-login:127.0.0.1");
+        verify(attemptLimiter).checkAllowed("code:" + InviteCode.sha256("BADCOD"));
+        verify(attemptLimiter).recordAttempt("code:" + InviteCode.sha256("BADCOD"));
     }
 
     @Test
@@ -158,6 +162,8 @@ class CareRelationServiceTest {
                     assertThat(be.getErrorCode()).isEqualTo(ErrorCode.CARE_RELATION_INVITE_INVALID);
                 });
         verify(rateLimiter).recordFailure("code-login:127.0.0.1");
+        verify(attemptLimiter).checkAllowed("code:" + codeHash);
+        verify(attemptLimiter).recordAttempt("code:" + codeHash);
     }
 
     @Test

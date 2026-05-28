@@ -5,7 +5,7 @@ status: draft
 owner: @dohyeon
 scope: infra
 related_issues: [403]
-related_prs: [406]
+related_prs: [406, 407]
 last_reviewed: 2026-05-22
 ---
 
@@ -44,8 +44,8 @@ last_reviewed: 2026-05-22
 - `.env.example` 갱신
 
 ### 제외 (Out of Scope)
-- **DrugInfoClient / MfdsApiClient 캐시의 Redis 전환**: 후속 이슈 #404에서 진행
-- **InMemoryRateLimiter의 Redis 전환**: 후속 이슈 #405에서 진행
+- **DrugInfoClient / MfdsApiClient 캐시의 Redis 전환**: PR #408에서 진행
+- **InMemoryRateLimiter의 Redis 전환 + 초대코드 횟수 제한**: PR #407에서 진행
 - **Redis Sentinel / Cluster 구성**: 단일 인스턴스. 베타 규모에서 HA 불필요
 - **Spring Session (세션 저장소)**: JWT 기반 인증이므로 세션 저장소 불필요
 - **prod 서버 docker-compose 수정**: CD 파이프라인 변경은 별도 작업
@@ -84,11 +84,12 @@ last_reviewed: 2026-05-22
 
 ## 8) 오픈 질문
 
-| # | 질문 | 선택지 | 담당/기한 |
-|---|---|---|---|
-| Q1 | 로컬 테스트 시 embedded Redis vs docker Redis? | (a) Testcontainers로 Redis 컨테이너 기동 / (b) embedded-redis 라이브러리 / (c) docker-compose의 Redis 사용 | @dohyeon / 2026-05-23 |
-| Q2 | prod 배포 시 Redis 컨테이너를 backend-cd.yml에서 함께 관리할지, 별도 docker-compose로 분리할지 | (a) backend docker-compose에 포함 / (b) monitoring처럼 별도 compose | @dohyeon / 2026-05-23 |
+모두 해소됨 → §9 결정 로그로 이동.
 
 ## 9) 결정 로그
 
 - 2026-05-22: 초안 작성 (status=draft)
+- 2026-05-22: Q1 → (c) docker-compose의 Redis 사용. 테스트 환경에서는 Redis 없이 InMemory fallback으로 동작 / @dohyeon
+- 2026-05-22: Q2 → (a) backend docker-compose에 포함. Redis는 backend 앱이 직접 의존하는 저장소이므로 MySQL과 같이 관리 / @dohyeon
+- 2026-05-22: prod NCP 서버에 Redis 7 컨테이너 기동 완료, 비밀번호 설정 완료
+- 2026-05-24: 초대코드(invite_codes) 저장소를 MySQL → Redis로 이전하는 후속 작업 식별. 별도 이슈로 분리 예정
