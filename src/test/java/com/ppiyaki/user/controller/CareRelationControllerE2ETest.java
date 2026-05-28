@@ -156,4 +156,100 @@ class CareRelationControllerE2ETest {
                 .body("$", hasSize(1))
                 .body("[0].nickname", is("시니어코드E2E"));
     }
+
+    @Test
+    @DisplayName("시니어가 본인의 보호자 목록을 조회한다")
+    void readCaregivers_success() {
+        // given — 보호자 회원가입 + 시니어 대리 생성 + 초대 코드 + 코드 로그인 → 시니어 토큰
+        final String caregiverToken = RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "loginId": "cg_code_e2e",
+                            "password": "pass1234!",
+                            "nickname": "보호자코드E2E"
+                        }
+                        """)
+                .when()
+                .post("/api/v1/auth/signup")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("accessToken");
+
+        final Integer seniorId = RestAssured.given()
+                .header("Authorization", "Bearer " + caregiverToken)
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "nickname": "시니어코드E2E",
+                            "birthDate": "1945-03-15"
+                        }
+                        """)
+                .when()
+                .post("/api/v1/seniors")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("seniorId");
+
+        final String inviteCode = RestAssured.given()
+                .header("Authorization", "Bearer " + caregiverToken)
+                .contentType(ContentType.JSON)
+                .body("{\"seniorId\": " + seniorId + "}")
+                .when()
+                .post("/api/v1/care-relations/invite")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("inviteCode");
+
+        final String seniorToken = RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("{\"code\": \"" + inviteCode + "\"}")
+                .when()
+                .post("/api/v1/auth/code-login")
+                .then()
+                .statusCode(200)
+                .extract()
+                .path("accessToken");
+
+        // when & then — 시니어가 본인의 보호자 목록 조회
+        RestAssured.given()
+                .header("Authorization", "Bearer " + seniorToken)
+                .when()
+                .get("/api/v1/care-relations/caregivers")
+                .then()
+                .statusCode(200)
+                .body("$", hasSize(1))
+                .body("[0].nickname", is("보호자코드E2E"))
+                .body("[0].id", notNullValue());
+    }
+
+    @Test
+    @DisplayName("보호자가 시니어 전용 endpoint(/care-relations/caregivers) 호출 시 403")
+    void readCaregivers_caregiver_forbidden() {
+        final String caregiverToken = RestAssured.given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {
+                            "loginId": "cg_code_e2e",
+                            "password": "pass1234!",
+                            "nickname": "보호자코드E2E"
+                        }
+                        """)
+                .when()
+                .post("/api/v1/auth/signup")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path("accessToken");
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + caregiverToken)
+                .when()
+                .get("/api/v1/care-relations/caregivers")
+                .then()
+                .statusCode(403);
+    }
 }

@@ -4,6 +4,7 @@ import com.ppiyaki.common.auth.JwtProvider;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.common.ratelimit.RateLimiter;
+import com.ppiyaki.user.controller.dto.CaregiverSummaryResponse;
 import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
 import com.ppiyaki.user.controller.dto.SeniorSummaryResponse;
@@ -66,6 +67,24 @@ public class CareRelationService {
         return careRelations.stream()
                 .map(relation -> seniorsById.get(relation.getSeniorId()))
                 .map(SeniorSummaryResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CaregiverSummaryResponse> readCaregivers(final Long seniorId) {
+        final List<CareRelation> careRelations = careRelationRepository.findBySeniorIdAndDeletedAtIsNull(
+                seniorId);
+
+        final List<Long> caregiverIds = careRelations.stream()
+                .map(CareRelation::getCaregiverId)
+                .toList();
+
+        final Map<Long, User> caregiversById = userRepository.findAllById(caregiverIds).stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
+
+        return careRelations.stream()
+                .map(relation -> caregiversById.get(relation.getCaregiverId()))
+                .map(CaregiverSummaryResponse::from)
                 .toList();
     }
 
