@@ -1,5 +1,6 @@
 package com.ppiyaki.user.controller;
 
+import com.ppiyaki.user.controller.dto.CaregiverSummaryResponse;
 import com.ppiyaki.user.controller.dto.CodeLoginRequest;
 import com.ppiyaki.user.controller.dto.InviteCodeRequest;
 import com.ppiyaki.user.controller.dto.InviteCodeResponse;
@@ -37,6 +38,15 @@ public class CareRelationController {
             @AuthenticationPrincipal final Long userId
     ) {
         final List<SeniorSummaryResponse> responses = careRelationService.readSeniors(userId);
+        return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping("/care-relations/caregivers")
+    @PreAuthorize("hasRole('SENIOR')")
+    public ResponseEntity<List<CaregiverSummaryResponse>> readCaregivers(
+            @AuthenticationPrincipal final Long userId
+    ) {
+        final List<CaregiverSummaryResponse> responses = careRelationService.readCaregivers(userId);
         return ResponseEntity.ok(responses);
     }
 
