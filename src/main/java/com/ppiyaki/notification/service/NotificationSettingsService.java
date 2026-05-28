@@ -46,7 +46,8 @@ public class NotificationSettingsService {
                 request.medicationDelayThresholdMinutes(),
                 request.familySafetyEnabled(),
                 request.familySafetyThresholdHours(),
-                request.medicationCompleteEnabled()
+                request.medicationCompleteEnabled(),
+                request.prescriptionReviewRequestEnabled()
         );
         return NotificationSettingsResponse.from(settings);
     }

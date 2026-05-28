@@ -54,7 +54,8 @@ class NotificationSettingsControllerE2ETest {
                 .body("seniorId", is(seniorId.intValue()))
                 .body("medicationDelayThresholdMinutes", is(60))
                 .body("familySafetyThresholdHours", is(48))
-                .body("medicationCompleteEnabled", is(false));
+                .body("medicationCompleteEnabled", is(false))
+                .body("prescriptionReviewRequestEnabled", is(true));
 
         // when — PUT 갱신 (사용자 직접 수정)
         RestAssured.given()
@@ -67,7 +68,8 @@ class NotificationSettingsControllerE2ETest {
                           "medicationDelayThresholdMinutes": 45,
                           "familySafetyEnabled": false,
                           "familySafetyThresholdHours": 24,
-                          "medicationCompleteEnabled": true
+                          "medicationCompleteEnabled": true,
+                          "prescriptionReviewRequestEnabled": false
                         }
                         """)
                 .when()
@@ -76,7 +78,8 @@ class NotificationSettingsControllerE2ETest {
                 .statusCode(200)
                 .body("medicationDelayThresholdMinutes", is(45))
                 .body("familySafetyEnabled", is(false))
-                .body("medicationCompleteEnabled", is(true));
+                .body("medicationCompleteEnabled", is(true))
+                .body("prescriptionReviewRequestEnabled", is(false));
 
         // when — 프리셋 적용 (INTENSIVE)
         RestAssured.given()
@@ -91,7 +94,8 @@ class NotificationSettingsControllerE2ETest {
                 .statusCode(200)
                 .body("medicationDelayThresholdMinutes", is(30))
                 .body("familySafetyThresholdHours", is(12))
-                .body("medicationCompleteEnabled", is(true));
+                .body("medicationCompleteEnabled", is(true))
+                .body("prescriptionReviewRequestEnabled", is(true));
 
         // when — 다른 보호자 접근 → 403 CARE_001
         RestAssured.given()

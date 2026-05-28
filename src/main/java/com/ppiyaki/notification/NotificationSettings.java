@@ -51,6 +51,9 @@ public class NotificationSettings extends BaseTimeEntity {
     @Column(name = "medication_complete_enabled", nullable = false)
     private boolean medicationCompleteEnabled;
 
+    @Column(name = "prescription_review_request_enabled", nullable = false)
+    private boolean prescriptionReviewRequestEnabled;
+
     NotificationSettings(
             final Long caregiverId,
             final Long seniorId,
@@ -59,7 +62,8 @@ public class NotificationSettings extends BaseTimeEntity {
             final int medicationDelayThresholdMinutes,
             final boolean familySafetyEnabled,
             final int familySafetyThresholdHours,
-            final boolean medicationCompleteEnabled
+            final boolean medicationCompleteEnabled,
+            final boolean prescriptionReviewRequestEnabled
     ) {
         this.caregiverId = Objects.requireNonNull(caregiverId, "caregiverId must not be null");
         this.seniorId = Objects.requireNonNull(seniorId, "seniorId must not be null");
@@ -69,14 +73,15 @@ public class NotificationSettings extends BaseTimeEntity {
         this.familySafetyEnabled = familySafetyEnabled;
         this.familySafetyThresholdHours = familySafetyThresholdHours;
         this.medicationCompleteEnabled = medicationCompleteEnabled;
+        this.prescriptionReviewRequestEnabled = prescriptionReviewRequestEnabled;
     }
 
     public static NotificationSettings createWithStandardPreset(final Long caregiverId, final Long seniorId) {
-        return new NotificationSettings(caregiverId, seniorId, true, true, 60, true, 48, false);
+        return new NotificationSettings(caregiverId, seniorId, true, true, 60, true, 48, false, true);
     }
 
     public static NotificationSettings createWithIntensivePreset(final Long caregiverId, final Long seniorId) {
-        return new NotificationSettings(caregiverId, seniorId, true, true, 30, true, 12, true);
+        return new NotificationSettings(caregiverId, seniorId, true, true, 30, true, 12, true, true);
     }
 
     public void applyStandardPreset() {
@@ -86,6 +91,7 @@ public class NotificationSettings extends BaseTimeEntity {
         this.familySafetyEnabled = true;
         this.familySafetyThresholdHours = 48;
         this.medicationCompleteEnabled = false;
+        this.prescriptionReviewRequestEnabled = true;
     }
 
     public void applyIntensivePreset() {
@@ -95,6 +101,7 @@ public class NotificationSettings extends BaseTimeEntity {
         this.familySafetyEnabled = true;
         this.familySafetyThresholdHours = 12;
         this.medicationCompleteEnabled = true;
+        this.prescriptionReviewRequestEnabled = true;
     }
 
     public void updateAllFields(
@@ -103,7 +110,8 @@ public class NotificationSettings extends BaseTimeEntity {
             final int medicationDelayThresholdMinutes,
             final boolean familySafetyEnabled,
             final int familySafetyThresholdHours,
-            final boolean medicationCompleteEnabled
+            final boolean medicationCompleteEnabled,
+            final boolean prescriptionReviewRequestEnabled
     ) {
         this.durWarningEnabled = durWarningEnabled;
         this.medicationDelayEnabled = medicationDelayEnabled;
@@ -111,5 +119,6 @@ public class NotificationSettings extends BaseTimeEntity {
         this.familySafetyEnabled = familySafetyEnabled;
         this.familySafetyThresholdHours = familySafetyThresholdHours;
         this.medicationCompleteEnabled = medicationCompleteEnabled;
+        this.prescriptionReviewRequestEnabled = prescriptionReviewRequestEnabled;
     }
 }
