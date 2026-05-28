@@ -70,6 +70,14 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             final Long scheduleId
     );
 
+    boolean existsByUserIdAndCategoryAndSeniorIdAndTargetDateAndMealSlot(
+            final Long userId,
+            final NotificationCategory category,
+            final Long seniorId,
+            final java.time.LocalDate targetDate,
+            final String mealSlot
+    );
+
     java.util.Optional<Notification> findFirstByUserIdAndCategoryAndSeniorIdOrderByCreatedAtDesc(
             final Long userId,
             final NotificationCategory category,

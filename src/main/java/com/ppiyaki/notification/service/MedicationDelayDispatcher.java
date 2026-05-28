@@ -26,10 +26,12 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -109,6 +111,15 @@ public class MedicationDelayDispatcher {
                     takenScheduleIds.add(logRow.getScheduleId());
                 }
             }
+            final List<MedicationSchedule> unsentSchedules = new ArrayList<>();
+            for (final MedicationSchedule schedule : slotSchedules) {
+                if (!takenScheduleIds.contains(schedule.getId())) {
+                    unsentSchedules.add(schedule);
+                }
+            }
+            if (unsentSchedules.isEmpty()) {
+                continue;
+            }
 
             for (final CareRelation relation : relations) {
                 final Long caregiverId = relation.getCaregiverId();
@@ -123,18 +134,12 @@ public class MedicationDelayDispatcher {
                 if (now.isBefore(mealDateTime.plusMinutes(thresholdMinutes))) {
                     continue;
                 }
-                for (final MedicationSchedule schedule : slotSchedules) {
-                    if (takenScheduleIds.contains(schedule.getId())) {
-                        continue;
-                    }
-                    if (notificationRepository.existsByUserIdAndCategoryAndSeniorIdAndTargetDateAndScheduleId(
-                            caregiverId, NotificationCategory.MEDICATION_DELAY, senior.getId(), today,
-                            schedule.getId())) {
-                        continue;
-                    }
-                    sendDelayNotification(caregiverId, senior, slot, today, schedule, thresholdMinutes);
-                    dispatched++;
+                if (notificationRepository.existsByUserIdAndCategoryAndSeniorIdAndTargetDateAndMealSlot(
+                        caregiverId, NotificationCategory.MEDICATION_DELAY, senior.getId(), today, slot.name())) {
+                    continue;
                 }
+                sendDelayNotification(caregiverId, senior, slot, today, unsentSchedules, thresholdMinutes);
+                dispatched++;
             }
         }
         return dispatched;
@@ -145,21 +150,30 @@ public class MedicationDelayDispatcher {
             final User senior,
             final MealSlot slot,
             final LocalDate today,
-            final MedicationSchedule schedule,
+            final List<MedicationSchedule> schedules,
             final long thresholdMinutes
     ) {
         final String slotLabel = SLOT_LABELS.getOrDefault(slot, slot.name());
         final String title = "복약 지연 알림";
         final String seniorName = senior.getNickname() == null ? "" : senior.getNickname();
-        final String medicineLabel = resolveMedicineLabel(schedule);
-        final String body = String.format(
-                "%s 어르신이 %s에 %s을 아직 복용하지 않았어요. (%d분 경과)",
-                seniorName, slotLabel, medicineLabel, thresholdMinutes);
+        final StringBuilder bodyBuilder = new StringBuilder();
+        bodyBuilder.append(String.format(
+                "%s 어르신이 %s에 약 %d개를 아직 복용하지 않았어요. (%d분 경과)",
+                seniorName, slotLabel, schedules.size(), thresholdMinutes));
+        for (final MedicationSchedule schedule : schedules) {
+            bodyBuilder.append("\n• ").append(resolveMedicineLabel(schedule));
+        }
+        final String body = bodyBuilder.toString();
+        final String scheduleIdsJson = schedules.stream()
+                .map(MedicationSchedule::getId)
+                .map(String::valueOf)
+                .collect(Collectors.joining(",", "[", "]"));
+
         final Notification saved = notificationRepository.save(
                 Notification.createForMedicationDelay(
-                        caregiverId, senior.getId(), title, body, today, slot.name(), schedule.getId()));
-        log.info("MEDICATION_DELAY notification created (id={}, caregiver={}, senior={}, slot={}, schedule={})",
-                saved.getId(), caregiverId, senior.getId(), slot, schedule.getId());
+                        caregiverId, senior.getId(), title, body, today, slot.name()));
+        log.info("MEDICATION_DELAY notification created (id={}, caregiver={}, senior={}, slot={}, scheduleCount={})",
+                saved.getId(), caregiverId, senior.getId(), slot, schedules.size());
 
         final List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(caregiverId);
         for (final DeviceToken token : tokens) {
@@ -167,7 +181,7 @@ public class MedicationDelayDispatcher {
                     new PushPayload(title, body, Map.of(
                             "category", "MEDICATION_DELAY",
                             "seniorId", String.valueOf(senior.getId()),
-                            "scheduleId", String.valueOf(schedule.getId()),
+                            "scheduleIds", scheduleIdsJson,
                             "mealSlot", slot.name()
                     )));
             if (result.tokenInvalid()) {
