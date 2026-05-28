@@ -3,6 +3,7 @@ package com.ppiyaki.user.service;
 import com.ppiyaki.common.auth.JwtProvider;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.common.ratelimit.AttemptLimiter;
 import com.ppiyaki.common.ratelimit.RateLimiter;
 import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
@@ -32,6 +33,7 @@ public class CareRelationService {
     private final JwtProvider jwtProvider;
     private final AuthService authService;
     private final RateLimiter rateLimiter;
+    private final AttemptLimiter attemptLimiter;
 
     public CareRelationService(
             final CareRelationRepository careRelationRepository,
@@ -40,7 +42,8 @@ public class CareRelationService {
             final UserRepository userRepository,
             final JwtProvider jwtProvider,
             final AuthService authService,
-            final RateLimiter rateLimiter
+            final RateLimiter rateLimiter,
+            final AttemptLimiter attemptLimiter
     ) {
         this.careRelationRepository = careRelationRepository;
         this.inviteCodeRepository = inviteCodeRepository;
@@ -49,6 +52,7 @@ public class CareRelationService {
         this.jwtProvider = jwtProvider;
         this.authService = authService;
         this.rateLimiter = rateLimiter;
+        this.attemptLimiter = attemptLimiter;
     }
 
     @Transactional(readOnly = true)
@@ -86,22 +90,28 @@ public class CareRelationService {
         rateLimiter.checkAllowed(rateLimitKey);
 
         final String codeHash = InviteCode.sha256(code);
+        final String attemptKey = "code:" + codeHash;
+        attemptLimiter.checkAllowed(attemptKey);
+
         final InviteCode inviteCode = inviteCodeRepository.findByCodeHashAndUsedAtIsNull(codeHash)
                 .orElse(null);
 
         if (inviteCode == null) {
             rateLimiter.recordFailure(rateLimitKey);
+            attemptLimiter.recordAttempt(attemptKey);
             throw new BusinessException(ErrorCode.CARE_RELATION_INVITE_INVALID);
         }
 
         final LocalDateTime now = LocalDateTime.now();
         if (inviteCode.isExpired(now)) {
             rateLimiter.recordFailure(rateLimitKey);
+            attemptLimiter.recordAttempt(attemptKey);
             throw new BusinessException(ErrorCode.CARE_RELATION_INVITE_INVALID);
         }
 
         inviteCode.markUsed(now);
         rateLimiter.clearFailures(rateLimitKey);
+        attemptLimiter.clear(attemptKey);
 
         final Long seniorId = inviteCode.getSeniorId();
         final User senior = findUserById(seniorId);
