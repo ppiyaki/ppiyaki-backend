@@ -3,6 +3,7 @@ package com.ppiyaki.user.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -20,7 +21,6 @@ import com.ppiyaki.user.domain.InviteCode;
 import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.domain.UserRole;
 import com.ppiyaki.user.repository.CareRelationRepository;
-import com.ppiyaki.user.repository.InviteCodeRepository;
 import com.ppiyaki.user.repository.RefreshTokenRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,7 +40,7 @@ class CareRelationServiceTest {
     private CareRelationRepository careRelationRepository;
 
     @Mock
-    private InviteCodeRepository inviteCodeRepository;
+    private InviteCodeStore inviteCodeStore;
 
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
@@ -69,7 +70,6 @@ class CareRelationServiceTest {
         final CareRelation existingRelation = CareRelation.createLinked(2L, 1L);
         given(careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(1L, 2L))
                 .willReturn(Optional.of(existingRelation));
-        given(inviteCodeRepository.save(any(InviteCode.class))).willAnswer(inv -> inv.getArgument(0));
 
         // when
         final InviteCodeResponse response = careRelationService.createInviteCode(1L, 2L);
@@ -78,6 +78,7 @@ class CareRelationServiceTest {
         assertThat(response.inviteCode()).hasSize(6);
         assertThat(response.inviteCode()).matches("[A-Z0-9]{6}");
         assertThat(response.expiresAt()).isAfter(LocalDateTime.now());
+        verify(inviteCodeStore).save(any(String.class), eq(2L), eq(300L));
     }
 
     @Test
@@ -100,14 +101,13 @@ class CareRelationServiceTest {
     @DisplayName("유효한 초대 코드로 코드 로그인하면 JWT가 발급된다")
     void codeLogin_success() {
         // given
-        final InviteCode.InviteCodeWithRaw inviteCodeWithRaw = InviteCode.create(2L, LocalDateTime.now());
-        final String rawCode = inviteCodeWithRaw.rawCode();
+        final String rawCode = "ABC123";
         final String codeHash = InviteCode.sha256(rawCode);
-        given(inviteCodeRepository.findByCodeHashAndUsedAtIsNull(codeHash))
-                .willReturn(java.util.Optional.of(inviteCodeWithRaw.inviteCode()));
+        given(inviteCodeStore.findSeniorIdByCodeHash(codeHash))
+                .willReturn(Optional.of(2L));
 
         final User senior = mockUser(2L, UserRole.SENIOR);
-        given(userRepository.findById(2L)).willReturn(java.util.Optional.of(senior));
+        given(userRepository.findById(2L)).willReturn(Optional.of(senior));
         given(jwtProvider.createAccessToken(2L, "SENIOR")).willReturn("access-token");
         given(jwtProvider.createRefreshToken(2L)).willReturn("refresh-token");
 
@@ -117,7 +117,7 @@ class CareRelationServiceTest {
         // then
         assertThat(response.accessToken()).isEqualTo("access-token");
         assertThat(response.refreshToken()).isEqualTo("refresh-token");
-        assertThat(inviteCodeWithRaw.inviteCode().isUsed()).isTrue();
+        verify(inviteCodeStore).markUsed(codeHash);
         verify(rateLimiter).clearFailures("code-login:127.0.0.1");
         verify(attemptLimiter).checkAllowed("code:" + codeHash);
         verify(attemptLimiter).clear("code:" + codeHash);
@@ -128,34 +128,11 @@ class CareRelationServiceTest {
     void codeLogin_invalidCode_throws() {
         // given
         final String codeHash = InviteCode.sha256("BADCOD");
-        given(inviteCodeRepository.findByCodeHashAndUsedAtIsNull(codeHash))
-                .willReturn(java.util.Optional.empty());
+        given(inviteCodeStore.findSeniorIdByCodeHash(codeHash))
+                .willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> careRelationService.codeLogin("BADCOD", "127.0.0.1"))
-                .isInstanceOf(BusinessException.class)
-                .satisfies(exception -> {
-                    final BusinessException be = (BusinessException) exception;
-                    assertThat(be.getErrorCode()).isEqualTo(ErrorCode.CARE_RELATION_INVITE_INVALID);
-                });
-        verify(rateLimiter).recordFailure("code-login:127.0.0.1");
-        verify(attemptLimiter).checkAllowed("code:" + InviteCode.sha256("BADCOD"));
-        verify(attemptLimiter).recordAttempt("code:" + InviteCode.sha256("BADCOD"));
-    }
-
-    @Test
-    @DisplayName("만료된 코드로 로그인 시도하면 CARE_RELATION_INVITE_INVALID 에러")
-    void codeLogin_expiredCode_throws() {
-        // given
-        final InviteCode.InviteCodeWithRaw inviteCodeWithRaw = InviteCode.create(
-                2L, LocalDateTime.now().minusMinutes(10));
-        final String rawCode = inviteCodeWithRaw.rawCode();
-        final String codeHash = InviteCode.sha256(rawCode);
-        given(inviteCodeRepository.findByCodeHashAndUsedAtIsNull(codeHash))
-                .willReturn(java.util.Optional.of(inviteCodeWithRaw.inviteCode()));
-
-        // when & then
-        assertThatThrownBy(() -> careRelationService.codeLogin(rawCode, "127.0.0.1"))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(exception -> {
                     final BusinessException be = (BusinessException) exception;
@@ -170,7 +147,7 @@ class CareRelationServiceTest {
     @DisplayName("Rate Limit 초과 시 429 에러가 발생하고 downstream은 호출되지 않는다")
     void codeLogin_rateLimitExceeded_throws() {
         // given
-        org.mockito.Mockito.doThrow(new BusinessException(ErrorCode.RATE_LIMIT_EXCEEDED))
+        Mockito.doThrow(new BusinessException(ErrorCode.RATE_LIMIT_EXCEEDED))
                 .when(rateLimiter).checkAllowed("code-login:127.0.0.1");
 
         // when & then
@@ -180,7 +157,7 @@ class CareRelationServiceTest {
                     final BusinessException be = (BusinessException) exception;
                     assertThat(be.getErrorCode()).isEqualTo(ErrorCode.RATE_LIMIT_EXCEEDED);
                 });
-        verify(inviteCodeRepository, org.mockito.Mockito.never()).findByCodeHashAndUsedAtIsNull(any());
+        verify(inviteCodeStore, Mockito.never()).findSeniorIdByCodeHash(any());
     }
 
     private User mockUser(final Long id, final UserRole role) {
