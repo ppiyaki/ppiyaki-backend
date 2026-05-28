@@ -42,6 +42,15 @@ public class UserController {
         return ResponseEntity.ok(userService.updateMealTimes(userId, request));
     }
 
+    @PutMapping("/{seniorId}/meal-times")
+    public ResponseEntity<UserMeResponse> updateMealTimesForSenior(
+            @AuthenticationPrincipal final Long requesterId,
+            @PathVariable final Long seniorId,
+            @Valid @RequestBody final MealTimesUpdateRequest request
+    ) {
+        return ResponseEntity.ok(userService.updateMealTimesForSenior(requesterId, seniorId, request));
+    }
+
     @DeleteMapping("/me")
     public ResponseEntity<Void> withdraw(@AuthenticationPrincipal final Long userId) {
         userService.withdraw(userId);

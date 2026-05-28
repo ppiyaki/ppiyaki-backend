@@ -11,7 +11,9 @@ import static org.mockito.Mockito.verify;
 import com.ppiyaki.common.auth.JwtProvider;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.common.ratelimit.AttemptLimiter;
 import com.ppiyaki.common.ratelimit.RateLimiter;
+import com.ppiyaki.user.controller.dto.CaregiverSummaryResponse;
 import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
 import com.ppiyaki.user.domain.CareRelation;
@@ -23,6 +25,7 @@ import com.ppiyaki.user.repository.InviteCodeRepository;
 import com.ppiyaki.user.repository.RefreshTokenRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -54,6 +57,9 @@ class CareRelationServiceTest {
 
     @Mock
     private RateLimiter rateLimiter;
+
+    @Mock
+    private AttemptLimiter attemptLimiter;
 
     @InjectMocks
     private CareRelationService careRelationService;
@@ -115,6 +121,8 @@ class CareRelationServiceTest {
         assertThat(response.refreshToken()).isEqualTo("refresh-token");
         assertThat(inviteCodeWithRaw.inviteCode().isUsed()).isTrue();
         verify(rateLimiter).clearFailures("code-login:127.0.0.1");
+        verify(attemptLimiter).checkAllowed("code:" + codeHash);
+        verify(attemptLimiter).clear("code:" + codeHash);
     }
 
     @Test
@@ -133,6 +141,8 @@ class CareRelationServiceTest {
                     assertThat(be.getErrorCode()).isEqualTo(ErrorCode.CARE_RELATION_INVITE_INVALID);
                 });
         verify(rateLimiter).recordFailure("code-login:127.0.0.1");
+        verify(attemptLimiter).checkAllowed("code:" + InviteCode.sha256("BADCOD"));
+        verify(attemptLimiter).recordAttempt("code:" + InviteCode.sha256("BADCOD"));
     }
 
     @Test
@@ -154,6 +164,8 @@ class CareRelationServiceTest {
                     assertThat(be.getErrorCode()).isEqualTo(ErrorCode.CARE_RELATION_INVITE_INVALID);
                 });
         verify(rateLimiter).recordFailure("code-login:127.0.0.1");
+        verify(attemptLimiter).checkAllowed("code:" + codeHash);
+        verify(attemptLimiter).recordAttempt("code:" + codeHash);
     }
 
     @Test
@@ -173,10 +185,61 @@ class CareRelationServiceTest {
         verify(inviteCodeRepository, org.mockito.Mockito.never()).findByCodeHashAndUsedAtIsNull(any());
     }
 
+    @Test
+    @DisplayName("시니어가 본인의 보호자 목록을 조회하면 활성 care_relation의 보호자가 DTO로 변환된다")
+    void readCaregivers_returnsActiveCaregivers() {
+        // given
+        final Long seniorId = 1L;
+        final Long caregiverA = 10L;
+        final Long caregiverB = 11L;
+
+        final CareRelation relationA = mock(CareRelation.class);
+        given(relationA.getCaregiverId()).willReturn(caregiverA);
+        final CareRelation relationB = mock(CareRelation.class);
+        given(relationB.getCaregiverId()).willReturn(caregiverB);
+        given(careRelationRepository.findBySeniorIdAndDeletedAtIsNull(seniorId))
+                .willReturn(List.of(relationA, relationB));
+
+        final User userA = mockUserWithNickname(caregiverA, "보호자A");
+        final User userB = mockUserWithNickname(caregiverB, "보호자B");
+        given(userRepository.findAllById(List.of(caregiverA, caregiverB)))
+                .willReturn(List.of(userA, userB));
+
+        // when
+        final List<CaregiverSummaryResponse> responses = careRelationService.readCaregivers(seniorId);
+
+        // then
+        assertThat(responses).hasSize(2);
+        assertThat(responses).extracting(CaregiverSummaryResponse::id).containsExactly(caregiverA, caregiverB);
+        assertThat(responses).extracting(CaregiverSummaryResponse::nickname).containsExactly("보호자A", "보호자B");
+    }
+
+    @Test
+    @DisplayName("연동된 보호자가 없으면 빈 리스트를 반환한다")
+    void readCaregivers_returnsEmptyWhenNoRelations() {
+        // given
+        given(careRelationRepository.findBySeniorIdAndDeletedAtIsNull(1L))
+                .willReturn(List.of());
+        given(userRepository.findAllById(List.of())).willReturn(List.of());
+
+        // when
+        final List<CaregiverSummaryResponse> responses = careRelationService.readCaregivers(1L);
+
+        // then
+        assertThat(responses).isEmpty();
+    }
+
     private User mockUser(final Long id, final UserRole role) {
         final User user = mock(User.class);
         lenient().when(user.getId()).thenReturn(id);
         lenient().when(user.getRole()).thenReturn(role);
+        return user;
+    }
+
+    private User mockUserWithNickname(final Long id, final String nickname) {
+        final User user = mock(User.class);
+        lenient().when(user.getId()).thenReturn(id);
+        lenient().when(user.getNickname()).thenReturn(nickname);
         return user;
     }
 }

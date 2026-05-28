@@ -1,10 +1,12 @@
 ---
 id: 0001
 title: 운영 DB는 NCP 매니지드 MySQL 8.4.6
-status: accepted
+status: superseded by 0011
 date: 2026-04-08
 deciders: [@goohong]
 ---
+
+> **2026-05-20 supersede**: 비용 절감 목적으로 운영 DB를 backend 서버 docker MySQL로 이전 (ADR 0011). MySQL 8.4.6 버전 선택과 로컬 docker-compose 정렬 결정은 ADR 0011에서도 유지된다.
 
 # 0001. 운영 DB는 NCP 매니지드 MySQL 8.4.6
 

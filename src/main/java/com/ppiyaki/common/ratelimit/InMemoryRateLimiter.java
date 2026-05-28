@@ -5,9 +5,7 @@ import com.ppiyaki.common.exception.ErrorCode;
 import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import org.springframework.stereotype.Component;
 
-@Component
 public class InMemoryRateLimiter implements RateLimiter {
 
     private static final int MAX_ATTEMPTS_PER_MINUTE = 10;

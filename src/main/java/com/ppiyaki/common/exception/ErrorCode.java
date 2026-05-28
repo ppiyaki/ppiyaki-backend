@@ -33,6 +33,10 @@ public enum ErrorCode {
     SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SCHEDULE_001", "Schedule not found"),
     SCHEDULE_MEDICINE_MISMATCH(HttpStatus.BAD_REQUEST, "SCHEDULE_002", "Schedule does not belong to this medicine"),
 
+    // Medication Log
+    MEDICATION_LOG_PHOTO_REQUIRED(HttpStatus.BAD_REQUEST, "LOG_001",
+            "Photo is required for senior in MANAGED care mode"),
+
     // DUR
     DUR_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "DUR_001", "DUR service unavailable"),
 
