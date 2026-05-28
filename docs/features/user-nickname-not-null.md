@@ -4,7 +4,7 @@ slug: user-nickname-not-null
 status: draft
 owner: @goohong
 scope: user
-related_issues: []
+related_issues: [417]
 related_prs: []
 last_reviewed: 2026-05-28
 ---
