@@ -6,5 +6,6 @@ public enum NotificationCategory {
     MEDICATION_DELAY,
     DUR_WARNING,
     FAMILY_SAFETY,
-    MEDICATION_COMPLETE
+    MEDICATION_COMPLETE,
+    WELLBEING_PING
 }

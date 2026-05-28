@@ -80,6 +80,7 @@
 | 리포트 | Report | 보호자용 복약 리포트 (스키마 미정) |
 | 채팅 세션 | Chat Session | AI 챗봇과의 대화 단위. 마지막 메시지 후 5분 경과 시 만료 |
 | 채팅 메시지 | Chat Message | 세션 내 개별 메시지. 사용자(USER) 또는 AI 응답(ASSISTANT) |
+| 안부 알림 | Wellbeing Ping | 시니어가 보호자에게 1-tap으로 "잘 지내요" 신호를 보내는 능동적 알림. `NotificationCategory.WELLBEING_PING`. 푸시만 발송하며 `notifications` row를 만들지 않는다. Redis 기반 쿨다운 1분(보호자 수신자별 독립). 시스템 자동 발송인 가족 안전망 알림(`FAMILY_SAFETY`)과는 트리거 주체가 다르다 |
 
 ## 5) 엔티티 (코드 기준)
 

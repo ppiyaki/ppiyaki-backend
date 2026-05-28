@@ -30,7 +30,11 @@ public class GlobalExceptionHandler {
         final ErrorResponse errorResponse = errorCode == ErrorCode.INTERNAL_SERVER_ERROR
                 ? ErrorResponse.of(errorCode)
                 : ErrorResponse.of(errorCode, exception.getMessage());
-        return ResponseEntity.status(errorCode.getStatus()).body(errorResponse);
+        final ResponseEntity.BodyBuilder builder = ResponseEntity.status(errorCode.getStatus());
+        if (exception instanceof final RetryAfterAware retryAfterAware) {
+            builder.header("Retry-After", String.valueOf(retryAfterAware.getRetryAfterSeconds()));
+        }
+        return builder.body(errorResponse);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
