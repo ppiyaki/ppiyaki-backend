@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import com.ppiyaki.common.auth.JwtProvider;
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.common.ratelimit.AttemptLimiter;
 import com.ppiyaki.common.ratelimit.RateLimiter;
 import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
@@ -54,6 +55,9 @@ class CareRelationServiceTest {
 
     @Mock
     private RateLimiter rateLimiter;
+
+    @Mock
+    private AttemptLimiter attemptLimiter;
 
     @InjectMocks
     private CareRelationService careRelationService;
@@ -115,6 +119,8 @@ class CareRelationServiceTest {
         assertThat(response.refreshToken()).isEqualTo("refresh-token");
         assertThat(inviteCodeWithRaw.inviteCode().isUsed()).isTrue();
         verify(rateLimiter).clearFailures("code-login:127.0.0.1");
+        verify(attemptLimiter).checkAllowed("code:" + codeHash);
+        verify(attemptLimiter).clear("code:" + codeHash);
     }
 
     @Test
@@ -133,6 +139,8 @@ class CareRelationServiceTest {
                     assertThat(be.getErrorCode()).isEqualTo(ErrorCode.CARE_RELATION_INVITE_INVALID);
                 });
         verify(rateLimiter).recordFailure("code-login:127.0.0.1");
+        verify(attemptLimiter).checkAllowed("code:" + InviteCode.sha256("BADCOD"));
+        verify(attemptLimiter).recordAttempt("code:" + InviteCode.sha256("BADCOD"));
     }
 
     @Test
@@ -154,6 +162,8 @@ class CareRelationServiceTest {
                     assertThat(be.getErrorCode()).isEqualTo(ErrorCode.CARE_RELATION_INVITE_INVALID);
                 });
         verify(rateLimiter).recordFailure("code-login:127.0.0.1");
+        verify(attemptLimiter).checkAllowed("code:" + codeHash);
+        verify(attemptLimiter).recordAttempt("code:" + codeHash);
     }
 
     @Test
