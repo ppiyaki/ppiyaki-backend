@@ -72,7 +72,7 @@ last_reviewed: 2026-05-28
 - 알림함 영속화는 하지 않지만 FCM payload `category` 식별자 + 향후 발송 통계용으로 enum 등재.
 
 **신규 빈**:
-- `WellbeingPingService` — care relation 검증 + 쿨다운 체크 + 푸시 발송. `@Transactional` 불필요 (DB write 없음).
+- `WellbeingPingService` — care relation 검증 + 쿨다운 체크 + 푸시 발송. `@Transactional` 부착 — `DeviceToken.deactivate()`가 JPA dirty checking으로 update SQL을 발생시키기 때문 (`notifications` row는 만들지 않지만 `device_tokens.is_active` 갱신은 발생).
 - `WellbeingPingController` — endpoint 노출.
 - `WellbeingPingCooldownStore` (or 같은 책임의 컴포넌트) — Redis 기반 쿨다운 SETNX.
 
@@ -152,3 +152,4 @@ last_reviewed: 2026-05-28
 - 2026-05-28: 초안 작성 (status=draft). 디스코드 백로그 4번 기반 [[backlog-2026-05-27]].
 - 2026-05-28: 합의 완료 항목 — 방향=시니어→보호자, 쿨다운=1분, 영속화=푸시만(DB row X), 본문 톤=안부 알림.
 - 2026-05-28: 오픈 질문 5건 합의 — Q1 (a) 1차에는 무조건 받기, Q2 (a) 보호자(수신자)별 쿨다운, Q3 (a) 429 + Retry-After, Q4 (a) 토큰 0개여도 204, Q5 (a) `NotificationCategory.WELLBEING_PING` enum 추가.
+- 2026-05-28: §5-1 `@Transactional 불필요` 문구를 구현 사실에 맞게 정정 — `DeviceToken.deactivate()` dirty checking으로 update SQL이 발생하므로 `@Transactional` 부착 (구현 PR #414 머지 직후 정정).
