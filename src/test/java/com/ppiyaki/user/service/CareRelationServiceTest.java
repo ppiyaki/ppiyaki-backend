@@ -105,7 +105,7 @@ class CareRelationServiceTest {
         // given
         final String rawCode = "ABC123";
         final String codeHash = InviteCode.sha256(rawCode);
-        given(inviteCodeStore.findSeniorIdByCodeHash(codeHash))
+        given(inviteCodeStore.consume(codeHash))
                 .willReturn(Optional.of(2L));
 
         final User senior = mockUser(2L, UserRole.SENIOR);
@@ -119,7 +119,7 @@ class CareRelationServiceTest {
         // then
         assertThat(response.accessToken()).isEqualTo("access-token");
         assertThat(response.refreshToken()).isEqualTo("refresh-token");
-        verify(inviteCodeStore).markUsed(codeHash);
+        verify(inviteCodeStore).consume(codeHash);
         verify(rateLimiter).clearFailures("code-login:127.0.0.1");
         verify(attemptLimiter).checkAllowed("code:" + codeHash);
         verify(attemptLimiter).clear("code:" + codeHash);
@@ -130,7 +130,7 @@ class CareRelationServiceTest {
     void codeLogin_invalidCode_throws() {
         // given
         final String codeHash = InviteCode.sha256("BADCOD");
-        given(inviteCodeStore.findSeniorIdByCodeHash(codeHash))
+        given(inviteCodeStore.consume(codeHash))
                 .willReturn(Optional.empty());
 
         // when & then
@@ -159,7 +159,7 @@ class CareRelationServiceTest {
                     final BusinessException be = (BusinessException) exception;
                     assertThat(be.getErrorCode()).isEqualTo(ErrorCode.RATE_LIMIT_EXCEEDED);
                 });
-        verify(inviteCodeStore, Mockito.never()).findSeniorIdByCodeHash(any());
+        verify(inviteCodeStore, Mockito.never()).consume(any());
     }
 
     @Test

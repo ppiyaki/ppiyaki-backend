@@ -2,10 +2,13 @@ package com.ppiyaki.user.service;
 
 import java.time.Duration;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 public class RedisInviteCodeStore implements InviteCodeStore {
 
+    private static final Logger log = LoggerFactory.getLogger(RedisInviteCodeStore.class);
     private static final String KEY_PREFIX = "invite-code:";
 
     private final StringRedisTemplate redisTemplate;
@@ -21,18 +24,17 @@ public class RedisInviteCodeStore implements InviteCodeStore {
     }
 
     @Override
-    public Optional<Long> findSeniorIdByCodeHash(final String codeHash) {
+    public Optional<Long> consume(final String codeHash) {
         final String redisKey = KEY_PREFIX + codeHash;
-        final String value = redisTemplate.opsForValue().get(redisKey);
+        final String value = redisTemplate.opsForValue().getAndDelete(redisKey);
         if (value == null) {
             return Optional.empty();
         }
-        return Optional.of(Long.parseLong(value));
-    }
-
-    @Override
-    public void markUsed(final String codeHash) {
-        final String redisKey = KEY_PREFIX + codeHash;
-        redisTemplate.delete(redisKey);
+        try {
+            return Optional.of(Long.parseLong(value));
+        } catch (final NumberFormatException e) {
+            log.warn("Invite code key has invalid value: key={}, value={}", redisKey, value);
+            return Optional.empty();
+        }
     }
 }

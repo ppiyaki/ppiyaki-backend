@@ -112,7 +112,7 @@ public class CareRelationService {
         final String attemptKey = "code:" + codeHash;
         attemptLimiter.checkAllowed(attemptKey);
 
-        final Long seniorId = inviteCodeStore.findSeniorIdByCodeHash(codeHash)
+        final Long seniorId = inviteCodeStore.consume(codeHash)
                 .orElse(null);
 
         if (seniorId == null) {
@@ -121,7 +121,6 @@ public class CareRelationService {
             throw new BusinessException(ErrorCode.CARE_RELATION_INVITE_INVALID);
         }
 
-        inviteCodeStore.markUsed(codeHash);
         rateLimiter.clearFailures(rateLimitKey);
         attemptLimiter.clear(attemptKey);
 

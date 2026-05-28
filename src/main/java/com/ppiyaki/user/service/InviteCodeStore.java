@@ -6,7 +6,5 @@ public interface InviteCodeStore {
 
     void save(String codeHash, Long seniorId, long ttlSeconds);
 
-    Optional<Long> findSeniorIdByCodeHash(String codeHash);
-
-    void markUsed(String codeHash);
+    Optional<Long> consume(String codeHash);
 }
