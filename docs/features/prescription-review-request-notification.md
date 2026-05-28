@@ -31,12 +31,13 @@ careMode가 `MANAGED`인 시니어는 보호자의 처방전 검증 윈도우(0~
 
 ### 기능 요구사항
 - [ ] **careMode 분기**: `MANAGED` 시니어의 처방전만 알림 발송. `AUTONOMOUS` 시니어는 무시.
+- [ ] **등록 주체 분기**: `PrescriptionService.processAndCreate` 호출자(`userId`)가 시니어 본인(`prescription.ownerId`)일 때만 알림 발송. 보호자 대리 등록은 알림 dispatch 자체를 skip.
 - [ ] **트리거 시점**: `PrescriptionService.processAndCreate` 트랜잭션 commit 이후 (`@TransactionalEventListener(AFTER_COMMIT)`). OCR + candidate 영속화가 모두 끝난 뒤 발송.
 - [ ] **다중 보호자**: `care_relations.deleted_at IS NULL`인 활성 보호자 전원에게 발송.
 - [ ] **NotificationCategory 추가**: `PRESCRIPTION_REVIEW_REQUEST` enum 값 추가. 알림함 row 영속화 카테고리.
-- [ ] **알림함 row 생성**: `Notification` 테이블에 row 1건/보호자 (다른 카테고리와 동일 패턴).
+- [ ] **알림함 row 생성**: `Notification` 테이블에 row 1건/보호자 (다른 카테고리와 동일 패턴). `prescription_id`는 row에 저장하지 않고 payload에만 전달 — `senior_id` + `created_at`으로 충분히 조회 가능.
 - [ ] **푸시 본문**: 제목 `"처방전 검토 요청"`, 본문 `"{시니어 닉네임} 어르신의 새 처방전이 도착했어요. 검토해 주세요."`. payload data: `{ "category": "PRESCRIPTION_REVIEW_REQUEST", "seniorId": "<id>", "prescriptionId": "<id>" }`.
-- [ ] **NotificationSettings 토글 (옵션)**: §8 Q1에서 결정. 1차 단순화로 무조건 발송 권장.
+- [ ] **NotificationSettings 토글 추가**: `prescription_review_request_enabled BOOLEAN NOT NULL DEFAULT TRUE` 컬럼 추가. 보호자별로 끌 수 있다. dispatcher에서 `false`면 해당 보호자 skip.
 - [ ] **`DUR_WARNING`과 독립**: 같은 처방전이라도 DUR 위험이 검출되면 별도 푸시 1건이 추가로 발송됨 (기존 흐름). 본 카테고리는 등록 사실 자체 알림.
 
 ### 비기능 요구사항
@@ -69,8 +70,13 @@ careMode가 `MANAGED`인 시니어는 보호자의 처방전 검증 윈도우(0~
 - `PRESCRIPTION_REVIEW_REQUEST` 추가.
 
 **`Notification` 엔티티 변경**:
-- 정적 팩토리 `createForPrescriptionReviewRequest(caregiverId, seniorId, prescriptionId, title, body)` 추가.
-- 알림함 row 영속화 — `target_date`/`meal_slot` 등 복약 관련 필드는 NULL, `senior_id` + `prescription_id`(또는 `schedule_id` 컬럼 재활용?) 사용. §8 Q2.
+- 정적 팩토리 `createForPrescriptionReviewRequest(caregiverId, seniorId, title, body)` 추가. `prescriptionId`는 인자로 받지 않음 — row에는 저장하지 않고 dispatcher에서 payload에만 담음.
+- 알림함 row — `target_date`/`meal_slot`/`schedule_id` 모두 NULL. `senior_id`만 채움.
+
+**`NotificationSettings` 엔티티 변경**:
+- `prescriptionReviewRequestEnabled` boolean 필드 추가 (default `true`).
+- preset 적용 로직(`NotificationSettingsService.applyPreset`)에 본 필드 포함 — `MANAGED`/`INTENSIVE` 모두 `true`로 초기화 (단순화).
+- `NotificationSettingsResponse` DTO 추가 필드.
 
 **도메인 이벤트**:
 - `PrescriptionReviewRequestedEvent(prescriptionId, seniorId)` 신설 (`com.ppiyaki.prescription.event` 패키지).
@@ -91,11 +97,12 @@ careMode가 `MANAGED`인 시니어는 보호자의 처방전 검증 윈도우(0~
 ### 5-4) 데이터 흐름
 
 ```
-[시니어] POST /api/v1/prescriptions { objectKey }
+[호출자] POST /api/v1/prescriptions { objectKey }
    ↓
-[PrescriptionService.processAndCreate]
-   1. OCR + candidate 생성 + Prescription row 저장
-   2. applicationEventPublisher.publishEvent(new PrescriptionReviewRequestedEvent(...))
+[PrescriptionService.processAndCreate(userId, objectKey)]
+   1. OCR + candidate 생성 + Prescription row 저장 (ownerId = 시니어)
+   2. if (userId == prescription.ownerId)  // 시니어 본인이 등록한 경우만
+        applicationEventPublisher.publishEvent(new PrescriptionReviewRequestedEvent(prescriptionId, seniorId))
    3. 트랜잭션 commit
    ↓ AFTER_COMMIT
 [PrescriptionReviewRequestDispatcher]
@@ -103,16 +110,22 @@ careMode가 `MANAGED`인 시니어는 보호자의 처방전 검증 윈도우(0~
    2. senior.careMode == MANAGED 확인 (AUTONOMOUS면 return)
    3. CareRelationRepository.findBySeniorIdAndDeletedAtIsNull
    4. 각 보호자에 대해:
-      - NotificationSettings 체크 (옵션, §8 Q1)
-      - Notification row INSERT (PRESCRIPTION_REVIEW_REQUEST)
-      - 활성 DeviceToken 조회 → FCM 발송 → tokenInvalid 시 deactivate
+      - NotificationSettings.prescriptionReviewRequestEnabled false면 skip
+      - Notification row INSERT (PRESCRIPTION_REVIEW_REQUEST, schedule_id/target_date/meal_slot NULL)
+      - 활성 DeviceToken 조회 → FCM 발송 (data에 prescriptionId 포함) → tokenInvalid 시 deactivate
    5. INFO 로그 1줄
 ```
 
 ### 5-5) DB 마이그레이션
 
-- **컬럼 변경 없음**: `notifications.category` 컬럼은 `varchar(32)` STRING enum이라 신규 값 추가 시 마이그레이션 불필요.
-- 다만 `Notification`이 `prescription_id`를 저장할 컬럼이 필요하면 §8 Q2 결정에 따라 마이그레이션 추가 가능.
+- **`notifications` 테이블**: 변경 없음. `category` 컬럼이 `varchar(32)` STRING enum이라 신규 값 추가는 무자료. `prescription_id`는 row에 저장하지 않음(payload에만).
+- **`notification_settings` 테이블**: `prescription_review_request_enabled BOOLEAN NOT NULL DEFAULT TRUE` 컬럼 추가.
+  ```sql
+  ALTER TABLE notification_settings
+  ADD COLUMN prescription_review_request_enabled BOOLEAN NOT NULL DEFAULT TRUE;
+  ```
+  보호 영역 변경(`src/main/resources/db/...` 또는 `schema.sql`) — `needs-human-review` 라벨 필수.
+- **운영 DB 사전 보강 불필요**: DEFAULT TRUE라 기존 row는 자동 채워짐.
 
 ## 6) 작업 분할 (예상 PR 리스트)
 
@@ -130,13 +143,10 @@ careMode가 `MANAGED`인 시니어는 보호자의 처방전 검증 윈도우(0~
 
 ## 8) 오픈 질문
 
-| # | 질문 | 선택지 | 담당/기한 |
-|---|---|---|---|
-| Q1 | `NotificationSettings`에 `prescriptionReviewRequestEnabled` 토글 추가 | (a) 1차 무조건 발송, 토글 없음 (추천) / (b) 토글 추가, default ON | @goohong / spec 합의 시점 |
-| Q2 | `Notification` row에 `prescription_id`를 저장할지 | (a) 기존 `schedule_id` 컬럼 재활용 (이름 혼란) / (b) 신규 `prescription_id` 컬럼 추가 (마이그레이션) / (c) payload에만 담고 row에는 미저장 (추천 — `senior_id` + `created_at`으로 조회 가능) | @goohong / spec 합의 시점 |
-| Q3 | 보호자 본인이 시니어 대리로 처방전 등록 시 알림 | (a) 등록한 보호자 본인에게는 미발송, 나머지 보호자에게만 (추천) / (b) 전원 발송 / (c) careMode 무관 등록자가 시니어일 때만 알림 (보호자 등록은 자체 알림 X) | @goohong / spec 합의 시점 |
+> 모든 항목 합의 완료. §9 결정 로그 참조.
 
 ## 9) 결정 로그
 
 - 2026-05-28: 초안 작성 (status=draft). 디스코드 백로그 2번 의도 재확인 — careMode=MANAGED 시니어 처방전 등록 시 보호자 알림.
 - 2026-05-28: 합의 4건 — 발송 조건 MANAGED, 트리거 OCR 완료 직후 자동, 알림함 row 생성, 보호자 전원 발송.
+- 2026-05-28: 오픈 질문 3건 합의 — Q1 `NotificationSettings.prescriptionReviewRequestEnabled` 토글 추가 (default TRUE), Q2 `prescription_id`는 row 미저장 payload만, Q3 시니어 본인이 등록한 경우만 알림(보호자 대리 등록은 dispatch skip).
