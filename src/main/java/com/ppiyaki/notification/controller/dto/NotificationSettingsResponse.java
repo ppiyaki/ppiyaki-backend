@@ -10,7 +10,8 @@ public record NotificationSettingsResponse(
         int medicationDelayThresholdMinutes,
         boolean familySafetyEnabled,
         int familySafetyThresholdHours,
-        boolean medicationCompleteEnabled
+        boolean medicationCompleteEnabled,
+        boolean prescriptionReviewRequestEnabled
 ) {
 
     public static NotificationSettingsResponse from(final NotificationSettings settings) {
@@ -22,7 +23,8 @@ public record NotificationSettingsResponse(
                 settings.getMedicationDelayThresholdMinutes(),
                 settings.isFamilySafetyEnabled(),
                 settings.getFamilySafetyThresholdHours(),
-                settings.isMedicationCompleteEnabled()
+                settings.isMedicationCompleteEnabled(),
+                settings.isPrescriptionReviewRequestEnabled()
         );
     }
 }
