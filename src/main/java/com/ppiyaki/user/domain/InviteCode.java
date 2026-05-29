@@ -88,12 +88,12 @@ public class InviteCode extends CreatedTimeEntity {
         this.usedAt = now;
     }
 
-    private static String generateCode() {
-        final StringBuilder sb = new StringBuilder(CODE_LENGTH);
+    public static String generateCode() {
+        final StringBuilder codeBuilder = new StringBuilder(CODE_LENGTH);
         for (int i = 0; i < CODE_LENGTH; i++) {
-            sb.append(CODE_CHARS.charAt(RANDOM.nextInt(CODE_CHARS.length())));
+            codeBuilder.append(CODE_CHARS.charAt(RANDOM.nextInt(CODE_CHARS.length())));
         }
-        return sb.toString();
+        return codeBuilder.toString();
     }
 
     public record InviteCodeWithRaw(
