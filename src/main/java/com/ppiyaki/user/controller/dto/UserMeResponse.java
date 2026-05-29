@@ -12,7 +12,7 @@ public record UserMeResponse(
 
     public static UserMeResponse from(final User user) {
         final String roleName = user.getRole() != null ? user.getRole().name() : null;
-        final boolean onboarded = user.getRole() != null;
+        final boolean onboarded = user.isOnboarded();
         final MealTimesResponse mealTimes = MealTimesResponse.from(user);
         return new UserMeResponse(user.getId(), user.getNickname(), roleName, onboarded, mealTimes);
     }
