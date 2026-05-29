@@ -1,10 +1,13 @@
 package com.ppiyaki.user.controller.dto;
 
+import com.ppiyaki.user.domain.CareMode;
+import com.ppiyaki.user.domain.Gender;
 import jakarta.validation.constraints.NotBlank;
-import java.time.LocalDate;
+import jakarta.validation.constraints.NotNull;
 
 public record SeniorCreateRequest(
         @NotBlank String nickname,
-        LocalDate birthDate
+        @NotNull Gender gender,
+        @NotNull CareMode careMode
 ) {
 }

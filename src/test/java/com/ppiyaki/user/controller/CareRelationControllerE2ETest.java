@@ -67,7 +67,8 @@ class CareRelationControllerE2ETest {
                 .body("""
                         {
                             "nickname": "시니어코드E2E",
-                            "birthDate": "1945-03-15"
+                            "gender": "FEMALE",
+                            "careMode": "MANAGED"
                         }
                         """)
                 .when()
@@ -138,7 +139,8 @@ class CareRelationControllerE2ETest {
                 .body("""
                         {
                             "nickname": "시니어코드E2E",
-                            "birthDate": "1945-03-15"
+                            "gender": "FEMALE",
+                            "careMode": "MANAGED"
                         }
                         """)
                 .when()
@@ -183,7 +185,8 @@ class CareRelationControllerE2ETest {
                 .body("""
                         {
                             "nickname": "시니어코드E2E",
-                            "birthDate": "1945-03-15"
+                            "gender": "FEMALE",
+                            "careMode": "MANAGED"
                         }
                         """)
                 .when()

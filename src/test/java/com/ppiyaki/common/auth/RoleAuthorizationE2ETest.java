@@ -75,7 +75,9 @@ class RoleAuthorizationE2ETest {
                 .contentType(ContentType.JSON)
                 .body("""
                         {
-                            "nickname": "할머니"
+                            "nickname": "할머니",
+                            "gender": "FEMALE",
+                            "careMode": "MANAGED"
                         }
                         """)
                 .when()
