@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ppiyaki.chat.service.ChatSessionPersistenceService;
 import com.ppiyaki.chat.service.ChatSessionService;
 import com.ppiyaki.common.exception.BusinessException;
@@ -36,7 +37,7 @@ class ChatSessionServiceTest {
         persistenceService = mock(ChatSessionPersistenceService.class);
         chatClient = mock(ChatClient.class);
         final Executor executor = Runnable::run;
-        chatSessionService = new ChatSessionService(persistenceService, chatClient, executor);
+        chatSessionService = new ChatSessionService(persistenceService, chatClient, executor, new ObjectMapper());
     }
 
     @Test

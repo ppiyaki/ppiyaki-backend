@@ -1,11 +1,15 @@
 package com.ppiyaki.chat.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -22,6 +26,7 @@ import reactor.core.Disposable;
 @RequiredArgsConstructor
 public class ChatSessionService {
 
+    private static final Logger log = LoggerFactory.getLogger(ChatSessionService.class);
     private static final long SSE_TIMEOUT = 60_000L;
 
     /**
@@ -76,6 +81,7 @@ public class ChatSessionService {
     private final ChatSessionPersistenceService persistenceService;
     private final ChatClient chatClient;
     private final Executor chatStreamExecutor;
+    private final ObjectMapper objectMapper;
 
     public SseEmitter sendMessageStream(final Long userId, final Long sessionId, final String message) {
         final List<Message> promptMessages = persistenceService.loadSessionAndBuildPrompt(userId, sessionId, message);
@@ -129,6 +135,20 @@ public class ChatSessionService {
         final SentenceBuffer sentenceBuffer = new SentenceBuffer();
 
         chatStreamExecutor.execute(() -> {
+            try {
+                final String transcriptionJson = objectMapper.writeValueAsString(
+                        Map.of("type", "transcription", "text", transcribedText));
+                emitter.send(SseEmitter.event().data(transcriptionJson));
+            } catch (final JsonProcessingException e) {
+                log.warn("transcription 이벤트 직렬화 실패 sessionId={}", sessionId, e);
+                emitter.completeWithError(e);
+                return;
+            } catch (final Exception e) {
+                log.warn("transcription 이벤트 전송 실패 sessionId={}", sessionId, e);
+                emitter.completeWithError(e);
+                return;
+            }
+
             final Disposable subscription = chatClient.prompt(new Prompt(promptMessages))
                     .toolContext(Map.of("userId", userId))
                     .stream()
