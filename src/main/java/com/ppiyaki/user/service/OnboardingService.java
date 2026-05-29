@@ -45,6 +45,7 @@ public class OnboardingService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         caregiver.updateNickname(onboardingRequest.nickname());
+        caregiver.completeOnboarding();
 
         final List<SeniorResult> seniorResults = new ArrayList<>();
 
