@@ -61,7 +61,8 @@ class SeniorControllerE2ETest {
                 .body("""
                         {
                             "nickname": "시니어E2E대리",
-                            "birthDate": "1945-03-15"
+                            "gender": "FEMALE",
+                            "careMode": "MANAGED"
                         }
                         """)
                 .when()
