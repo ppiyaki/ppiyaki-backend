@@ -11,10 +11,8 @@ import com.ppiyaki.user.controller.dto.LoginResponse;
 import com.ppiyaki.user.controller.dto.SeniorSummaryResponse;
 import com.ppiyaki.user.domain.CareRelation;
 import com.ppiyaki.user.domain.InviteCode;
-import com.ppiyaki.user.domain.InviteCode.InviteCodeWithRaw;
 import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
-import com.ppiyaki.user.repository.InviteCodeRepository;
 import com.ppiyaki.user.repository.RefreshTokenRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
@@ -27,8 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CareRelationService {
 
+    private static final long INVITE_CODE_TTL_SECONDS = 300L;
+
     private final CareRelationRepository careRelationRepository;
-    private final InviteCodeRepository inviteCodeRepository;
+    private final InviteCodeStore inviteCodeStore;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
     private final JwtProvider jwtProvider;
@@ -38,7 +38,7 @@ public class CareRelationService {
 
     public CareRelationService(
             final CareRelationRepository careRelationRepository,
-            final InviteCodeRepository inviteCodeRepository,
+            final InviteCodeStore inviteCodeStore,
             final RefreshTokenRepository refreshTokenRepository,
             final UserRepository userRepository,
             final JwtProvider jwtProvider,
@@ -47,7 +47,7 @@ public class CareRelationService {
             final AttemptLimiter attemptLimiter
     ) {
         this.careRelationRepository = careRelationRepository;
-        this.inviteCodeRepository = inviteCodeRepository;
+        this.inviteCodeStore = inviteCodeStore;
         this.refreshTokenRepository = refreshTokenRepository;
         this.userRepository = userRepository;
         this.jwtProvider = jwtProvider;
@@ -92,18 +92,18 @@ public class CareRelationService {
                 .toList();
     }
 
-    @Transactional
     public InviteCodeResponse createInviteCode(final Long caregiverId, final Long seniorId) {
         careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(caregiverId, seniorId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
 
-        final InviteCodeWithRaw inviteCodeWithRaw = InviteCode.create(seniorId, LocalDateTime.now());
-        inviteCodeRepository.save(inviteCodeWithRaw.inviteCode());
+        final String rawCode = InviteCode.generateCode();
+        final String codeHash = InviteCode.sha256(rawCode);
+        inviteCodeStore.save(codeHash, seniorId, INVITE_CODE_TTL_SECONDS);
 
-        return new InviteCodeResponse(inviteCodeWithRaw.rawCode(), inviteCodeWithRaw.inviteCode().getExpiresAt());
+        final LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(INVITE_CODE_TTL_SECONDS);
+        return new InviteCodeResponse(rawCode, expiresAt);
     }
 
-    @Transactional
     public LoginResponse codeLogin(final String code, final String clientIp) {
         final String rateLimitKey = "code-login:" + clientIp;
         rateLimiter.checkAllowed(rateLimitKey);
@@ -112,27 +112,18 @@ public class CareRelationService {
         final String attemptKey = "code:" + codeHash;
         attemptLimiter.checkAllowed(attemptKey);
 
-        final InviteCode inviteCode = inviteCodeRepository.findByCodeHashAndUsedAtIsNull(codeHash)
+        final Long seniorId = inviteCodeStore.consume(codeHash)
                 .orElse(null);
 
-        if (inviteCode == null) {
+        if (seniorId == null) {
             rateLimiter.recordFailure(rateLimitKey);
             attemptLimiter.recordAttempt(attemptKey);
             throw new BusinessException(ErrorCode.CARE_RELATION_INVITE_INVALID);
         }
 
-        final LocalDateTime now = LocalDateTime.now();
-        if (inviteCode.isExpired(now)) {
-            rateLimiter.recordFailure(rateLimitKey);
-            attemptLimiter.recordAttempt(attemptKey);
-            throw new BusinessException(ErrorCode.CARE_RELATION_INVITE_INVALID);
-        }
-
-        inviteCode.markUsed(now);
         rateLimiter.clearFailures(rateLimitKey);
         attemptLimiter.clear(attemptKey);
 
-        final Long seniorId = inviteCode.getSeniorId();
         final User senior = findUserById(seniorId);
         final String accessToken = jwtProvider.createAccessToken(seniorId, senior.getRole().name());
         final String refreshToken = jwtProvider.createRefreshToken(seniorId);
