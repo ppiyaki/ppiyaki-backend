@@ -1,5 +1,6 @@
 package com.ppiyaki.user.controller;
 
+import com.ppiyaki.infrastructure.storage.ProfileImageUrlResolver;
 import com.ppiyaki.user.controller.dto.KakaoLoginRequest;
 import com.ppiyaki.user.controller.dto.LoginRequest;
 import com.ppiyaki.user.controller.dto.LoginResponse;
@@ -25,9 +26,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final ProfileImageUrlResolver profileImageUrlResolver;
 
-    public AuthController(final AuthService authService) {
+    public AuthController(final AuthService authService, final ProfileImageUrlResolver profileImageUrlResolver) {
         this.authService = authService;
+        this.profileImageUrlResolver = profileImageUrlResolver;
     }
 
     @PostMapping("/auth/signup")
@@ -64,7 +67,8 @@ public class AuthController {
     @GetMapping("/users/me")
     public ResponseEntity<UserMeResponse> me(@AuthenticationPrincipal final Long userId) {
         final User user = authService.findUserById(userId);
-        final UserMeResponse userMeResponse = UserMeResponse.from(user);
+        final UserMeResponse userMeResponse = UserMeResponse.from(user,
+                profileImageUrlResolver.resolve(user.getProfileImageObjectKey()));
         return ResponseEntity.ok(userMeResponse);
     }
 }

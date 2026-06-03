@@ -103,8 +103,10 @@
 | password | varchar nullable | 로컬 로그인용. OAuth 전용 유저는 NULL |
 | role | varchar | DB는 varchar로 자유도 유지, Java는 `UserRole` enum(`SENIOR`/`CAREGIVER`)로 다루며 컨버터로 변환 |
 | nickname | varchar | 사용자 표시 이름 |
-| gender | varchar | DB는 varchar, Java는 `Gender` enum(`MALE`/`FEMALE`/`OTHER`/`UNKNOWN`) |
+| gender | varchar | DB는 varchar, Java는 `Gender` enum(`MALE`/`FEMALE`/`OTHER`/`UNKNOWN`). 변경 권한: 시니어 본인(`PUT /api/v1/users/me`) 또는 연결된 보호자(`PUT /api/v1/users/{seniorId}`, CareRelation 검증) |
 | birth_date | date | 생년월일 |
+| profile_image | int nullable | 기본 프로필 사진 선택 인덱스(1~6). 커스텀 업로드 사용 시 NULL. `profile_image_object_key`와 상호 배타 |
+| profile_image_object_key | varchar nullable | 사용자가 직접 업로드한 프로필 사진의 objectKey(`profile-image/{userId}/{uuid}.{ext}`). 기본 프사 사용 시 NULL. 응답 시 `PhotoUrlAssembler`로 presigned GET URL 변환 |
 | pet_id | bigint | `pets.id` PK 참조 (FK 제약 선언 여부는 §7-12) |
 | care_mode | varchar | DB는 varchar, Java는 `CareMode` enum(`MANAGED` default / `AUTONOMOUS`). 시니어 회원에 적용. 보호자 회원도 컬럼은 갖지만 처방전 흐름에서는 `prescription.owner_id`로 참조하는 시니어 측 값만 사용 |
 | breakfast_time | time nullable | 시니어 식사 시간대(아침). Java는 `LocalTime`. 미설정 가능. Phase 1: 클라이언트가 schedule 등록 시 활용. Phase 2~3: 슬롯 매핑/자동 생성 (별도 spec). 변경 권한: 시니어 본인(`PUT /api/v1/users/me/meal-times`) 또는 연결된 보호자(`PUT /api/v1/users/{seniorId}/meal-times`, CareRelation 검증) |
