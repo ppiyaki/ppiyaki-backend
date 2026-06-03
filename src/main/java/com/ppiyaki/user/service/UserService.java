@@ -2,8 +2,11 @@ package com.ppiyaki.user.service;
 
 import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
+import com.ppiyaki.infrastructure.storage.ProfileImageUrlResolver;
 import com.ppiyaki.user.controller.dto.CareModeResponse;
 import com.ppiyaki.user.controller.dto.MealTimesUpdateRequest;
+import com.ppiyaki.user.controller.dto.ProfileUpdateRequest;
+import com.ppiyaki.user.controller.dto.SeniorProfileUpdateRequest;
 import com.ppiyaki.user.controller.dto.UserMeResponse;
 import com.ppiyaki.user.domain.CareMode;
 import com.ppiyaki.user.domain.CareRelation;
@@ -14,24 +17,34 @@ import com.ppiyaki.user.repository.RefreshTokenRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserService {
 
+    private static final Pattern PROFILE_IMAGE_OBJECT_KEY_PATTERN = Pattern.compile(
+            "^profile-image/(\\d+)/"
+                    + "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+                    + "\\.[a-zA-Z0-9]+$");
+
     private final UserRepository userRepository;
     private final CareRelationRepository careRelationRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final ProfileImageUrlResolver profileImageUrlResolver;
 
     public UserService(
             final UserRepository userRepository,
             final CareRelationRepository careRelationRepository,
-            final RefreshTokenRepository refreshTokenRepository
+            final RefreshTokenRepository refreshTokenRepository,
+            final ProfileImageUrlResolver profileImageUrlResolver
     ) {
         this.userRepository = userRepository;
         this.careRelationRepository = careRelationRepository;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.profileImageUrlResolver = profileImageUrlResolver;
     }
 
     @Transactional
@@ -56,7 +69,7 @@ public class UserService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         user.updateMealTimes(request.breakfast(), request.lunch(), request.dinner());
-        return UserMeResponse.from(user);
+        return toUserMeResponse(user);
     }
 
     @Transactional
@@ -72,7 +85,56 @@ public class UserService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
 
         senior.updateMealTimes(request.breakfast(), request.lunch(), request.dinner());
-        return UserMeResponse.from(senior);
+        return toUserMeResponse(senior);
+    }
+
+    @Transactional
+    public UserMeResponse updateMyProfile(final Long userId, final ProfileUpdateRequest request) {
+        final User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (request.profileImageObjectKey() != null) {
+            validateProfileImageObjectKey(request.profileImageObjectKey(), userId);
+        }
+
+        user.updateNickname(request.nickname());
+        user.updateProfileImage(request.profileImage(), request.profileImageObjectKey());
+        if (request.gender() != null) {
+            user.updateGender(request.gender());
+        }
+        return toUserMeResponse(user);
+    }
+
+    @Transactional
+    public UserMeResponse updateSeniorProfile(
+            final Long requesterId,
+            final Long seniorId,
+            final SeniorProfileUpdateRequest request
+    ) {
+        final User senior = userRepository.findById(seniorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(requesterId, seniorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
+
+        senior.updateNickname(request.nickname());
+        senior.updateGender(request.gender());
+        return toUserMeResponse(senior);
+    }
+
+    private UserMeResponse toUserMeResponse(final User user) {
+        return UserMeResponse.from(user, profileImageUrlResolver.resolve(user.getProfileImageObjectKey()));
+    }
+
+    private void validateProfileImageObjectKey(final String objectKey, final Long userId) {
+        final Matcher matcher = PROFILE_IMAGE_OBJECT_KEY_PATTERN.matcher(objectKey);
+        if (objectKey.contains("..") || !matcher.matches()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "Invalid profile image objectKey format");
+        }
+        final long uploaderId = Long.parseLong(matcher.group(1));
+        if (uploaderId != userId) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "objectKey owner mismatch");
+        }
     }
 
     @Transactional
