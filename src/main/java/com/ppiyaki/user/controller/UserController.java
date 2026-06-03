@@ -3,6 +3,8 @@ package com.ppiyaki.user.controller;
 import com.ppiyaki.user.controller.dto.CareModeResponse;
 import com.ppiyaki.user.controller.dto.CareModeUpdateRequest;
 import com.ppiyaki.user.controller.dto.MealTimesUpdateRequest;
+import com.ppiyaki.user.controller.dto.ProfileUpdateRequest;
+import com.ppiyaki.user.controller.dto.SeniorProfileUpdateRequest;
 import com.ppiyaki.user.controller.dto.UserMeResponse;
 import com.ppiyaki.user.service.UserService;
 import jakarta.validation.Valid;
@@ -32,6 +34,23 @@ public class UserController {
             @Valid @RequestBody final CareModeUpdateRequest request
     ) {
         return ResponseEntity.ok(userService.updateCareMode(requesterId, seniorId, request.careMode()));
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<UserMeResponse> updateMyProfile(
+            @AuthenticationPrincipal final Long userId,
+            @Valid @RequestBody final ProfileUpdateRequest request
+    ) {
+        return ResponseEntity.ok(userService.updateMyProfile(userId, request));
+    }
+
+    @PutMapping("/{seniorId}")
+    public ResponseEntity<UserMeResponse> updateSeniorProfile(
+            @AuthenticationPrincipal final Long requesterId,
+            @PathVariable final Long seniorId,
+            @Valid @RequestBody final SeniorProfileUpdateRequest request
+    ) {
+        return ResponseEntity.ok(userService.updateSeniorProfile(requesterId, seniorId, request));
     }
 
     @PutMapping("/me/meal-times")
