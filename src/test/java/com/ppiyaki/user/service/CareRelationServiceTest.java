@@ -14,6 +14,7 @@ import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.common.ratelimit.AttemptLimiter;
 import com.ppiyaki.common.ratelimit.RateLimiter;
+import com.ppiyaki.infrastructure.storage.ProfileImageUrlResolver;
 import com.ppiyaki.user.controller.dto.CaregiverSummaryResponse;
 import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
@@ -61,6 +62,9 @@ class CareRelationServiceTest {
 
     @Mock
     private AttemptLimiter attemptLimiter;
+
+    @Mock
+    private ProfileImageUrlResolver profileImageUrlResolver;
 
     @InjectMocks
     private CareRelationService careRelationService;
