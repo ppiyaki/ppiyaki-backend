@@ -129,3 +129,4 @@ FIRST_STEP, MIRACLE_MORNING, FAMILY_LINK, HEALTH_GUARDIAN, BUDDY
 
 ## 9) 결정 로그
 - 2026-05-09: 초안 작성. 6단계 성장, 7일 미인증 리셋, 뱃지 5종. 기존 point/level과 공존.
+- 2026-06-04: **버그 수정 — 첫 복약 인증 이후 포인트/streak이 갱신되지 않던 문제.** 원인: `BadgeService.checkAndAwardBadges`가 포인트 트랜잭션(`PetPointListener`, REQUIRES_NEW)에 합류(REQUIRED)한 채 뱃지를 insert-and-catch 하는데, 2번째 인증부터 `FIRST_STEP` 중복 INSERT가 유니크 제약(`uk_badges_pet_type`)을 위반 → 예외를 catch해도 트랜잭션이 rollback-only로 오염되어 `addPoint`/`incrementStreak`까지 통째로 롤백됨(첫 인증만 +10 커밋, 이후 멈춤). 보호자 대시보드는 `medication_logs` 직접 집계라 영향 없었음. 수정: ① `saveIfAbsent` 존재-확인 후 INSERT, ② `checkAndAwardBadges`를 `REQUIRES_NEW`로 격리, ③ 리스너에서 뱃지 부여를 best-effort(try/catch)로 분리해 실패해도 포인트/streak 보존. 회귀 E2E `PetMedicationPointE2ETest` 추가.

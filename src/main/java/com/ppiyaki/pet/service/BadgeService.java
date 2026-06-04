@@ -7,8 +7,8 @@ import com.ppiyaki.pet.repository.BadgeRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -26,7 +26,12 @@ public class BadgeService {
         this.meterRegistry = meterRegistry;
     }
 
-    @Transactional
+    /**
+     * 뱃지 부여는 포인트/streak 갱신과 분리된 독립 트랜잭션({@link Propagation#REQUIRES_NEW})에서 수행한다.
+     * 뱃지 INSERT가 유니크 제약(uk_badges_pet_type)에 걸려도 호출자(PetPointListener)의 포인트 트랜잭션을
+     * 오염(rollback-only)시키지 않도록 격리한다.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void checkAndAwardBadges(final Pet pet) {
         checkFirstStep(pet);
         checkHealthGuardian(pet);
@@ -45,12 +50,11 @@ public class BadgeService {
     }
 
     private void saveIfAbsent(final Long petId, final BadgeType badgeType) {
-        try {
-            badgeRepository.save(new Badge(petId, badgeType));
-            badgeRepository.flush();
-            meterRegistry.counter(METRIC, "badge_type", badgeType.name()).increment();
-        } catch (final DataIntegrityViolationException e) {
+        if (badgeRepository.existsByPetIdAndBadgeType(petId, badgeType)) {
             log.debug("Badge already exists: petId={}, type={}", petId, badgeType);
+            return;
         }
+        badgeRepository.save(new Badge(petId, badgeType));
+        meterRegistry.counter(METRIC, "badge_type", badgeType.name()).increment();
     }
 }
