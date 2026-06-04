@@ -88,7 +88,7 @@ class MedicationCompleteNotificationE2ETest {
         Assertions.assertThat(completed.get(0).getSeniorId()).isEqualTo(seniorId);
         Assertions.assertThat(completed.get(0).getTargetDate()).isEqualTo(today);
         Assertions.assertThat(completed.get(0).getMealSlot()).isEqualTo(MealSlot.BREAKFAST.name());
-        Assertions.assertThat(completed.get(0).getBody()).contains("아침 복약을 완료");
+        Assertions.assertThat(completed.get(0).getBody()).contains("님이 아침 복약을 완료했어요");
     }
 
     @Test
