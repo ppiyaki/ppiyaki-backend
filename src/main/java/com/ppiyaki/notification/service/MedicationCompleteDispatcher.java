@@ -4,6 +4,7 @@ import com.ppiyaki.infrastructure.messaging.fcm.PushPayload;
 import com.ppiyaki.infrastructure.messaging.fcm.PushSendResult;
 import com.ppiyaki.infrastructure.messaging.fcm.PushSender;
 import com.ppiyaki.medication.domain.LogStatus;
+import com.ppiyaki.medication.domain.MealSlot;
 import com.ppiyaki.medication.domain.MedicationLog;
 import com.ppiyaki.medication.domain.MedicationSchedule;
 import com.ppiyaki.medication.repository.MedicationLogRepository;
@@ -20,13 +21,16 @@ import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
@@ -63,8 +67,14 @@ public class MedicationCompleteDispatcher {
         this.pushSender = pushSender;
     }
 
-    @Transactional
-    public int dispatchIfDayComplete(final Long seniorId, final LocalDate targetDate) {
+    /**
+     * 끼니(아침/점심/저녁)별로 그 끼니에 속한 모든 schedule이 인증되면 보호자에게 완료 알림을 보낸다.
+     *
+     * <p>{@code AFTER_COMMIT} 이벤트 리스너에서 호출되므로, 이미 커밋된 트랜잭션에 합류해 INSERT가 유실되는 것을
+     * 막기 위해 {@link Propagation#REQUIRES_NEW}로 독립 트랜잭션을 연다.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public int dispatchCompletedSlots(final Long seniorId, final LocalDate targetDate) {
         final List<MedicationSchedule> schedules = scheduleRepository.findActiveByOwnerAndDate(seniorId, targetDate);
         if (schedules.isEmpty()) {
             return 0;
@@ -75,10 +85,19 @@ public class MedicationCompleteDispatcher {
                 takenScheduleIds.add(logRow.getScheduleId());
             }
         }
-        for (final MedicationSchedule schedule : schedules) {
-            if (!takenScheduleIds.contains(schedule.getId())) {
-                return 0;
+
+        final Map<MealSlot, List<MedicationSchedule>> schedulesBySlot = schedules.stream()
+                .collect(Collectors.groupingBy(MedicationSchedule::getMealSlot));
+        final List<MealSlot> completedSlots = new ArrayList<>();
+        for (final Map.Entry<MealSlot, List<MedicationSchedule>> entry : schedulesBySlot.entrySet()) {
+            final boolean slotComplete = entry.getValue().stream()
+                    .allMatch(schedule -> takenScheduleIds.contains(schedule.getId()));
+            if (slotComplete) {
+                completedSlots.add(entry.getKey());
             }
+        }
+        if (completedSlots.isEmpty()) {
+            return 0;
         }
 
         final List<CareRelation> relations = careRelationRepository.findBySeniorIdAndDeletedAtIsNull(seniorId);
@@ -89,11 +108,25 @@ public class MedicationCompleteDispatcher {
         if (senior == null) {
             return 0;
         }
+        final String seniorName = senior.getNickname() == null ? "" : senior.getNickname();
 
+        int dispatched = 0;
+        for (final MealSlot slot : completedSlots) {
+            dispatched += dispatchForSlot(seniorId, targetDate, slot, seniorName, relations);
+        }
+        return dispatched;
+    }
+
+    private int dispatchForSlot(
+            final Long seniorId,
+            final LocalDate targetDate,
+            final MealSlot slot,
+            final String seniorName,
+            final List<CareRelation> relations
+    ) {
         final String title = "복약 완료 알림";
         final String body = String.format(
-                "축하합니다! %s 어르신이 모든 복약을 완료하셨습니다!",
-                senior.getNickname() == null ? "" : senior.getNickname());
+                "%s님이 %s 복약을 완료했어요", seniorName, slotLabel(slot));
 
         int dispatched = 0;
         for (final CareRelation relation : relations) {
@@ -104,14 +137,14 @@ public class MedicationCompleteDispatcher {
             if (settings != null && !settings.isMedicationCompleteEnabled()) {
                 continue;
             }
-            if (notificationRepository.existsByUserIdAndCategoryAndSeniorIdAndTargetDate(
-                    caregiverId, NotificationCategory.MEDICATION_COMPLETE, seniorId, targetDate)) {
+            if (notificationRepository.existsByUserIdAndCategoryAndSeniorIdAndTargetDateAndMealSlot(
+                    caregiverId, NotificationCategory.MEDICATION_COMPLETE, seniorId, targetDate, slot.name())) {
                 continue;
             }
-            final Notification saved = notificationRepository.save(
-                    Notification.createForMedicationComplete(caregiverId, seniorId, title, body, targetDate));
-            log.info("MEDICATION_COMPLETE notification created (id={}, caregiver={}, senior={}, date={})",
-                    saved.getId(), caregiverId, seniorId, targetDate);
+            final Notification saved = notificationRepository.save(Notification.createForMedicationComplete(
+                    caregiverId, seniorId, title, body, targetDate, slot.name()));
+            log.info("MEDICATION_COMPLETE notification created (id={}, caregiver={}, senior={}, date={}, slot={})",
+                    saved.getId(), caregiverId, seniorId, targetDate, slot);
 
             final List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(caregiverId);
             for (final DeviceToken token : tokens) {
@@ -119,7 +152,8 @@ public class MedicationCompleteDispatcher {
                         new PushPayload(title, body, Map.of(
                                 "category", "MEDICATION_COMPLETE",
                                 "seniorId", String.valueOf(seniorId),
-                                "targetDate", targetDate.toString()
+                                "targetDate", targetDate.toString(),
+                                "mealSlot", slot.name()
                         )));
                 if (result.tokenInvalid()) {
                     token.deactivate();
@@ -128,5 +162,13 @@ public class MedicationCompleteDispatcher {
             dispatched++;
         }
         return dispatched;
+    }
+
+    private String slotLabel(final MealSlot slot) {
+        return switch (slot) {
+            case BREAKFAST -> "아침";
+            case LUNCH -> "점심";
+            case DINNER -> "저녁";
+        };
     }
 }
