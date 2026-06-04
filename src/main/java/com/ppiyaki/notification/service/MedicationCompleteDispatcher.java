@@ -126,7 +126,7 @@ public class MedicationCompleteDispatcher {
     ) {
         final String title = "복약 완료 알림";
         final String body = String.format(
-                "축하합니다! %s 어르신이 %s 복약을 완료하셨습니다!", seniorName, slotLabel(slot));
+                "%s님이 %s 복약을 완료했어요", seniorName, slotLabel(slot));
 
         int dispatched = 0;
         for (final CareRelation relation : relations) {
