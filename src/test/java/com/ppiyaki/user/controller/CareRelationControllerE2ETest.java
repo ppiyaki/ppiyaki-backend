@@ -1,8 +1,10 @@
 package com.ppiyaki.user.controller;
 
+import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -156,7 +158,11 @@ class CareRelationControllerE2ETest {
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(1))
-                .body("[0].nickname", is("시니어코드E2E"));
+                .body("[0].nickname", is("시니어코드E2E"))
+                .body("[0]", hasKey("profileImage"))
+                .body("[0]", hasKey("profileImageUrl"))
+                .body("[0].profileImage", is(nullValue()))
+                .body("[0].profileImageUrl", is(nullValue()));
     }
 
     @Test
@@ -226,7 +232,11 @@ class CareRelationControllerE2ETest {
                 .statusCode(200)
                 .body("$", hasSize(1))
                 .body("[0].nickname", is("보호자코드E2E"))
-                .body("[0].id", notNullValue());
+                .body("[0].id", notNullValue())
+                .body("[0]", hasKey("profileImage"))
+                .body("[0]", hasKey("profileImageUrl"))
+                .body("[0].profileImage", is(nullValue()))
+                .body("[0].profileImageUrl", is(nullValue()));
     }
 
     @Test
