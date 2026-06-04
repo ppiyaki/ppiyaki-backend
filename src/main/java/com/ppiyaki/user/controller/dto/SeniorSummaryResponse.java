@@ -10,16 +10,20 @@ public record SeniorSummaryResponse(
         String nickname,
         LocalDate birthDate,
         Gender gender,
-        CareMode careMode
+        CareMode careMode,
+        Integer profileImage,
+        String profileImageUrl
 ) {
 
-    public static SeniorSummaryResponse from(final User user) {
+    public static SeniorSummaryResponse from(final User user, final String profileImageUrl) {
         return new SeniorSummaryResponse(
                 user.getId(),
                 user.getNickname(),
                 user.getBirthDate(),
                 user.getGender(),
-                user.getCareMode()
+                user.getCareMode(),
+                user.getProfileImage(),
+                profileImageUrl
         );
     }
 }

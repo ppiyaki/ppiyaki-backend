@@ -5,6 +5,7 @@ import com.ppiyaki.common.exception.BusinessException;
 import com.ppiyaki.common.exception.ErrorCode;
 import com.ppiyaki.common.ratelimit.AttemptLimiter;
 import com.ppiyaki.common.ratelimit.RateLimiter;
+import com.ppiyaki.infrastructure.storage.ProfileImageUrlResolver;
 import com.ppiyaki.user.controller.dto.CaregiverSummaryResponse;
 import com.ppiyaki.user.controller.dto.InviteCodeResponse;
 import com.ppiyaki.user.controller.dto.LoginResponse;
@@ -35,6 +36,7 @@ public class CareRelationService {
     private final AuthService authService;
     private final RateLimiter rateLimiter;
     private final AttemptLimiter attemptLimiter;
+    private final ProfileImageUrlResolver profileImageUrlResolver;
 
     public CareRelationService(
             final CareRelationRepository careRelationRepository,
@@ -44,7 +46,8 @@ public class CareRelationService {
             final JwtProvider jwtProvider,
             final AuthService authService,
             final RateLimiter rateLimiter,
-            final AttemptLimiter attemptLimiter
+            final AttemptLimiter attemptLimiter,
+            final ProfileImageUrlResolver profileImageUrlResolver
     ) {
         this.careRelationRepository = careRelationRepository;
         this.inviteCodeStore = inviteCodeStore;
@@ -54,6 +57,7 @@ public class CareRelationService {
         this.authService = authService;
         this.rateLimiter = rateLimiter;
         this.attemptLimiter = attemptLimiter;
+        this.profileImageUrlResolver = profileImageUrlResolver;
     }
 
     @Transactional(readOnly = true)
@@ -70,7 +74,8 @@ public class CareRelationService {
 
         return careRelations.stream()
                 .map(relation -> seniorsById.get(relation.getSeniorId()))
-                .map(SeniorSummaryResponse::from)
+                .map(senior -> SeniorSummaryResponse.from(
+                        senior, profileImageUrlResolver.resolve(senior.getProfileImageObjectKey())))
                 .toList();
     }
 
