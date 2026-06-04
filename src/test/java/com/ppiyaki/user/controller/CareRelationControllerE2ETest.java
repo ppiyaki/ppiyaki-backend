@@ -229,7 +229,9 @@ class CareRelationControllerE2ETest {
                 .statusCode(200)
                 .body("$", hasSize(1))
                 .body("[0].nickname", is("보호자코드E2E"))
-                .body("[0].id", notNullValue());
+                .body("[0].id", notNullValue())
+                .body("[0]", hasKey("profileImage"))
+                .body("[0]", hasKey("profileImageUrl"));
     }
 
     @Test

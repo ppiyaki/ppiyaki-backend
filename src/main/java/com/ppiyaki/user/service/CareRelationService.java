@@ -93,7 +93,8 @@ public class CareRelationService {
 
         return careRelations.stream()
                 .map(relation -> caregiversById.get(relation.getCaregiverId()))
-                .map(CaregiverSummaryResponse::from)
+                .map(caregiver -> CaregiverSummaryResponse.from(
+                        caregiver, profileImageUrlResolver.resolve(caregiver.getProfileImageObjectKey())))
                 .toList();
     }
 
