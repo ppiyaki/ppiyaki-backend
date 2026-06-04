@@ -28,7 +28,7 @@ last_reviewed: 2026-05-10
 - **시니어**는 아침 8시(자기 mealTime)에 "삐~약드실 시간이에요~" 푸시를 받고 앱을 열어 복약을 인증한다.
 - **보호자**는 시니어가 아침 약을 8시 30분이 지나도 인증하지 않으면 "김장군 어르신이 아침 약 복용 시간을 30분 넘겼습니다" 푸시를 받는다 (임계는 보호자가 시니어별로 설정 가능).
 - **보호자**는 새 처방전이 등록되어 DUR 위험(연령 금기/병용 금기)이 검출되면 "새로 등록된 처방전에 연령 금기 주의 약물이 포함되어 있습니다" 푸시를 받는다.
-- **보호자**는 시니어가 그 날 모든 복약을 완료하면 "축하합니다! 김장군 어르신이 모든 복약을 완료하셨습니다!" 푸시를 받는다.
+- **보호자**는 시니어가 한 끼니(아침/점심/저녁)의 복약을 완료할 때마다 "축하합니다! 김장군 어르신이 아침 복약을 완료하셨습니다!" 푸시를 받는다 (끼니별 1회).
 - **보호자**는 시니어가 24시간(설정 가능) 동안 앱에 접속하지 않으면 "앱 미접속" 알림을 받는다.
 - **보호자**는 알림함에서 "전체 / 긴급 경고 / 복약 완료" 탭으로 과거 알림을 분류 조회할 수 있다.
 - **보호자**는 알림 설정 페이지에서 시니어별로 항목 on/off 및 임계값을 조정하거나, **일반/집중 프리셋**을 선택해 일괄 적용한다.
@@ -39,7 +39,7 @@ last_reviewed: 2026-05-10
 - [ ] **시니어 복약 시간 알림** (`MEDICATION_REMINDER`): 시니어 mealTime(아침/점심/저녁) 도래 시 시니어 본인에게 푸시 + 알림함 row.
 - [ ] **보호자 미복약/지연 알림** (`MEDICATION_DELAY`): mealTime + 임계 분 경과 후 미인증 schedule이 있으면 보호자에게 푸시 + 알림함 row.
 - [ ] **보호자 DUR 긴급 경고** (`DUR_WARNING`): 처방전 등록 후 DUR 검사 결과 연령 금기/병용 금기가 있으면 보호자에게 즉시 푸시 + 알림함 row.
-- [ ] **보호자 복약 완료 알림** (`MEDICATION_COMPLETE`): 시니어가 그 날 등록된 모든 복약 schedule을 인증하면 보호자에게 푸시 + 알림함 row. (멱등 — 하루 1회만)
+- [ ] **보호자 복약 완료 알림** (`MEDICATION_COMPLETE`): 시니어가 한 끼니(meal_slot)에 속한 모든 복약 schedule을 인증하면 그 끼니에 대해 보호자에게 푸시 + 알림함 row. (멱등 — 끼니별 1회, 하루 최대 아침/점심/저녁 3회)
 - [ ] **보호자 가족 안전망 알림** (`FAMILY_SAFETY`): 시니어 `last_active_at` + 임계 시간 경과 시 보호자에게 푸시 + 알림함 row. (멱등 — 임계 도달 시 1회, 시니어 재접속까지 재발송 X)
 - [ ] **알림함 조회 API**: 페이징, 카테고리 필터(전체/긴급 경고/복약 완료), 읽음 상태.
 - [ ] **알림 읽음 처리 API**: 단건 + 모두 읽음.
@@ -150,7 +150,7 @@ last_reviewed: 2026-05-10
 
 **DUR 경고**: 즉시 트리거. `PrescriptionService.confirm` → DUR 검사 → 위험 시 알림.
 
-**복약 완료 알림**: `MedicationLog` 업서트 후 그 날 schedule이 모두 인증되었는지 확인 → 마지막 인증 시 발송. 멱등 `(caregiver_id, category=MEDICATION_COMPLETE, senior_id, target_date)`.
+**복약 완료 알림**: `MedicationLog` 업서트(TAKEN 신규 전환) 후 `MedicationTakenEvent`를 `AFTER_COMMIT`으로 수신 → 그 날 끼니(meal_slot)별로 해당 끼니의 모든 schedule이 인증되었는지 확인 → 완료된 끼니마다 발송. 멱등 `(caregiver_id, category=MEDICATION_COMPLETE, senior_id, target_date, meal_slot)`. `AFTER_COMMIT` 리스너에서 INSERT가 유실되지 않도록 dispatcher는 `@Transactional(REQUIRES_NEW)`로 독립 트랜잭션을 연다 (푸시 ↔ 알림함 row 1:1 보장, §10 Q7).
 
 **가족 안전망 알림**: Cron `FamilySafetyChecker` 매 시간 실행. `User.last_active_at + 임계` 경과한 시니어의 보호자에게 발송. 멱등 — `last_active_at` 갱신 시점 이후의 가장 최근 `FAMILY_SAFETY` row가 없으면 발송, 있으면 skip. 시니어 재접속 시 다음 임계 초과 때 새 알림 가능 (cooldown 정책 = 시니어 재접속까지 1회만).
 
@@ -269,3 +269,5 @@ ALTER TABLE users ADD COLUMN last_active_at DATETIME NULL;
 - 2026-05-10: **Q7 해소** — 푸시 ↔ 알림함 row 항상 1:1. 이유: Figma 5종(시니어 복약시간 / 보호자 미복약·DUR·가족안전망·복약완료) 모두 알림함 표시 의도, 단순/일관성, 푸시 누락 보완, ppiyaki 규모에서 부하 무시 가능.
 - 2026-05-10: **Q8 해소** — 가족 안전망 알림 cooldown = 시니어 재접속까지 1회만. 구현은 `last_active_at` 갱신 시점 이후의 가장 최근 `FAMILY_SAFETY` row 존재 여부로 판정. 이유: 알림 피로 방지, 보호자가 한 번 인지하면 후속은 본인 책임, 구현 단순 (시니어 재접속 시 자연 reset).
 - 2026-05-10: 모든 오픈 질문 해소 → status `draft` → `approved`. 다음 단계: PR 머지 후 PR 2(refactor + notification_settings) 착수.
+- 2026-06-04: **복약 완료 알림을 "하루 전체 완료 1회" → "끼니별 완료" 로 변경.** 이유: 알림 의도(보호자가 끼니 단위로 복약 현황을 확인)에 맞춤. 끼니(meal_slot)별로 해당 끼니의 모든 schedule 인증 시 발송, 멱등키에 `meal_slot` 추가(하루 최대 아침/점심/저녁 3회). 기존 "모든 복약 완료" 알림은 제거. 사용자 합의.
+- 2026-06-04: **버그 수정 — 복약 완료 알림이 푸시는 뜨는데 알림함 row가 저장되지 않던 문제.** 원인: `MedicationCompleteDispatcher`가 `AFTER_COMMIT` 이벤트 리스너에서 호출되는데 `@Transactional`(기본 REQUIRED)이라 이미 커밋된 트랜잭션에 합류해 INSERT가 유실됨(푸시는 트랜잭션 무관이라 정상 발송 → Q7의 1:1 불변식 위반). 수정: dispatcher를 `@Transactional(REQUIRES_NEW)`로 변경하여 독립 트랜잭션 커밋 보장. 회귀 테스트 `MedicationCompleteNotificationE2ETest` 추가.
