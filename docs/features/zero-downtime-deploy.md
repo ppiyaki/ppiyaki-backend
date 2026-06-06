@@ -1,7 +1,7 @@
 ---
 feature: 무중단 배포 (nginx blue-green)
 slug: zero-downtime-deploy
-status: draft
+status: approved
 owner: @goohong
 scope: infra
 related_issues: [452]
@@ -101,6 +101,14 @@ location / { proxy_pass http://ppiyaki_backend; ... 기존 헤더/타임아웃 �
 ### 5-5) DB 마이그레이션
 없음.
 
+### 5-6) 확정 파라미터 (합의 2026-06-06)
+- **색/포트**: blue = app `127.0.0.1:8080` · mgmt `127.0.0.1:18081`, green = app `127.0.0.1:8082` · mgmt `127.0.0.1:18082`.
+  현재 8080 컨테이너를 **첫 blue로 재사용**(재시작 없음).
+- **헬스체크**: `http://127.0.0.1:<mgmt>/actuator/health` 를 **2초 간격·최대 60초** 폴링. 미통과 시 nginx 미전환 + 구 색 유지(자동 롤백) + 새 컨테이너 제거 후 배포 실패 종료.
+- **메모리**: 각 앱 컨테이너 `--memory=768m` + `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=65`. 전환 직후 구 색 즉시 graceful stop. 추가로 **호스트 swap 2GB** 안전망 구성(현재 swap 0).
+- **nginx 일회성 셋업**: 운영자/AI가 ssh로 1회 적용(`/etc/nginx/conf.d/ppiyaki-upstream.conf` 생성 + `default` proxy_pass를 `http://ppiyaki_backend` 로 변경 → `nginx -t` → reload). 이후 CD는 upstream 파일 재작성 + reload만 수행.
+- **첫 적용**: 정규 release 전에 **리허설 배포 1회**로 무중단 실측(별도 터미널 1초 간격 헬스 폴링이 연속 200인지 확인).
+
 ## 6) 작업 분할 (예상 PR 리스트)
 - [ ] PR 1 (`docs(infra)`): 본 Feature Spec 초안 — 합의용
 - [ ] PR 2 (`chore(infra)`): `backend-cd.yml` blue-green 배포 스크립트 + (선택) 헬퍼 스크립트.
@@ -114,17 +122,15 @@ location / { proxy_pass http://ppiyaki_backend; ... 기존 헤더/타임아웃 �
 - 롤백 경로: 일부러 부팅 실패하는 이미지로 green 기동 → nginx 미전환 + blue 유지 확인.
 
 ## 8) 오픈 질문
-> 구현 전에 답이 나와야 하는 것들.
-
-| # | 질문 | 선택지 | 담당/기한 |
-|---|---|---|---|
-| Q1 | 서버 nginx 일회성 셋업(upstream 간접화)을 누가/어떻게 | (a) 운영자가 수동 1회 적용 후 CD는 전환만 / (b) CD 스크립트가 멱등 셋업까지 자동 | @goohong |
-| Q2 | 색깔별 포트 규약 | (a) blue=8080·green=8082, mgmt 18081·18082 (제안) / (b) 다른 값 | @goohong |
-| Q3 | 헬스체크 폴링 타임아웃/간격 + 실패 시 동작 | (a) 2s 간격·최대 60s, 실패 시 자동 롤백(전환 안 함) (제안) / (b) 조정 | @goohong |
-| Q4 | 전환 순간 앱 JVM 2개 공존 시 OOM 방지 | (a) 컨테이너 `--memory` + `-XX:MaxRAMPercentage`로 각 앱 heap 상한 (제안) / (b) 현 메모리로 충분(측정) / (c) swap 추가 | @goohong |
-| Q5 | 첫 적용/검증 시점 | (a) 다음 정규 release 때 자연 적용 / (b) 빈 변경으로 1회 리허설 배포 | @goohong |
+모두 해소됨 → §9 결정 로그로 이동.
 
 ## 9) 결정 로그
 - 2026-06-06: 초안 작성 (status=draft)
 - 2026-06-06: 방식 = **호스트 nginx upstream 전환 blue-green** 확정. 사용자 선택(권장안). 이유: 호스트 nginx가 이미 TLS 종료 + 프록시 앞단으로 존재하여 추가 프록시 도입 없이 무중단 reload로 전환 가능.
 - 2026-06-06: 진행 절차 = **Feature Spec 선합의 후 구현**(사용자 선택 B). 보호 영역 변경이라 권장 절차.
+- 2026-06-06: Q1 → (a) **AI가 ssh로 nginx 일회성 셋업 수동 1회**. 위험한 첫 변경을 검증하며 진행, CD는 이후 전환만.
+- 2026-06-06: Q2 → blue=8080/green=8082(app), 18081/18082(mgmt) 확정.
+- 2026-06-06: Q3 → 헬스체크 2초 간격·최대 60초, 실패 시 자동 롤백(전환 안 함).
+- 2026-06-06: Q4 → **heap 상한(`--memory=768m`+`MaxRAMPercentage=65`) + 호스트 swap 2GB**. 서버 3.8GB·가용 1.8GB·swap 0 실측 근거.
+- 2026-06-06: Q5 → 정규 release 전 **리허설 배포 1회**로 무중단 실측.
+- 2026-06-06: 오픈 질문 전부 해소 → status=**approved**. 구현 PR(`backend-cd.yml`) 착수 가능.
