@@ -32,7 +32,7 @@ public class PrescriptionReviewRequestDispatcher {
 
     private static final Logger log = LoggerFactory.getLogger(PrescriptionReviewRequestDispatcher.class);
     private static final String PUSH_TITLE = "처방전 검토 요청";
-    private static final String PUSH_BODY_FORMAT = "%s 어르신의 새 처방전이 도착했어요. 검토해 주세요.";
+    private static final String PUSH_BODY_FORMAT = "%s님의 새 처방전이 도착했어요. 검토해 주세요.";
 
     private final UserRepository userRepository;
     private final CareRelationRepository careRelationRepository;

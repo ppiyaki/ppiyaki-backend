@@ -158,7 +158,7 @@ public class MedicationDelayDispatcher {
         final String seniorName = senior.getNickname() == null ? "" : senior.getNickname();
         final StringBuilder bodyBuilder = new StringBuilder();
         bodyBuilder.append(String.format(
-                "%s 어르신이 %s에 약 %d개를 아직 복용하지 않았어요. (%d분 경과)",
+                "%s님이 %s에 약 %d개를 아직 복용하지 않았어요. (%d분 경과)",
                 seniorName, slotLabel, schedules.size(), thresholdMinutes));
         for (final MedicationSchedule schedule : schedules) {
             bodyBuilder.append("\n• ").append(resolveMedicineLabel(schedule));
