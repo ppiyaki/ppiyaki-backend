@@ -66,7 +66,7 @@ public class DurWarningDispatcher {
 
         final String title = "처방전 안전 경고";
         final String body = String.format(
-                "%s 어르신의 처방전에 %s 주의 약물이 포함되어 있습니다.",
+                "%s님의 처방전에 %s 주의 약물이 포함되어 있습니다.",
                 senior.getNickname() == null ? "" : senior.getNickname(),
                 level == DurWarningLevel.BLOCK ? "복용 금기" : "주의 필요");
 
