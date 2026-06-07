@@ -6,6 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -17,6 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String ROLE_PREFIX = "ROLE_";
@@ -36,6 +39,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         final String token = extractToken(request);
         final boolean userIdSet = token != null && jwtProvider.isValid(token);
+
+        // 토큰이 실렸는데 거부된 경우만 경로와 함께 기록 (사유는 JwtProvider 로그, requestId로 상관).
+        // 토큰 미첨부(로그인 등 permitAll)는 정상이라 로깅하지 않음 — 노이즈 회피.
+        if (token != null && !userIdSet) {
+            log.warn("JWT 인증 실패 — {} {}", request.getMethod(), request.getRequestURI());
+        }
 
         if (userIdSet) {
             final Long userId = jwtProvider.extractUserId(token);

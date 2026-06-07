@@ -7,10 +7,14 @@ import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import javax.crypto.SecretKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
 public class JwtProvider {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtProvider.class);
 
     private final SecretKey secretKey;
     private final long accessTokenExpiry;
@@ -50,6 +54,8 @@ public class JwtProvider {
             parseClaims(token);
             return true;
         } catch (final JwtException | IllegalArgumentException e) {
+            // 토큰 값은 절대 남기지 않고 실패 사유(예외 클래스)만 기록 — 만료/서명불일치/형식오류 판별용.
+            log.warn("JWT 검증 실패: {}", e.getClass().getSimpleName());
             return false;
         }
     }
