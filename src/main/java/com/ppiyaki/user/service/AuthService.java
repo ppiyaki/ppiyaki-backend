@@ -123,7 +123,7 @@ public class AuthService {
             saveRefreshToken(user.getId(), refreshTokenValue);
 
             recordAttempt(TYPE_LOCAL, ACTION_SIGNUP, "success");
-            return new LoginResponse(accessToken, refreshTokenValue, false);
+            return new LoginResponse(accessToken, refreshTokenValue, user.isOnboarded());
         } catch (final BusinessException e) {
             recordAttempt(TYPE_LOCAL, ACTION_SIGNUP, mapResult(e));
             throw e;
