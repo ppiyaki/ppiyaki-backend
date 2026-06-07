@@ -24,7 +24,7 @@ public class WellbeingPingService {
 
     private static final Logger log = LoggerFactory.getLogger(WellbeingPingService.class);
     private static final String PUSH_TITLE = "안부 알림";
-    private static final String PUSH_BODY_FORMAT = "%s 어르신이 안부를 전했어요.";
+    private static final String PUSH_BODY_FORMAT = "%s님이 안부를 전했어요.";
 
     private final UserRepository userRepository;
     private final CareRelationRepository careRelationRepository;

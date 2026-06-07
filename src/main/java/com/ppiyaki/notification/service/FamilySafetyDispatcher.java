@@ -102,7 +102,7 @@ public class FamilySafetyDispatcher {
 
             final String title = "가족 안전망 알림";
             final String body = String.format(
-                    "%s 어르신이 %d시간 이상 앱에 접속하지 않았습니다.",
+                    "%s님이 %d시간 이상 앱에 접속하지 않았습니다.",
                     senior.getNickname() == null ? "" : senior.getNickname(), thresholdHours);
             final Notification saved = notificationRepository.save(
                     Notification.createForFamilySafety(caregiverId, senior.getId(), title, body, today));
