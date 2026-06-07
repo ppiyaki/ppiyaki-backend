@@ -105,7 +105,7 @@ class MedicationDelayDispatcherTest {
         final ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(notificationRepository, times(1)).save(captor.capture());
         assertThat(captor.getValue().getBody())
-                .isEqualTo("김철수 어르신이 아침에 약 1개를 아직 복용하지 않았어요. (60분 경과)\n• 록스펜씨알정 1정");
+                .isEqualTo("김철수님이 아침에 약 1개를 아직 복용하지 않았어요. (60분 경과)\n• 록스펜씨알정 1정");
     }
 
     @Test
@@ -127,7 +127,7 @@ class MedicationDelayDispatcherTest {
         final ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(notificationRepository).save(captor.capture());
         assertThat(captor.getValue().getBody())
-                .isEqualTo("김철수 어르신이 아침에 약 1개를 아직 복용하지 않았어요. (60분 경과)\n• 약 2캡슐");
+                .isEqualTo("김철수님이 아침에 약 1개를 아직 복용하지 않았어요. (60분 경과)\n• 약 2캡슐");
     }
 
     @Test
@@ -149,7 +149,7 @@ class MedicationDelayDispatcherTest {
         final ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(notificationRepository).save(captor.capture());
         assertThat(captor.getValue().getBody())
-                .isEqualTo("김철수 어르신이 아침에 약 1개를 아직 복용하지 않았어요. (60분 경과)\n• 록스펜씨알정");
+                .isEqualTo("김철수님이 아침에 약 1개를 아직 복용하지 않았어요. (60분 경과)\n• 록스펜씨알정");
     }
 
     @Test
@@ -179,7 +179,7 @@ class MedicationDelayDispatcherTest {
         final ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
         verify(notificationRepository, times(1)).save(notificationCaptor.capture());
         assertThat(notificationCaptor.getValue().getBody())
-                .isEqualTo("김철수 어르신이 아침에 약 3개를 아직 복용하지 않았어요. (60분 경과)"
+                .isEqualTo("김철수님이 아침에 약 3개를 아직 복용하지 않았어요. (60분 경과)"
                         + "\n• 타이레놀500mg 1정"
                         + "\n• 비타민C 2캡슐"
                         + "\n• 위장약");
@@ -215,7 +215,7 @@ class MedicationDelayDispatcherTest {
         final ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(notificationRepository).save(captor.capture());
         assertThat(captor.getValue().getBody())
-                .isEqualTo("김철수 어르신이 아침에 약 1개를 아직 복용하지 않았어요. (60분 경과)\n• 비타민C 2캡슐");
+                .isEqualTo("김철수님이 아침에 약 1개를 아직 복용하지 않았어요. (60분 경과)\n• 비타민C 2캡슐");
     }
 
     @Test

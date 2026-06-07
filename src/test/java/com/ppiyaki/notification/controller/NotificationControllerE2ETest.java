@@ -1,6 +1,7 @@
 package com.ppiyaki.notification.controller;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 
 import io.restassured.RestAssured;
@@ -45,8 +46,9 @@ class NotificationControllerE2ETest {
 
         // owner 알림 2건 + other 알림 1건 INSERT
         jdbcTemplate.update("INSERT INTO notifications "
-                + "(user_id, category, title, body, created_at) "
-                + "VALUES (?, 'MEDICATION_REMINDER', '아침 약 복용', '아침 약 드세요', NOW(6))", ownerId);
+                + "(user_id, category, title, body, meal_slot, target_date, created_at) "
+                + "VALUES (?, 'MEDICATION_REMINDER', '아침 약 복용', '아침 약 드세요', 'BREAKFAST', CURDATE(), NOW(6))",
+                ownerId);
         jdbcTemplate.update("INSERT INTO notifications "
                 + "(user_id, category, title, body, created_at) "
                 + "VALUES (?, 'MEDICATION_REMINDER', '저녁 약 복용', '저녁 약 드세요', NOW(6))", ownerId);
@@ -68,6 +70,7 @@ class NotificationControllerE2ETest {
                 .then()
                 .statusCode(200)
                 .body("responses.size()", greaterThanOrEqualTo(2))
+                .body("responses.mealSlot", hasItem("BREAKFAST"))
                 .body("hasNext", is(false));
 
         // 단건 읽음

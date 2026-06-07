@@ -175,7 +175,8 @@ public class Notification extends BaseTimeEntity {
             final Long seniorId,
             final String title,
             final String body,
-            final LocalDate targetDate
+            final LocalDate targetDate,
+            final String mealSlot
     ) {
         return new Notification(
                 caregiverId,
@@ -185,7 +186,7 @@ public class Notification extends BaseTimeEntity {
                 body,
                 null,
                 targetDate,
-                null,
+                mealSlot,
                 null
         );
     }

@@ -83,11 +83,4 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             final NotificationCategory category,
             final Long seniorId
     );
-
-    boolean existsByUserIdAndCategoryAndSeniorIdAndTargetDate(
-            final Long userId,
-            final NotificationCategory category,
-            final Long seniorId,
-            final java.time.LocalDate targetDate
-    );
 }

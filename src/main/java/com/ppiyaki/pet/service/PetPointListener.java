@@ -77,7 +77,13 @@ public class PetPointListener {
             pet.incrementStreak(targetDate);
         }
 
-        badgeService.checkAndAwardBadges(pet);
+        // 뱃지 부여는 best-effort. 독립 트랜잭션(REQUIRES_NEW)이라 실패해도 포인트/streak는 보존된다.
+        try {
+            badgeService.checkAndAwardBadges(pet);
+        } catch (final RuntimeException e) {
+            log.warn("Badge award failed for petId={}; point/streak preserved", pet.getId(), e);
+            meterRegistry.counter(METRIC, "result", "badge_failed").increment();
+        }
         meterRegistry.counter(METRIC, "result", "granted").increment();
     }
 
