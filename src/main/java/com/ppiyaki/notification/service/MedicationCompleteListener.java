@@ -18,6 +18,6 @@ public class MedicationCompleteListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @EventListener
     public void onMedicationTaken(final MedicationTakenEvent event) {
-        dispatcher.dispatchIfDayComplete(event.seniorId(), event.targetDate());
+        dispatcher.dispatchCompletedSlots(event.seniorId(), event.targetDate());
     }
 }

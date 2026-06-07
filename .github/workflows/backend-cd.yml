@@ -54,22 +54,44 @@ jobs:
           password: ${{ secrets.REMOTE_PASSWORD }}
           port: 22
           script: |
-            docker login ${{ secrets.NCP_REGISTRY }} -u ${{ secrets.NCP_ACCESS_KEY }} -p ${{ secrets.NCP_SECRET_KEY }}
-            
-            echo "Stopping and removing old container..."
-            docker stop ppiyaki-server || true
-            docker rm ppiyaki-server || true
-            
+            set -e
+            # ── 무중단 blue-green 배포 ──
+            # 호스트 nginx 의 upstream(ppiyaki_backend) 대상 포트를 blue↔green 으로 전환한다.
+            # 사전 일회성 셋업 필요(운영 작업): /etc/nginx/conf.d/ppiyaki-upstream.conf 생성 +
+            #   default 의 proxy_pass 를 http://ppiyaki_backend 로 변경 + CD 유저 NOPASSWD sudo(tee/nginx/systemctl).
+            # 상세: docs/features/zero-downtime-deploy.md
+            REGISTRY='${{ secrets.NCP_REGISTRY }}'
+            IMAGE="$REGISTRY/ppiyaki-server:latest"
+            UPSTREAM_CONF=/etc/nginx/conf.d/ppiyaki-upstream.conf
+
+            docker login "$REGISTRY" -u '${{ secrets.NCP_ACCESS_KEY }}' -p '${{ secrets.NCP_SECRET_KEY }}'
+
             echo "Pulling latest image..."
-            docker pull ${{ secrets.NCP_REGISTRY }}/ppiyaki-server:latest
-            
-            echo "Starting new container..."
+            docker pull "$IMAGE"
+
+            # 활성 색 판별: upstream 이 green(8082) 을 가리키면 green 활성 → 다음은 blue, 아니면 그 반대
+            if grep -q '127.0.0.1:8082' "$UPSTREAM_CONF" 2>/dev/null; then
+              ACTIVE=green; NEW=blue;  NEW_APP=8080; NEW_MGMT=18081
+            else
+              ACTIVE=blue;  NEW=green; NEW_APP=8082; NEW_MGMT=18082
+            fi
+            NEW_NAME="ppiyaki-server-$NEW"
+            OLD_NAME="ppiyaki-server-$ACTIVE"
+            echo "Active=$ACTIVE → deploying NEW=$NEW ($NEW_NAME, app=$NEW_APP, mgmt=$NEW_MGMT)"
+
+            # 이전 실패로 남아있을 수 있는 동일 색 컨테이너 정리
+            docker rm -f "$NEW_NAME" 2>/dev/null || true
+
+            echo "Starting $NEW_NAME ..."
             docker run -d \
-              --name ppiyaki-server \
+              --name "$NEW_NAME" \
               --network ppiyaki-monitoring \
-              -p 8080:8080 \
+              -p 127.0.0.1:$NEW_APP:8080 \
+              -p 127.0.0.1:$NEW_MGMT:8081 \
+              --memory=768m \
               --restart always \
               -e TZ='Asia/Seoul' \
+              -e JAVA_TOOL_OPTIONS='-XX:MaxRAMPercentage=65' \
               -e SPRING_PROFILES_ACTIVE=prod \
               -e DB_URL='${{ secrets.DB_URL }}' \
               -e DB_USERNAME='${{ secrets.DB_USERNAME }}' \
@@ -93,8 +115,32 @@ jobs:
               -e REDIS_HOST='ppiyaki-redis' \
               -e REDIS_PORT='6379' \
               -e REDIS_PASSWORD='${{ secrets.REDIS_PASSWORD }}' \
-              ${{ secrets.NCP_REGISTRY }}/ppiyaki-server:latest
-            
+              "$IMAGE"
+
+            echo "Health checking $NEW_NAME (2s × 최대 60s)..."
+            OK=0
+            for i in $(seq 1 30); do
+              if curl -fsS "http://127.0.0.1:$NEW_MGMT/actuator/health" 2>/dev/null | grep -q '"status":"UP"'; then
+                OK=1; break
+              fi
+              sleep 2
+            done
+            if [ "$OK" != "1" ]; then
+              echo "Health check FAILED — nginx 전환 없이 롤백 (활성 $ACTIVE 유지). 새 컨테이너 로그:"
+              docker logs --tail 80 "$NEW_NAME" || true
+              docker rm -f "$NEW_NAME" || true
+              exit 1
+            fi
+            echo "Health OK → nginx upstream 을 127.0.0.1:$NEW_APP 로 전환"
+
+            echo "upstream ppiyaki_backend { server 127.0.0.1:$NEW_APP; }" | sudo tee "$UPSTREAM_CONF" >/dev/null
+            sudo nginx -t
+            sudo systemctl reload nginx
+
+            echo "구 컨테이너 $OLD_NAME drain & 종료..."
+            docker stop -t 30 "$OLD_NAME" 2>/dev/null || true
+            docker rm "$OLD_NAME" 2>/dev/null || true
+
             echo "Cleaning up old images..."
             docker image prune -f
 

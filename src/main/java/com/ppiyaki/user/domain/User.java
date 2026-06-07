@@ -48,6 +48,12 @@ public class User extends BaseTimeEntity {
     @Column(name = "birth_date")
     private LocalDate birthDate;
 
+    @Column(name = "profile_image")
+    private Integer profileImage;
+
+    @Column(name = "profile_image_object_key")
+    private String profileImageObjectKey;
+
     @Column(name = "pet_id")
     private Long petId;
 
@@ -116,6 +122,18 @@ public class User extends BaseTimeEntity {
 
     public void updateNickname(final String nickname) {
         this.nickname = Objects.requireNonNull(nickname, "nickname must not be null");
+    }
+
+    public void updateGender(final Gender gender) {
+        this.gender = Objects.requireNonNull(gender, "gender must not be null");
+    }
+
+    public void updateProfileImage(final Integer profileImage, final String profileImageObjectKey) {
+        if (profileImage != null && profileImageObjectKey != null) {
+            throw new IllegalArgumentException("profileImage and profileImageObjectKey are mutually exclusive");
+        }
+        this.profileImage = profileImage;
+        this.profileImageObjectKey = profileImageObjectKey;
     }
 
     public void assignPet(final Long petId) {

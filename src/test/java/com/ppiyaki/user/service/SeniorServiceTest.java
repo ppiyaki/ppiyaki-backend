@@ -9,11 +9,12 @@ import com.ppiyaki.pet.Pet;
 import com.ppiyaki.pet.repository.PetRepository;
 import com.ppiyaki.user.controller.dto.SeniorCreateRequest;
 import com.ppiyaki.user.controller.dto.SeniorCreateResponse;
+import com.ppiyaki.user.domain.CareMode;
 import com.ppiyaki.user.domain.CareRelation;
+import com.ppiyaki.user.domain.Gender;
 import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
-import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,7 +53,7 @@ class SeniorServiceTest {
         given(careRelation.getId()).willReturn(1L);
         given(careRelationRepository.save(any(CareRelation.class))).willReturn(careRelation);
 
-        final SeniorCreateRequest request = new SeniorCreateRequest("시니어할머니", LocalDate.of(1945, 3, 15));
+        final SeniorCreateRequest request = new SeniorCreateRequest("시니어할머니", Gender.FEMALE, CareMode.MANAGED);
 
         // when
         final SeniorCreateResponse response = seniorService.createSenior(1L, request);
