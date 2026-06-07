@@ -11,6 +11,7 @@ public record NotificationItemResponse(
         String title,
         String body,
         String payload,
+        String mealSlot,
         LocalDateTime readAt,
         LocalDateTime takenAt,
         LocalDateTime createdAt
@@ -24,6 +25,7 @@ public record NotificationItemResponse(
                 notification.getTitle(),
                 notification.getBody(),
                 notification.getPayload(),
+                notification.getMealSlot(),
                 notification.getReadAt(),
                 notification.getTakenAt(),
                 notification.getCreatedAt()
