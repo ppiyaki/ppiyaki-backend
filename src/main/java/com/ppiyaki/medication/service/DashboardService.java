@@ -339,7 +339,7 @@ public class DashboardService {
         for (final MedicationSchedule s : slotSchedules) {
             final Medicine m = medicineById.get(s.getMedicineId());
             if (m != null) {
-                slotMedicines.add(new SlotMedicine(m.getId(), m.getName(), s.composeDosageText()));
+                slotMedicines.add(new SlotMedicine(s.getId(), m.getId(), m.getName(), s.composeDosageText()));
             }
         }
         return new SlotInfo(slot, status, mealTime, takenAt, photoUrl, slotMedicines);
