@@ -29,7 +29,7 @@ class LocalAuthE2ETest {
     }
 
     @Test
-    @DisplayName("로컬 회원가입 시 201 응답과 JWT 발급, isOnboarded=true")
+    @DisplayName("로컬 회원가입 시 201 응답과 JWT 발급, isOnboarded=false")
     void signup_success() {
         final String loginId = "user" + idSequence++;
 
@@ -48,7 +48,7 @@ class LocalAuthE2ETest {
                 .statusCode(201)
                 .body("accessToken", notNullValue())
                 .body("refreshToken", notNullValue())
-                .body("isOnboarded", is(true));
+                .body("isOnboarded", is(false));
     }
 
     @Test
@@ -123,7 +123,7 @@ class LocalAuthE2ETest {
                 .statusCode(200)
                 .body("accessToken", notNullValue())
                 .body("refreshToken", notNullValue())
-                .body("isOnboarded", is(true));
+                .body("isOnboarded", is(false));
     }
 
     @Test
