@@ -88,7 +88,7 @@ public class AuthService {
             final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
             saveRefreshToken(user.getId(), refreshTokenValue);
 
-            final boolean isOnboarded = user.getNickname() != null;
+            final boolean isOnboarded = user.isOnboarded();
 
             recordAttempt(TYPE_KAKAO, ACTION_LOGIN, "success");
             return new LoginResponse(accessToken, refreshTokenValue, isOnboarded);
@@ -123,7 +123,7 @@ public class AuthService {
             saveRefreshToken(user.getId(), refreshTokenValue);
 
             recordAttempt(TYPE_LOCAL, ACTION_SIGNUP, "success");
-            return new LoginResponse(accessToken, refreshTokenValue, true);
+            return new LoginResponse(accessToken, refreshTokenValue, user.isOnboarded());
         } catch (final BusinessException e) {
             recordAttempt(TYPE_LOCAL, ACTION_SIGNUP, mapResult(e));
             throw e;
@@ -157,7 +157,7 @@ public class AuthService {
             final String refreshTokenValue = jwtProvider.createRefreshToken(user.getId());
             saveRefreshToken(user.getId(), refreshTokenValue);
 
-            final boolean isOnboarded = user.getRole() != null;
+            final boolean isOnboarded = user.isOnboarded();
 
             recordAttempt(TYPE_LOCAL, ACTION_LOGIN, "success");
             return new LoginResponse(accessToken, refreshTokenValue, isOnboarded);

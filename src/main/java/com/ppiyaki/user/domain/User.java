@@ -77,6 +77,9 @@ public class User extends BaseTimeEntity {
     @Column(name = "last_active_at")
     private java.time.LocalDateTime lastActiveAt;
 
+    @Column(name = "onboarded", nullable = false)
+    private boolean onboarded = false;
+
     @Column(name = "deleted_at")
     private java.time.LocalDateTime deletedAt;
 
@@ -157,6 +160,14 @@ public class User extends BaseTimeEntity {
 
     public void softDelete(final java.time.LocalDateTime now) {
         this.deletedAt = Objects.requireNonNull(now, "now must not be null");
+    }
+
+    public void completeOnboarding() {
+        this.onboarded = true;
+    }
+
+    public boolean isOnboarded() {
+        return this.onboarded;
     }
 
     public boolean isDeleted() {

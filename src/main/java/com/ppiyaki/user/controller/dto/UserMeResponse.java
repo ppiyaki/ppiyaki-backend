@@ -17,7 +17,7 @@ public record UserMeResponse(
     public static UserMeResponse from(final User user, final String profileImageUrl) {
         final String roleName = user.getRole() != null ? user.getRole().name() : null;
         final String genderName = user.getGender() != null ? user.getGender().name() : null;
-        final boolean onboarded = user.getRole() != null;
+        final boolean onboarded = user.isOnboarded();
         final String careModeName = user.getCareMode() != null ? user.getCareMode().name() : null;
         final MealTimesResponse mealTimes = MealTimesResponse.from(user);
         return new UserMeResponse(user.getId(), user.getNickname(), roleName, genderName,
