@@ -152,10 +152,13 @@ public class MedicationLogService {
             }
         }
 
-        // 복약 성공 이벤트 발행 (TAKEN→TAKEN 중복 방지)
-        if (request.status() == LogStatus.TAKEN && previousStatus != LogStatus.TAKEN) {
-            eventPublisher.publishEvent(new MedicationTakenEvent(seniorId, request.targetDate()));
-            // 같은 시니어/날짜/슬롯 MEDICATION_REMINDER 알림 자동 전이 (issue #324).
+        // 복약 성공 처리
+        if (request.status() == LogStatus.TAKEN) {
+            // 이벤트는 처음 TAKEN 전환 시에만 발행 (중복 포인트/뱃지 방지)
+            if (previousStatus != LogStatus.TAKEN) {
+                eventPublisher.publishEvent(new MedicationTakenEvent(seniorId, request.targetDate()));
+            }
+            // 알림 완료 처리는 로그 상태와 무관하게(이미 TAKEN이어도 알림이 미완료면) 시도 (멱등성 보장).
             // 시니어 본인 인증/보호자 대리 인증 모두 시니어의 알림이 대상 (userId=seniorId).
             notificationRepository.markReminderTaken(
                     seniorId, request.targetDate(), schedule.getMealSlot().name(), takenAt);
