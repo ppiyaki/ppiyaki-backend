@@ -67,6 +67,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
     }
 
+    // SSE 등 비동기 응답은 스트림 종료/에러 시 컨테이너로 ASYNC/ERROR 디스패치가 한 번 더 일어난다.
+    // OncePerRequestFilter는 기본적으로 두 디스패치를 건너뛰어 SecurityContext가 비는데,
+    // Spring Security 6의 AuthorizationFilter는 모든 디스패치 타입에서 동작하므로 익명으로 간주돼 401(AUTH_001)이 난다.
+    // 첫 이벤트 전송 전에 스트림이 실패하면 이 401이 클라이언트에 그대로 노출된다(REST는 재디스패치가 없어 무관).
+    // 따라서 이 디스패치들에서도 필터가 토큰을 다시 읽어 컨텍스트를 복원하도록 한다.
+    @Override
+    protected boolean shouldNotFilterAsyncDispatch() {
+        return false;
+    }
+
+    @Override
+    protected boolean shouldNotFilterErrorDispatch() {
+        return false;
+    }
+
     private String extractToken(final HttpServletRequest request) {
         final String header = request.getHeader(AUTHORIZATION_HEADER);
         if (header != null && header.startsWith(BEARER_PREFIX)) {
