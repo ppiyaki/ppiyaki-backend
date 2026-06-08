@@ -39,6 +39,7 @@ public record DailyDashboardResponse(
     }
 
     public record SlotMedicine(
+            Long scheduleId,
             Long medicineId,
             String name,
             String dosage
