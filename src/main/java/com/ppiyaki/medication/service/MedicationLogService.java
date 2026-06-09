@@ -165,15 +165,19 @@ public class MedicationLogService {
         }
 
         // Phase 2: 사진 + status=TAKEN일 때 약 개수 AI 검증 (spec medication-log-phase2 §5-4)
-        if (request.status() == LogStatus.TAKEN
-                && request.photoObjectKey() != null && !request.photoObjectKey().isBlank()) {
-            final LogPillCountStatus pillCountStatus = verifyPillCount(seniorId, schedule, request);
-            log.updatePillCountStatus(pillCountStatus);
-            meterRegistry.counter("ppiyaki.medication.pill_count.total",
-                    "result", pillCountStatus.name()).increment();
-            // COUNT_MATCH일 때 슬롯의 다른 active schedule도 TAKEN 전파 (issue #343).
-            // 시니어가 슬롯 전체 약을 사진 한 장에 담아 인증한 경우 == 슬롯 전체 인증으로 인정.
-            if (pillCountStatus == LogPillCountStatus.COUNT_MATCH) {
+        if (request.status() == LogStatus.TAKEN) {
+            if (request.photoObjectKey() != null && !request.photoObjectKey().isBlank()) {
+                final LogPillCountStatus pillCountStatus = verifyPillCount(seniorId, schedule, request);
+                log.updatePillCountStatus(pillCountStatus);
+                meterRegistry.counter("ppiyaki.medication.pill_count.total",
+                        "result", pillCountStatus.name()).increment();
+                // COUNT_MATCH일 때 슬롯의 다른 active schedule도 TAKEN 전파 (issue #343).
+                // 시니어가 슬롯 전체 약을 사진 한 장에 담아 인증한 경우 == 슬롯 전체 인증으로 인정.
+                if (pillCountStatus == LogPillCountStatus.COUNT_MATCH) {
+                    propagateTakenToSlotSchedules(seniorId, schedule, request, takenAt, isProxy, userId);
+                }
+            } else {
+                // 사진 없이 매뉴얼 인증한 경우에도 슬롯 전체 인증으로 인정하여 전파
                 propagateTakenToSlotSchedules(seniorId, schedule, request, takenAt, isProxy, userId);
             }
         }
