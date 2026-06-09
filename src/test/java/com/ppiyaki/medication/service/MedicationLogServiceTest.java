@@ -428,7 +428,8 @@ class MedicationLogServiceTest {
         medicationLogService.upsert(SENIOR_ID, request);
 
         // then
-        verify(notificationRepository, org.mockito.Mockito.never())
+        // 알림 전이는 데이터 불일치 회복을 위해 상태와 무관하게 항상 호출되도록 변경됨 (v0.19.1)
+        verify(notificationRepository, org.mockito.Mockito.atLeastOnce())
                 .markReminderTaken(any(), any(), any(), any());
     }
 

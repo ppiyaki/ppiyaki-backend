@@ -41,10 +41,7 @@ public class ChatSessionPersistenceService {
         if (!chatSession.isOwnedBy(userId)) {
             throw new BusinessException(ErrorCode.CHAT_SESSION_ACCESS_DENIED);
         }
-
-        if (chatSession.isExpired(LocalDateTime.now(), EXPIRATION_MINUTES)) {
-            throw new BusinessException(ErrorCode.CHAT_SESSION_EXPIRED);
-        }
+        // 세션 만료 검사는 여기서 에러를 던지지 않고, loadSessionAndBuildPrompt에서 Transparent Fallback으로 처리함.
     }
 
     @Transactional(readOnly = true)
@@ -58,14 +55,21 @@ public class ChatSessionPersistenceService {
             throw new BusinessException(ErrorCode.CHAT_SESSION_ACCESS_DENIED);
         }
 
+        final List<ChatMessage> recentMessages;
+        String promptMessage = message;
+
         if (chatSession.isExpired(LocalDateTime.now(), EXPIRATION_MINUTES)) {
-            throw new BusinessException(ErrorCode.CHAT_SESSION_EXPIRED);
+            // Transparent Fallback: 에러를 던지지 않고 히스토리를 비움
+            recentMessages = Collections.emptyList();
+            promptMessage = "[시스템 알림: 마지막 대화 이후 5분이 경과되어 이전 대화 내용이 초기화되었습니다. "
+                    + "만약 사용자가 이전 대화의 문맥(예: '그 약', '아까 말한 거')을 가리키며 질문한다면, "
+                    + "친절하게 '시간이 좀 지나서 이전 대화를 깜빡했어요. 어떤 약인지 다시 말씀해 주시겠어요?' 라고 안내해 주세요.]\n\n"
+                    + "사용자: " + message;
+        } else {
+            recentMessages = chatMessageRepository.findTop20BySessionOrderByCreatedAtDescIdDesc(chatSession);
         }
 
-        final List<ChatMessage> recentMessages = chatMessageRepository.findTop20BySessionOrderByCreatedAtDescIdDesc(
-                chatSession);
-
-        return buildPromptMessages(recentMessages, message);
+        return buildPromptMessages(recentMessages, promptMessage);
     }
 
     @Transactional
