@@ -101,23 +101,32 @@ public enum LogAiStatus {
 ```text
 [PUT /api/v1/medication-logs]
   ├─ status != TAKEN || photoObjectKey == null → AI 검증 스킵, ai_status=null
+  │    (status != TAKEN이면 takenAt=null로 저장 — status 무관 takenAt 세팅 금지, issue #462)
   └─ photoObjectKey 있음 + status == TAKEN
        ↓
        1. NCP S3에서 사진 fetch (byte[])
        2. 동일 (seniorId, targetDate, mealSlot) 의 모든 active schedule 조회
-       3. 각 schedule.dosage를 DosageParser.parsePillCount() 적용 → 정수 합산
-          ├─ 하나라도 파싱 실패 → ai_status = COUNT_UNKNOWN, Vision 호출 스킵
+       3. 각 schedule.dosage를 정수 합산
+          ├─ 하나라도 파싱 실패 / 스케줄 없음 → ai_status = COUNT_UNKNOWN, Vision 호출 스킵
           └─ 모두 성공 → expectedCount 산출 → 다음 단계
        4. OpenAiClient.countPills(imageBytes) → Optional<Integer>
           ├─ empty (Vision 실패) → ai_status = COUNT_FAILED
-          └─ present → 비교
-              ├─ actualCount == expectedCount → COUNT_MATCH
-              └─ != → COUNT_MISMATCH
-       5. medication_log.ai_status 갱신 후 저장
+          └─ present → actualCount == expectedCount ? COUNT_MATCH : COUNT_MISMATCH
+       ※ 1~4 검증은 DB 저장 "전"에 수행한다 (issue #462). 저장 후 검증하면
+         COUNT_MISMATCH여도 takenAt을 되돌릴 수 없어 복약 완료로 오확정된다.
+       5. 검증 결과에 따라 저장:
+          ├─ COUNT_MISMATCH → 복약 완료로 확정하지 않음:
+          │    takenAt=null, status=PENDING(요청이 TAKEN이어도 강등), ai_status=COUNT_MISMATCH 저장.
+          │    잔여분 차감 / 포인트 이벤트 / 알림 완료(markReminderTaken) / 슬롯 전파 모두 skip.
+          │    FE는 ai_status로 "약 개수 불일치 → 재인증 필요" 안내.
+          └─ COUNT_MATCH / COUNT_FAILED / COUNT_UNKNOWN → 복약 완료로 인정:
+               takenAt 세팅, status=TAKEN, ai_status 저장.
+               (검증 불가한 FAILED·UNKNOWN은 사용자 책임이 아니므로 관대 처리)
        6. ai_status == COUNT_MATCH → 슬롯의 다른 active schedule들도 TAKEN 전파 (issue #343)
           - 각 peer schedule에 medication_log upsert (이미 TAKEN이면 skip, 멱등)
           - 새로 TAKEN 전환되는 peer의 medicine.remainingAmount 차감
           - peer log의 ai_status = COUNT_MATCH (슬롯 전체가 검증된 상태이므로)
+          - COUNT_FAILED·COUNT_UNKNOWN은 검증되지 않았으므로 전파하지 않음
        7. 응답 200 + aiStatus 포함 (PUT 응답 시간: 평소 + 5~10s)
 ```
 

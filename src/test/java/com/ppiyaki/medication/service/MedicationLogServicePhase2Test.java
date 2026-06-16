@@ -291,6 +291,67 @@ class MedicationLogServicePhase2Test {
         verify(openAiClient).countPills(any(), eq("image/png"));
     }
 
+    @Test
+    @DisplayName("COUNT_MISMATCH면 복약 미확정: status=PENDING, takenAt=null, 잔여분·알림 완료 처리 안 함 (issue #462)")
+    void count_mismatch_not_confirmed() throws Exception {
+        final MedicationSchedule schedule = buildSchedule(SCHEDULE_ID, "1정");
+        when(medicationScheduleRepository.findById(SCHEDULE_ID)).thenReturn(Optional.of(schedule));
+        final Medicine medicine = new Medicine(SENIOR_ID, null, "테스트약", 30, 30, "ITEM-1", null);
+        setField(medicine, "id", MEDICINE_ID);
+        when(medicineRepository.findById(MEDICINE_ID)).thenReturn(Optional.of(medicine));
+        givenAutonomousSenior();
+        givenUpsertSucceeds();
+        givenSiblingSchedules(List.of(buildSchedule(SCHEDULE_ID, "1정"), buildSchedule(2L, "1정")));
+        givenS3Returns(new byte[]{1});
+        when(openAiClient.countPills(any(), any())).thenReturn(Optional.of(1));
+
+        final var saved = captureSavedLog();
+        service.upsert(SENIOR_ID, new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, VALID_OBJECT_KEY));
+
+        final MedicationLog log = saved.get();
+        assertThat(log.getStatus()).isEqualTo(LogStatus.PENDING);
+        assertThat(log.getTakenAt()).isNull();
+        assertThat(log.getPillCountStatus()).isEqualTo(LogPillCountStatus.COUNT_MISMATCH);
+        assertThat(medicine.getRemainingAmount()).isEqualTo(30);
+        verify(notificationRepository, never()).markReminderTaken(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("COUNT_FAILED(검증 불가)면 관대 처리: status=TAKEN, takenAt 세팅")
+    void count_failed_lenient_confirm() throws Exception {
+        givenScheduleAndMedicine();
+        givenUpsertSucceeds();
+        givenSiblingSchedules(List.of(buildSchedule(SCHEDULE_ID, "1정")));
+        givenS3Returns(new byte[]{1});
+        when(openAiClient.countPills(any(), any())).thenReturn(Optional.empty());
+
+        final var saved = captureSavedLog();
+        service.upsert(SENIOR_ID, new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.TAKEN, VALID_OBJECT_KEY));
+
+        final MedicationLog log = saved.get();
+        assertThat(log.getStatus()).isEqualTo(LogStatus.TAKEN);
+        assertThat(log.getTakenAt()).isNotNull();
+        assertThat(log.getPillCountStatus()).isEqualTo(LogPillCountStatus.COUNT_FAILED);
+    }
+
+    @Test
+    @DisplayName("status=PENDING 요청이면 takenAt=null로 저장 (status 무관 takenAt 세팅 버그 수정)")
+    void pending_request_clears_taken_at() throws Exception {
+        givenScheduleAndMedicine();
+        givenUpsertSucceeds();
+
+        final var saved = captureSavedLog();
+        service.upsert(SENIOR_ID, new MedicationLogUpsertRequest(
+                SCHEDULE_ID, TARGET_DATE, null, LogStatus.PENDING, null));
+
+        final MedicationLog log = saved.get();
+        assertThat(log.getStatus()).isEqualTo(LogStatus.PENDING);
+        assertThat(log.getTakenAt()).isNull();
+        verify(openAiClient, never()).countPills(any(), any());
+    }
+
     // --- fixtures -----------------------------------------------------------
 
     private void givenScheduleAndMedicine() throws Exception {
