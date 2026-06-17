@@ -115,7 +115,26 @@ public class MedicationLogService {
             validatePhotoObjectKey(request.photoObjectKey(), userId);
         }
 
-        final LocalDateTime takenAt = request.takenAt() != null ? request.takenAt() : LocalDateTime.now();
+        final boolean photoProvided = request.photoObjectKey() != null && !request.photoObjectKey().isBlank();
+
+        // 사진 + status=TAKEN이면 DB 저장 전에 약 개수 AI 검증 (issue #462).
+        // 저장 후 검증하면 COUNT_MISMATCH여도 takenAt을 되돌릴 수 없어 복약 완료로 오확정된다.
+        LogPillCountStatus pillCountStatus = null;
+        if (request.status() == LogStatus.TAKEN && photoProvided) {
+            pillCountStatus = verifyPillCount(seniorId, schedule, request);
+            meterRegistry.counter("ppiyaki.medication.pill_count.total",
+                    "result", pillCountStatus.name()).increment();
+        }
+
+        // COUNT_MISMATCH면 복약 완료로 확정하지 않는다: takenAt 미설정 + status는 PENDING으로 강등.
+        // 그 외(COUNT_MATCH / 사진 없는 수동 인증 / 검증 불가 COUNT_FAILED·COUNT_UNKNOWN)는 인증으로 인정.
+        final boolean confirmedTaken = request.status() == LogStatus.TAKEN
+                && pillCountStatus != LogPillCountStatus.COUNT_MISMATCH;
+        final LogStatus effectiveStatus = request.status() == LogStatus.TAKEN && !confirmedTaken
+                ? LogStatus.PENDING : request.status();
+        final LocalDateTime takenAt = confirmedTaken
+                ? (request.takenAt() != null ? request.takenAt() : LocalDateTime.now())
+                : null;
 
         final Optional<MedicationLog> existing = medicationLogRepository
                 .findByScheduleIdAndTargetDate(request.scheduleId(), request.targetDate());
@@ -125,12 +144,12 @@ public class MedicationLogService {
         try {
             log = existing
                     .map(found -> {
-                        found.updateRecord(takenAt, request.status(), request.photoObjectKey(), isProxy, userId);
+                        found.updateRecord(takenAt, effectiveStatus, request.photoObjectKey(), isProxy, userId);
                         return found;
                     })
                     .orElseGet(() -> medicationLogRepository.saveAndFlush(new MedicationLog(
                             seniorId, request.scheduleId(), request.targetDate(),
-                            takenAt, request.status(), request.photoObjectKey(), isProxy, userId)));
+                            takenAt, effectiveStatus, request.photoObjectKey(), isProxy, userId)));
         } catch (final DataIntegrityViolationException e) {
             // 동시 INSERT 경합 발생: UNIQUE(schedule_id, target_date)에 의해 두 번째가 충돌.
             // 현재 트랜잭션은 rollback-only 상태이므로 같은 트랜잭션 내 재조회 불가.
@@ -139,10 +158,14 @@ public class MedicationLogService {
                     "Concurrent upsert conflict on (scheduleId, targetDate); please retry");
         }
 
-        // 새로 TAKEN으로 전환되는 케이스에만 잔여분 차감 (멱등성: 이미 TAKEN이던 row 재호출 시 중복 차감 방지).
+        if (pillCountStatus != null) {
+            log.updatePillCountStatus(pillCountStatus);
+        }
+
+        // 새로 TAKEN으로 확정되는 케이스에만 잔여분 차감 (멱등성: 이미 TAKEN이던 row 재호출 시 중복 차감 방지).
         // 차감 단위 = schedule.dosageQuantity (BigDecimal). null이면 차감 skip
         // (옛 schedule이거나 PRN 같은 정의 안 된 케이스. spec dosage-quantity-unit-split.md Q7 결정).
-        if (request.status() == LogStatus.TAKEN && previousStatus != LogStatus.TAKEN) {
+        if (confirmedTaken && previousStatus != LogStatus.TAKEN) {
             final BigDecimal dosageQuantity = schedule.getDosageQuantity();
             if (dosageQuantity != null) {
                 final int dosageCount = dosageQuantity.setScale(0, java.math.RoundingMode.CEILING).intValueExact();
@@ -152,8 +175,8 @@ public class MedicationLogService {
             }
         }
 
-        // 복약 성공 처리
-        if (request.status() == LogStatus.TAKEN) {
+        // 복약 성공 처리: 인증으로 확정된 경우에만 (COUNT_MISMATCH는 제외)
+        if (confirmedTaken) {
             // 이벤트는 처음 TAKEN 전환 시에만 발행 (중복 포인트/뱃지 방지)
             if (previousStatus != LogStatus.TAKEN) {
                 eventPublisher.publishEvent(new MedicationTakenEvent(seniorId, request.targetDate()));
@@ -162,22 +185,10 @@ public class MedicationLogService {
             // 시니어 본인 인증/보호자 대리 인증 모두 시니어의 알림이 대상 (userId=seniorId).
             notificationRepository.markReminderTaken(
                     seniorId, request.targetDate(), schedule.getMealSlot().name(), takenAt);
-        }
 
-        // Phase 2: 사진 + status=TAKEN일 때 약 개수 AI 검증 (spec medication-log-phase2 §5-4)
-        if (request.status() == LogStatus.TAKEN) {
-            if (request.photoObjectKey() != null && !request.photoObjectKey().isBlank()) {
-                final LogPillCountStatus pillCountStatus = verifyPillCount(seniorId, schedule, request);
-                log.updatePillCountStatus(pillCountStatus);
-                meterRegistry.counter("ppiyaki.medication.pill_count.total",
-                        "result", pillCountStatus.name()).increment();
-                // COUNT_MATCH일 때 슬롯의 다른 active schedule도 TAKEN 전파 (issue #343).
-                // 시니어가 슬롯 전체 약을 사진 한 장에 담아 인증한 경우 == 슬롯 전체 인증으로 인정.
-                if (pillCountStatus == LogPillCountStatus.COUNT_MATCH) {
-                    propagateTakenToSlotSchedules(seniorId, schedule, request, takenAt, isProxy, userId);
-                }
-            } else {
-                // 사진 없이 매뉴얼 인증한 경우에도 슬롯 전체 인증으로 인정하여 전파
+            // 슬롯 전체 전파: 사진 한 장에 슬롯 전체 약을 담아 인증한 COUNT_MATCH, 또는 사진 없는 수동 인증일 때만.
+            // (issue #343) COUNT_FAILED·COUNT_UNKNOWN은 검증되지 않았으므로 전파하지 않는다.
+            if (!photoProvided || pillCountStatus == LogPillCountStatus.COUNT_MATCH) {
                 propagateTakenToSlotSchedules(seniorId, schedule, request, takenAt, isProxy, userId);
             }
         }
