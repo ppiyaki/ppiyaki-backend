@@ -169,7 +169,8 @@ class MedicationLogServiceTest {
         // then
         verify(medicationLogRepository, never()).saveAndFlush(any()); // update via dirty checking
         assertThat(existing.getStatus()).isEqualTo(LogStatus.MISSED);
-        assertThat(existing.getTakenAt()).isEqualTo(LocalDateTime.of(2026, 4, 18, 10, 0));
+        // status != TAKEN이면 요청에 takenAt이 있어도 null로 정리한다 (issue #462: status 무관 takenAt 세팅 금지)
+        assertThat(existing.getTakenAt()).isNull();
         verify(eventPublisher, never()).publishEvent(any(MedicationTakenEvent.class));
     }
 

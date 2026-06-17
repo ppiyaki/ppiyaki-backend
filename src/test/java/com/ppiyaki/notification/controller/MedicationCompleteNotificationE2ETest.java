@@ -92,8 +92,10 @@ class MedicationCompleteNotificationE2ETest {
     }
 
     @Test
-    @DisplayName("끼니에 schedule이 2개인데 1개만 인증되면 완료 알림이 발송되지 않는다")
-    void slotPartiallyTaken_noNotification() {
+    @DisplayName("끼니에 schedule이 2개여도 (약별이 아닌 끼니 단위 인증) 사진 없는 인증 1건으로 슬롯 전체가 완료되어 알림이 발송된다")
+    void slotSingleManualAuth_completesWholeSlot() {
+        // 약별로 인증 사진을 따로 찍지 않고 끼니 단위로 인증하는 구조이므로, 사진 없는 수동 인증 1건은
+        // 같은 끼니의 다른 schedule들로 TAKEN이 전파된다 (b6fd662). 따라서 끼니 전체가 완료 처리된다.
         final Long seniorId = seedSenior();
         final Long caregiverId = seedCaregiver();
         seedRelation(seniorId, caregiverId);
@@ -103,11 +105,13 @@ class MedicationCompleteNotificationE2ETest {
         seedSchedule(medicineId, MealSlot.BREAKFAST);
         final LocalDate today = LocalDate.now();
 
-        // when — BREAKFAST 2정 중 1정만 인증
+        // when — BREAKFAST 2개 schedule 중 1건만 (사진 없이) 인증
         certifyTaken(seniorToken, scheduleA, today);
 
-        // then — 아침 끼니가 아직 완료되지 않았으므로 알림 없음
-        Assertions.assertThat(findCompleteNotifications(caregiverId)).isEmpty();
+        // then — 끼니 전체로 전파되어 완료 알림 1건 발송
+        Assertions.assertThat(findCompleteNotifications(caregiverId))
+                .extracting(Notification::getMealSlot)
+                .containsExactly(MealSlot.BREAKFAST.name());
     }
 
     @Test
