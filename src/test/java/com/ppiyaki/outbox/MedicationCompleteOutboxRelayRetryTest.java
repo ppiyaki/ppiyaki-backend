@@ -33,7 +33,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * 조건에서만 통과하는 테스트가 되기 때문이다. 대신 dispatcher 내부 의존성인
  * {@link MedicationScheduleRepository}만 mock으로 바꿔, <b>실제 dispatcher 빈의 실제
  * {@code @Transactional(REQUIRES_NEW)} 경계 안</b>에서 예외가 터지게 한다. 따라서 이 테스트는
- * dispatch가 REQUIRED로 relay 트랜잭션에 합류하면(rollback-only 전파로 recordFailure가 롤백되어)
+ * dispatch가 REQUIRED로 워커의 배치 트랜잭션에 합류하면(rollback-only 전파로 recordFailure가 롤백되어)
  * 실패하고, REQUIRES_NEW 격리가 있어야만 통과한다.
  *
  * <p>recordFailure의 지수 백오프로 nextAttemptAt이 미래로 밀리면 다음 poll이 클레임하지 못하므로,

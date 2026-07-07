@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * Transactional Outbox 메시지. 도메인 트랜잭션과 같은 트랜잭션에서 INSERT되고({@link OutboxService#enqueue}),
- * 별도 relay({@link MedicationCompleteOutboxRelay})가 PENDING row를 클레임해 발행한다.
+ * 별도 relay({@link MedicationCompleteOutboxRelay})가 PENDING row를 폴링해 발행한다.
  */
 @Getter
 @Entity
@@ -30,10 +30,6 @@ import lombok.NoArgsConstructor;
 public class OutboxMessage extends BaseTimeEntity {
 
     private static final int DEFAULT_MAX_ATTEMPTS = 5;
-    /**
-     * 지수 백오프 상한(초). maxAttempts가 커져도 재시도 간격이 5분을 넘지 않게 한다.
-     */
-    private static final long BACKOFF_CAP_SECONDS = 300L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -94,7 +90,8 @@ public class OutboxMessage extends BaseTimeEntity {
 
     /**
      * 발행 실패 기록. attempts를 증가시키고 maxAttempts에 도달하면 FAILED(데드레터),
-     * 아니면 PENDING을 유지하며 nextAttemptAt을 지수 백오프(now + min(2^attempts, 300)초)로 미룬다.
+     * 아니면 PENDING을 유지하며 nextAttemptAt을 지수 백오프(now + 2^attempts초)로 미룬다.
+     * maxAttempts=5 기준 재시도 간격은 2, 4, 8, 16초다.
      */
     public void recordFailure(final String error, final LocalDateTime now) {
         Objects.requireNonNull(now, "now must not be null");
@@ -104,14 +101,7 @@ public class OutboxMessage extends BaseTimeEntity {
             this.status = OutboxStatus.FAILED;
             return;
         }
-        this.nextAttemptAt = now.plusSeconds(backoffSeconds(this.attempts));
-    }
-
-    private static long backoffSeconds(final int attempts) {
-        // attempts가 커져도 시프트 오버플로 없이 상한에 수렴하도록 방어한다.
-        if (attempts >= Long.SIZE - 1) {
-            return BACKOFF_CAP_SECONDS;
-        }
-        return Math.min(1L << attempts, BACKOFF_CAP_SECONDS);
+        // 여기 도달 시 attempts < maxAttempts이므로 시프트 오버플로 걱정이 없다.
+        this.nextAttemptAt = now.plusSeconds(1L << this.attempts);
     }
 }

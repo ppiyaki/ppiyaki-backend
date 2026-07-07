@@ -17,11 +17,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * {@code OutboxMessageRepository.findClaimable}의 WHERE/ORDER BY/LIMIT 검증.
- *
- * <p><b>한계</b>: FOR UPDATE SKIP LOCKED의 동시성 semantics(멀티 인스턴스가 서로 잠긴 row를
- * 건너뛰고 클레임하는 동작)는 H2로는 검증할 수 없다 — H2는 구문만 수용할 뿐 MySQL 8과 락 동작이
- * 다르다. 해당 보증은 prod와 같은 MySQL 환경에서 별도 검증이 필요하며, 이 테스트는
- * 필터(PENDING + next_attempt_at<=now)·정렬(created_at ASC)·LIMIT만 검증한다.
+ * 단일 인스턴스 기준 단순 SELECT 폴링이므로 필터(PENDING + event_type + next_attempt_at<=now),
+ * 정렬(created_at ASC), LIMIT만 검증하면 된다.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "openai.api-key=sk-test-placeholder",
@@ -76,7 +73,7 @@ class OutboxFindClaimableTest {
         // 5) PENDING + 과거지만 다른 event_type → 제외 (다른 타입 relay의 메시지를 뺏지 않는다)
         final Long otherTypeId = save(OutboxMessage.create("OTHER_EVENT", "other-type", past));
 
-        // when — findClaimable은 FOR UPDATE 쿼리이므로 트랜잭션 안에서 호출
+        // when
         final List<Long> claimedIds = findClaimableIds(10);
 
         // then: PENDING + event_type 일치 + next_attempt_at<=now인 1건만
@@ -87,7 +84,7 @@ class OutboxFindClaimableTest {
     @Test
     @DisplayName("클레임 대상은 created_at 오름차순으로 정렬되고 limit 건수만 반환된다")
     void findClaimable_ordersByCreatedAtAndRespectsLimit() {
-        // given — 클레임 가능한 PENDING 3건. created_at을 저장 순서와 다르게 직접 세팅해
+        // given: 클레임 가능한 PENDING 3건. created_at을 저장 순서와 다르게 직접 세팅해
         // (JPA Auditing이 채우는 값을 덮어씀) 정렬 기준이 insert/id 순서가 아닌 created_at임을 증명한다.
         final LocalDateTime now = LocalDateTime.now(clock);
         final LocalDateTime past = now.minusHours(1);
@@ -98,7 +95,7 @@ class OutboxFindClaimableTest {
         overrideCreatedAt(secondSavedId, past.plusMinutes(1)); // 가장 먼저 생성된 것으로 세팅
         overrideCreatedAt(thirdSavedId, past.plusMinutes(2));
 
-        // when & then — created_at 오름차순: second → third → first
+        // when & then: created_at 오름차순: second → third → first
         assertThat(findClaimableIds(10))
                 .containsExactly(secondSavedId, thirdSavedId, firstSavedId);
 
@@ -114,10 +111,11 @@ class OutboxFindClaimableTest {
     }
 
     private List<Long> findClaimableIds(final int limit) {
-        return transactionTemplate.execute(status -> outboxMessageRepository
+        // 단순 SELECT라 트랜잭션 없이 호출한다.
+        return outboxMessageRepository
                 .findClaimable(OutboxService.MEDICATION_COMPLETE, LocalDateTime.now(clock), limit).stream()
                 .map(OutboxMessage::getId)
-                .toList());
+                .toList();
     }
 
     /**
