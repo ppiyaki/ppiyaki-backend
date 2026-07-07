@@ -33,7 +33,7 @@ class OutboxMessageTest {
         // given
         final OutboxMessage message = OutboxMessage.create("MEDICATION_COMPLETE", "{}", NOW);
 
-        // when & then — 실패 1회차: attempts=1, nextAttemptAt=now+2s
+        // when & then: 실패 1회차: attempts=1, nextAttemptAt=now+2s
         message.recordFailure("boom-1", NOW);
         assertThat(message.getAttempts()).isEqualTo(1);
         assertThat(message.getStatus()).isEqualTo(OutboxStatus.PENDING);
@@ -52,7 +52,7 @@ class OutboxMessageTest {
         assertThat(message.getStatus()).isEqualTo(OutboxStatus.PENDING);
         assertThat(message.getNextAttemptAt()).isEqualTo(NOW.plusSeconds(8));
 
-        // 실패 4회차: attempts=4, nextAttemptAt=now+16s — 아직 PENDING (maxAttempts=5 미달)
+        // 실패 4회차: attempts=4, nextAttemptAt=now+16s, 아직 PENDING (maxAttempts=5 미달)
         message.recordFailure("boom-4", NOW);
         assertThat(message.getAttempts()).isEqualTo(4);
         assertThat(message.getStatus()).isEqualTo(OutboxStatus.PENDING);
@@ -62,17 +62,17 @@ class OutboxMessageTest {
     @Test
     @DisplayName("attempts가 maxAttempts(5)에 도달하면 FAILED(데드레터)로 전이하고 nextAttemptAt은 더 이상 바뀌지 않는다")
     void recordFailure_reachesMaxAttempts_becomesFailedDeadLetter() {
-        // given — 4회 실패까지 진행 (nextAttemptAt=now+16s)
+        // given: 4회 실패까지 진행 (nextAttemptAt=now+16s)
         final OutboxMessage message = OutboxMessage.create("MEDICATION_COMPLETE", "{}", NOW);
         for (int i = 1; i <= 4; i++) {
             message.recordFailure("boom-" + i, NOW);
         }
         final LocalDateTime nextAttemptBeforeDeadLetter = message.getNextAttemptAt();
 
-        // when — 5회차 실패로 maxAttempts 도달
+        // when: 5회차 실패로 maxAttempts 도달
         message.recordFailure("boom-final", NOW);
 
-        // then — FAILED 전이, nextAttemptAt은 4회차 값 그대로 (더 미루지 않음)
+        // then: FAILED 전이, nextAttemptAt은 4회차 값 그대로 (더 미루지 않음)
         assertThat(message.getAttempts()).isEqualTo(5);
         assertThat(message.getStatus()).isEqualTo(OutboxStatus.FAILED);
         assertThat(message.getNextAttemptAt()).isEqualTo(nextAttemptBeforeDeadLetter);
@@ -87,7 +87,7 @@ class OutboxMessageTest {
     @Test
     @DisplayName("markProcessed 시 status=PROCESSED, processedAt=주입한 now, lastError는 초기화된다")
     void markProcessed_setsProcessedStateAndClearsLastError() {
-        // given — 한 번 실패해 lastError가 남아 있는 메시지
+        // given: 한 번 실패해 lastError가 남아 있는 메시지
         final OutboxMessage message = OutboxMessage.create("MEDICATION_COMPLETE", "{}", NOW);
         message.recordFailure("transient-error", NOW);
         final LocalDateTime processedNow = NOW.plusSeconds(30);

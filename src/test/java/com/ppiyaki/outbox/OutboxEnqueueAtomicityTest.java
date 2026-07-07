@@ -48,16 +48,16 @@ class OutboxEnqueueAtomicityTest {
     @Test
     @DisplayName("도메인 트랜잭션이 롤백되면 enqueue된 outbox row도 함께 사라진다 (원자성)")
     void enqueue_rolledBackWithCallerTransaction() {
-        // given — 프로그래매틱 트랜잭션 안에서 enqueue 후 의도적으로 예외를 던져 롤백시킨다
+        // given: 프로그래매틱 트랜잭션 안에서 enqueue 후 의도적으로 예외를 던져 롤백시킨다
         final MedicationTakenEvent event = new MedicationTakenEvent(999901L, LocalDate.now());
 
-        // when — enqueue는 호출자 트랜잭션에 합류하므로 예외로 인한 롤백에 outbox INSERT도 휩쓸려야 한다
+        // when: enqueue는 호출자 트랜잭션에 합류하므로 예외로 인한 롤백에 outbox INSERT도 휩쓸려야 한다
         assertThatThrownBy(() -> transactionTemplate.executeWithoutResult(status -> {
             outboxService.enqueue(OutboxService.MEDICATION_COMPLETE, event);
             throw new IllegalStateException("도메인 로직 실패를 가장한 의도적 롤백");
         })).isInstanceOf(IllegalStateException.class);
 
-        // then — 롤백 후 별도 트랜잭션에서 조회하면 outbox row가 남아 있지 않아야 한다
+        // then: 롤백 후 별도 트랜잭션에서 조회하면 outbox row가 남아 있지 않아야 한다
         assertThat(outboxMessageRepository.count()).isZero();
     }
 
@@ -67,11 +67,11 @@ class OutboxEnqueueAtomicityTest {
         // given
         final MedicationTakenEvent event = new MedicationTakenEvent(999902L, LocalDate.now());
 
-        // when — 예외 없이 정상 커밋
+        // when: 예외 없이 정상 커밋
         transactionTemplate.executeWithoutResult(status ->
                 outboxService.enqueue(OutboxService.MEDICATION_COMPLETE, event));
 
-        // then — 커밋 후 row 1건이 PENDING으로 남고 payload에 이벤트가 직렬화되어 있다
+        // then: 커밋 후 row 1건이 PENDING으로 남고 payload에 이벤트가 직렬화되어 있다
         assertThat(outboxMessageRepository.count()).isEqualTo(1);
         final OutboxMessage saved = outboxMessageRepository.findAll().get(0);
         assertThat(saved.getStatus()).isEqualTo(OutboxStatus.PENDING);

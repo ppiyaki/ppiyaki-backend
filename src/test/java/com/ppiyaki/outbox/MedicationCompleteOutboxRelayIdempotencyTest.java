@@ -84,7 +84,7 @@ class MedicationCompleteOutboxRelayIdempotencyTest {
     @Test
     @DisplayName("같은 PENDING 메시지에 relay.poll()을 2번 호출해도 알림은 정확히 1건, 메시지는 PROCESSED로 유지된다")
     void pollTwice_createsExactlyOneNotification() {
-        // given — 시니어/보호자 연동 + BREAKFAST schedule 1건이 TAKEN으로 완료된 상태
+        // given: 시니어/보호자 연동 + BREAKFAST schedule 1건이 TAKEN으로 완료된 상태
         final Long seniorId = seedSenior();
         final Long caregiverId = seedCaregiver();
         seedRelation(seniorId, caregiverId);
@@ -97,18 +97,18 @@ class MedicationCompleteOutboxRelayIdempotencyTest {
                 .enqueue(OutboxService.MEDICATION_COMPLETE, new MedicationTakenEvent(seniorId, today))
                 .getId());
 
-        // when — relay를 2번 폴링 (1번째: PENDING 클레임 → 발송 → PROCESSED, 2번째: 재처리 시도)
+        // when: relay를 2번 폴링 (1번째: PENDING 클레임 → 발송 → PROCESSED, 2번째: 재처리 시도)
         relay.poll();
         relay.poll();
 
-        // then — 보호자 알림은 정확히 1건 (중복 발송 없음)
+        // then: 보호자 알림은 정확히 1건 (중복 발송 없음)
         final List<Notification> notifications = findCompleteNotifications(caregiverId);
         assertThat(notifications).hasSize(1);
         assertThat(notifications.get(0).getSeniorId()).isEqualTo(seniorId);
         assertThat(notifications.get(0).getTargetDate()).isEqualTo(today);
         assertThat(notifications.get(0).getMealSlot()).isEqualTo(MealSlot.BREAKFAST.name());
 
-        // outbox 메시지는 PROCESSED로 종결 — 2번째 poll에서 findClaimable(PENDING만)에 잡히지 않아
+        // outbox 메시지는 PROCESSED로 종결되어 2번째 poll에서 findClaimable(PENDING만)에 잡히지 않아
         // 재디스패치 자체가 일어나지 않는다 (attempts=0 유지가 그 증거)
         final OutboxMessage message = outboxMessageRepository.findById(messageId).orElseThrow();
         assertThat(message.getStatus()).isEqualTo(OutboxStatus.PROCESSED);
