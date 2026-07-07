@@ -86,9 +86,16 @@ public class PrescriptionReviewRequestDispatcher {
             if (settings != null && !settings.isPrescriptionReviewRequestEnabled()) {
                 continue;
             }
+            // 동일 처방전 알림 중복 방지 (schedule_id 자연키에 prescriptionId 저장, sentinel target_date).
+            if (notificationRepository.existsByUserIdAndCategoryAndSeniorIdAndTargetDateAndScheduleId(
+                    caregiverId, NotificationCategory.PRESCRIPTION_REVIEW_REQUEST, seniorId,
+                    Notification.SENTINEL_TARGET_DATE, prescriptionId)) {
+                continue;
+            }
 
             notificationRepository.save(
-                    Notification.createForPrescriptionReviewRequest(caregiverId, seniorId, PUSH_TITLE, body));
+                    Notification.createForPrescriptionReviewRequest(
+                            caregiverId, seniorId, prescriptionId, PUSH_TITLE, body));
 
             final List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(caregiverId);
             for (final DeviceToken token : tokens) {

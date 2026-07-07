@@ -1,7 +1,6 @@
 package com.ppiyaki.notification.service;
 
 import com.ppiyaki.medication.event.MedicationTakenEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -16,7 +15,6 @@ public class MedicationCompleteListener {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @EventListener
     public void onMedicationTaken(final MedicationTakenEvent event) {
         dispatcher.dispatchCompletedSlots(event.seniorId(), event.targetDate());
     }

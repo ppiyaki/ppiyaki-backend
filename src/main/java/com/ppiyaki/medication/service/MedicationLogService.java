@@ -17,12 +17,14 @@ import com.ppiyaki.medication.repository.MedicationLogRepository;
 import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
+import com.ppiyaki.notification.repository.NotificationRepository;
 import com.ppiyaki.user.domain.CareMode;
 import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -30,6 +32,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -41,6 +45,8 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 @Service
 @ConditionalOnProperty(prefix = "ncp.storage", name = "bucket-name")
 public class MedicationLogService {
+
+    private static final Logger log = LoggerFactory.getLogger(MedicationLogService.class);
 
     private static final long MAX_QUERY_RANGE_DAYS = 31L;
     /**
@@ -62,7 +68,7 @@ public class MedicationLogService {
     private final NcpStorageProperties storageProperties;
     private final S3Client s3Client;
     private final ApplicationEventPublisher eventPublisher;
-    private final com.ppiyaki.notification.repository.NotificationRepository notificationRepository;
+    private final NotificationRepository notificationRepository;
     private final MeterRegistry meterRegistry;
 
     public MedicationLogService(
@@ -76,7 +82,7 @@ public class MedicationLogService {
             final NcpStorageProperties storageProperties,
             final S3Client s3Client,
             final ApplicationEventPublisher eventPublisher,
-            final com.ppiyaki.notification.repository.NotificationRepository notificationRepository,
+            final NotificationRepository notificationRepository,
             final MeterRegistry meterRegistry
     ) {
         this.medicationLogRepository = medicationLogRepository;
@@ -105,17 +111,16 @@ public class MedicationLogService {
 
         final User senior = userRepository.findById(seniorId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        final boolean photoProvided = request.photoObjectKey() != null && !request.photoObjectKey().isBlank();
         if (senior.getCareMode() == CareMode.MANAGED
                 && request.status() == LogStatus.TAKEN
-                && (request.photoObjectKey() == null || request.photoObjectKey().isBlank())) {
+                && !photoProvided) {
             throw new BusinessException(ErrorCode.MEDICATION_LOG_PHOTO_REQUIRED);
         }
 
-        if (request.photoObjectKey() != null && !request.photoObjectKey().isBlank()) {
+        if (photoProvided) {
             validatePhotoObjectKey(request.photoObjectKey(), userId);
         }
-
-        final boolean photoProvided = request.photoObjectKey() != null && !request.photoObjectKey().isBlank();
 
         // 사진 + status=TAKEN이면 DB 저장 전에 약 개수 AI 검증 (issue #462).
         // 저장 후 검증하면 COUNT_MISMATCH여도 takenAt을 되돌릴 수 없어 복약 완료로 오확정된다.
@@ -140,9 +145,9 @@ public class MedicationLogService {
                 .findByScheduleIdAndTargetDate(request.scheduleId(), request.targetDate());
         final LogStatus previousStatus = existing.map(MedicationLog::getStatus).orElse(null);
 
-        final MedicationLog log;
+        final MedicationLog medicationLog;
         try {
-            log = existing
+            medicationLog = existing
                     .map(found -> {
                         found.updateRecord(takenAt, effectiveStatus, request.photoObjectKey(), isProxy, userId);
                         return found;
@@ -159,7 +164,7 @@ public class MedicationLogService {
         }
 
         if (pillCountStatus != null) {
-            log.updatePillCountStatus(pillCountStatus);
+            medicationLog.updatePillCountStatus(pillCountStatus);
         }
 
         // 새로 TAKEN으로 확정되는 케이스에만 잔여분 차감 (멱등성: 이미 TAKEN이던 row 재호출 시 중복 차감 방지).
@@ -168,7 +173,7 @@ public class MedicationLogService {
         if (confirmedTaken && previousStatus != LogStatus.TAKEN) {
             final BigDecimal dosageQuantity = schedule.getDosageQuantity();
             if (dosageQuantity != null) {
-                final int dosageCount = dosageQuantity.setScale(0, java.math.RoundingMode.CEILING).intValueExact();
+                final int dosageCount = toDosageCount(dosageQuantity);
                 if (dosageCount > 0) {
                     medicine.decreaseRemainingAmount(dosageCount);
                 }
@@ -199,7 +204,7 @@ public class MedicationLogService {
                 "transition", transition,
                 "is_proxy", String.valueOf(isProxy)).increment();
 
-        return MedicationLogResponse.from(log, photoUrlAssembler.toFullUrl(log.getPhotoObjectKey()));
+        return MedicationLogResponse.from(medicationLog, photoUrlAssembler.toFullUrl(medicationLog.getPhotoObjectKey()));
     }
 
     private static String resolveTransition(final LogStatus current, final LogStatus previous) {
@@ -252,7 +257,7 @@ public class MedicationLogService {
 
             final BigDecimal dosageQuantity = peer.getDosageQuantity();
             if (dosageQuantity != null) {
-                final int dosageCount = dosageQuantity.setScale(0, java.math.RoundingMode.CEILING).intValueExact();
+                final int dosageCount = toDosageCount(dosageQuantity);
                 if (dosageCount > 0) {
                     medicineRepository.findById(peer.getMedicineId())
                             .ifPresent(m -> m.decreaseRemainingAmount(dosageCount));
@@ -273,6 +278,9 @@ public class MedicationLogService {
         final List<MedicationSchedule> schedules = medicationScheduleRepository
                 .findActiveByOwnerAndMealSlot(
                         seniorId, request.targetDate(), triggerSchedule.getMealSlot());
+        if (schedules.isEmpty()) {
+            return LogPillCountStatus.COUNT_UNKNOWN;
+        }
 
         int expected = 0;
         for (final MedicationSchedule s : schedules) {
@@ -280,10 +288,7 @@ public class MedicationLogService {
             if (quantity == null) {
                 return LogPillCountStatus.COUNT_UNKNOWN;
             }
-            expected += quantity.setScale(0, java.math.RoundingMode.CEILING).intValueExact();
-        }
-        if (schedules.isEmpty()) {
-            return LogPillCountStatus.COUNT_UNKNOWN;
+            expected += toDosageCount(quantity);
         }
 
         final byte[] imageBytes;
@@ -293,6 +298,8 @@ public class MedicationLogService {
                     .key(request.photoObjectKey())
                     .build()).asByteArray();
         } catch (final Exception e) {
+            log.warn("Failed to fetch medication photo from storage for pill count verification (objectKey={})",
+                    request.photoObjectKey(), e);
             return LogPillCountStatus.COUNT_FAILED;
         }
         final String mediaType = guessMediaType(request.photoObjectKey());
@@ -301,6 +308,10 @@ public class MedicationLogService {
             return LogPillCountStatus.COUNT_FAILED;
         }
         return actual.get() == expected ? LogPillCountStatus.COUNT_MATCH : LogPillCountStatus.COUNT_MISMATCH;
+    }
+
+    private static int toDosageCount(final BigDecimal quantity) {
+        return quantity.setScale(0, RoundingMode.CEILING).intValueExact();
     }
 
     private String guessMediaType(final String objectKey) {

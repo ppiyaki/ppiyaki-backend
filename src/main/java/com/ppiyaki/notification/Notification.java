@@ -29,6 +29,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Notification extends BaseTimeEntity {
 
+    /**
+     * dedup 자연키(senior_id, target_date, meal_slot, schedule_id) sentinel 값.
+     * MySQL/H2 유니크 인덱스는 NULL을 서로 다른 값으로 취급하므로, 카테고리별로 의미 없는 컬럼에
+     * NULL 대신 아래 sentinel을 채워 uk_notifications_dedup가 동시성 최종 방어선으로 동작하게 한다.
+     * id는 auto-increment(1부터)라 0과, meal_slot은 실제 슬롯명(BREAKFAST 등)과, target_date는
+     * 실제 복약일과 절대 충돌하지 않는다.
+     */
+    public static final long SENTINEL_ID = 0L;
+    public static final String SENTINEL_MEAL_SLOT = "NONE";
+    public static final LocalDate SENTINEL_TARGET_DATE = LocalDate.of(1900, 1, 1);
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -36,7 +47,7 @@ public class Notification extends BaseTimeEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "senior_id")
+    @Column(name = "senior_id", nullable = false, columnDefinition = "bigint not null default 0")
     private Long seniorId;
 
     @Enumerated(EnumType.STRING)
@@ -52,13 +63,13 @@ public class Notification extends BaseTimeEntity {
     @Column(name = "payload", columnDefinition = "JSON")
     private String payload;
 
-    @Column(name = "target_date")
+    @Column(name = "target_date", nullable = false, columnDefinition = "date not null default '1900-01-01'")
     private LocalDate targetDate;
 
-    @Column(name = "meal_slot", length = 16)
+    @Column(name = "meal_slot", nullable = false, columnDefinition = "varchar(16) not null default 'NONE'")
     private String mealSlot;
 
-    @Column(name = "schedule_id")
+    @Column(name = "schedule_id", nullable = false, columnDefinition = "bigint not null default 0")
     private Long scheduleId;
 
     @Column(name = "read_at")
@@ -82,11 +93,12 @@ public class Notification extends BaseTimeEntity {
         this.category = Objects.requireNonNull(category, "category must not be null");
         this.title = Objects.requireNonNull(title, "title must not be null");
         this.body = Objects.requireNonNull(body, "body must not be null");
-        this.seniorId = seniorId;
+        // dedup 자연키 컬럼은 NULL 대신 sentinel로 채워 유니크 제약이 온전히 동작하게 한다.
+        this.seniorId = seniorId != null ? seniorId : SENTINEL_ID;
         this.payload = payload;
-        this.targetDate = targetDate;
-        this.mealSlot = mealSlot;
-        this.scheduleId = scheduleId;
+        this.targetDate = targetDate != null ? targetDate : SENTINEL_TARGET_DATE;
+        this.mealSlot = mealSlot != null ? mealSlot : SENTINEL_MEAL_SLOT;
+        this.scheduleId = scheduleId != null ? scheduleId : SENTINEL_ID;
     }
 
     public static Notification createForMedicationReminder(
@@ -194,9 +206,13 @@ public class Notification extends BaseTimeEntity {
     public static Notification createForPrescriptionReviewRequest(
             final Long caregiverId,
             final Long seniorId,
+            final Long prescriptionId,
             final String title,
             final String body
     ) {
+        // prescriptionId를 schedule_id 자연키에 저장(DUR_WARNING이 medicineId를 담는 것과 동일 패턴).
+        // sentinel-only로 두면 (caregiver, senior)당 1건만 허용되어 이후 처방전 알림이 영구 차단되므로,
+        // 처방전별로 dedup 되도록 prescriptionId로 자연키를 구분한다.
         return new Notification(
                 caregiverId,
                 seniorId,
@@ -206,7 +222,7 @@ public class Notification extends BaseTimeEntity {
                 null,
                 null,
                 null,
-                null
+                prescriptionId
         );
     }
 

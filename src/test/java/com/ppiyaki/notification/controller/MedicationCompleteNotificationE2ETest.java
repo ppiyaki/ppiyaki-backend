@@ -16,18 +16,21 @@ import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.domain.UserRole;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
@@ -84,11 +87,11 @@ class MedicationCompleteNotificationE2ETest {
 
         // then — 보호자 알림함에 아침 완료 알림 1건 (AFTER_COMMIT 리스너 저장이 실제 커밋되어야 함)
         final List<Notification> completed = findCompleteNotifications(caregiverId);
-        Assertions.assertThat(completed).hasSize(1);
-        Assertions.assertThat(completed.get(0).getSeniorId()).isEqualTo(seniorId);
-        Assertions.assertThat(completed.get(0).getTargetDate()).isEqualTo(today);
-        Assertions.assertThat(completed.get(0).getMealSlot()).isEqualTo(MealSlot.BREAKFAST.name());
-        Assertions.assertThat(completed.get(0).getBody()).contains("님이 아침 복약을 완료했어요");
+        assertThat(completed).hasSize(1);
+        assertThat(completed.get(0).getSeniorId()).isEqualTo(seniorId);
+        assertThat(completed.get(0).getTargetDate()).isEqualTo(today);
+        assertThat(completed.get(0).getMealSlot()).isEqualTo(MealSlot.BREAKFAST.name());
+        assertThat(completed.get(0).getBody()).contains("님이 아침 복약을 완료했어요");
     }
 
     @Test
@@ -109,7 +112,7 @@ class MedicationCompleteNotificationE2ETest {
         certifyTaken(seniorToken, scheduleA, today);
 
         // then — 끼니 전체로 전파되어 완료 알림 1건 발송
-        Assertions.assertThat(findCompleteNotifications(caregiverId))
+        assertThat(findCompleteNotifications(caregiverId))
                 .extracting(Notification::getMealSlot)
                 .containsExactly(MealSlot.BREAKFAST.name());
     }
@@ -128,19 +131,44 @@ class MedicationCompleteNotificationE2ETest {
 
         // 아침 완료 → 아침 알림 1건
         certifyTaken(seniorToken, breakfastScheduleId, today);
-        Assertions.assertThat(findCompleteNotifications(caregiverId))
+        assertThat(findCompleteNotifications(caregiverId))
                 .extracting(Notification::getMealSlot)
                 .containsExactlyInAnyOrder(MealSlot.BREAKFAST.name());
 
         // 점심 완료 → 점심 알림 추가 (총 2건)
         certifyTaken(seniorToken, lunchScheduleId, today);
-        Assertions.assertThat(findCompleteNotifications(caregiverId))
+        assertThat(findCompleteNotifications(caregiverId))
                 .extracting(Notification::getMealSlot)
                 .containsExactlyInAnyOrder(MealSlot.BREAKFAST.name(), MealSlot.LUNCH.name());
 
         // 아침 재인증(멱등 호출) → 중복 발송 없음 (여전히 2건)
         certifyTaken(seniorToken, breakfastScheduleId, today);
-        Assertions.assertThat(findCompleteNotifications(caregiverId)).hasSize(2);
+        assertThat(findCompleteNotifications(caregiverId)).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("동일 자연키 MEDICATION_COMPLETE 2회 저장 시 유니크 제약(sentinel schedule_id)으로 중복 저장이 거부된다")
+    void duplicateNaturalKey_rejectedByUniqueConstraint() {
+        // 실제 dispatch 경로가 아니라, 동시성 레이스로 exists 체크를 둘 다 통과해 save가 2번 도달한
+        // 상황을 재현. schedule_id가 NULL이면(구 스키마) H2/MySQL 모두 NULL을 서로 다르게 취급해
+        // 중복이 통과되지만, sentinel(0)로 채워지면 유니크 제약이 두 번째 저장을 거부해야 한다.
+        final Long caregiverId = userSequence++;
+        final Long seniorId = userSequence++;
+        final LocalDate today = LocalDate.now();
+
+        notificationRepository.saveAndFlush(Notification.createForMedicationComplete(
+                caregiverId, seniorId, "완료", "아침 복약 완료", today, MealSlot.BREAKFAST.name()));
+
+        assertThatThrownBy(() -> notificationRepository.saveAndFlush(
+                        Notification.createForMedicationComplete(
+                                caregiverId, seniorId, "완료2", "아침 복약 완료2", today, MealSlot.BREAKFAST.name())))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        final long persisted = notificationRepository.findAll().stream()
+                .filter(n -> n.getUserId().equals(caregiverId))
+                .filter(n -> n.getCategory() == NotificationCategory.MEDICATION_COMPLETE)
+                .count();
+        assertThat(persisted).isEqualTo(1);
     }
 
     // --- helpers ---

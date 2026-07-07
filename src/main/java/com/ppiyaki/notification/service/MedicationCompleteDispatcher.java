@@ -150,7 +150,7 @@ public class MedicationCompleteDispatcher {
             for (final DeviceToken token : tokens) {
                 final PushSendResult result = pushSender.send(token.getToken(),
                         new PushPayload(title, body, Map.of(
-                                "category", "MEDICATION_COMPLETE",
+                                "category", NotificationCategory.MEDICATION_COMPLETE.name(),
                                 "seniorId", String.valueOf(seniorId),
                                 "targetDate", targetDate.toString(),
                                 "mealSlot", slot.name()
