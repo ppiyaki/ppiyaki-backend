@@ -31,12 +31,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/**
- * Outbox relay <b>멱등성</b> 검증: 같은 PENDING 메시지에 대해 relay가 여러 번 돌아도
- * 알림은 정확히 1건만 생성되고(6컬럼 유니크 제약 + exists 선체크), 메시지는 PROCESSED로 종결된다.
- */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "openai.api-key=sk-test-placeholder",
         "openai.model=gpt-test",
@@ -45,8 +42,7 @@ import org.springframework.transaction.support.TransactionTemplate;
         "ncp.storage.access-key=test-access-key",
         "ncp.storage.secret-key=test-secret-key",
         "ncp.storage.bucket-name=ppiyaki-test",
-        // 백그라운드 @Scheduled 릴레이가 테스트 도중 끼어들지 않게 initial delay를 크게 잡고,
-        // 테스트에서 relay.poll()을 직접 호출해 결정적으로 처리한다.
+
         "outbox.relay.initial-delay-ms=3600000"
 })
 @DisplayName("복약 완료 Outbox relay 멱등성 (poll 2회 → 알림 1건)")
@@ -72,19 +68,21 @@ class MedicationCompleteOutboxRelayIdempotencyTest {
     private NotificationRepository notificationRepository;
     @Autowired
     private TransactionTemplate transactionTemplate;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private static long userSequence = 910000L;
 
     @BeforeEach
     void setUp() {
-        // 공유 H2(mem, ddl-auto=update)라 다른 테스트가 남긴 PENDING row가 poll에 끼어들지 않게 비운다.
+
         outboxMessageRepository.deleteAll();
     }
 
     @Test
     @DisplayName("같은 PENDING 메시지에 relay.poll()을 2번 호출해도 알림은 정확히 1건, 메시지는 PROCESSED로 유지된다")
     void pollTwice_createsExactlyOneNotification() {
-        // given: 시니어/보호자 연동 + BREAKFAST schedule 1건이 TAKEN으로 완료된 상태
+
         final Long seniorId = seedSenior();
         final Long caregiverId = seedCaregiver();
         seedRelation(seniorId, caregiverId);
@@ -92,31 +90,56 @@ class MedicationCompleteOutboxRelayIdempotencyTest {
         final Long medicineId = seedMedicine(seniorId);
         final Long scheduleId = seedSchedule(medicineId, MealSlot.BREAKFAST);
         seedTakenLog(seniorId, scheduleId, today);
-        // 완료 이벤트를 담은 PENDING outbox 메시지 적재 (프로덕션 enqueue 경로 그대로)
+
         final Long messageId = transactionTemplate.execute(status -> outboxService
                 .enqueue(OutboxService.MEDICATION_COMPLETE, new MedicationTakenEvent(seniorId, today))
                 .getId());
 
-        // when: relay를 2번 폴링 (1번째: PENDING 클레임 → 발송 → PROCESSED, 2번째: 재처리 시도)
         relay.poll();
         relay.poll();
 
-        // then: 보호자 알림은 정확히 1건 (중복 발송 없음)
         final List<Notification> notifications = findCompleteNotifications(caregiverId);
         assertThat(notifications).hasSize(1);
         assertThat(notifications.get(0).getSeniorId()).isEqualTo(seniorId);
         assertThat(notifications.get(0).getTargetDate()).isEqualTo(today);
         assertThat(notifications.get(0).getMealSlot()).isEqualTo(MealSlot.BREAKFAST.name());
 
-        // outbox 메시지는 PROCESSED로 종결되어 2번째 poll에서 findClaimable(PENDING만)에 잡히지 않아
-        // 재디스패치 자체가 일어나지 않는다 (attempts=0 유지가 그 증거)
         final OutboxMessage message = outboxMessageRepository.findById(messageId).orElseThrow();
         assertThat(message.getStatus()).isEqualTo(OutboxStatus.PROCESSED);
         assertThat(message.getAttempts()).isEqualTo(0);
         assertThat(message.getProcessedAt()).isNotNull();
     }
 
-    // --- helpers ---
+    @Test
+    @DisplayName("부분 커밋 후 메시지가 재처리돼도 알림은 1건으로 수렴한다")
+    void reprocessAfterNotificationCommitted_convergesToOneNotification() {
+
+        final Long seniorId = seedSenior();
+        final Long caregiverId = seedCaregiver();
+        seedRelation(seniorId, caregiverId);
+        final LocalDate today = LocalDate.now();
+        final Long medicineId = seedMedicine(seniorId);
+        final Long scheduleId = seedSchedule(medicineId, MealSlot.BREAKFAST);
+        seedTakenLog(seniorId, scheduleId, today);
+
+        final Long messageId = transactionTemplate.execute(status -> outboxService
+                .enqueue(OutboxService.MEDICATION_COMPLETE, new MedicationTakenEvent(seniorId, today))
+                .getId());
+
+        relay.poll();
+        assertThat(findCompleteNotifications(caregiverId)).hasSize(1);
+
+        // 알림은 커밋됐지만 배치 커밋 실패로 메시지가 PENDING으로 남은 상황
+        jdbcTemplate.update(
+                "UPDATE outbox_message SET status = 'PENDING', processed_at = NULL, next_attempt_at = ? WHERE id = ?",
+                LocalDateTime.now().minusSeconds(1), messageId);
+
+        relay.poll();
+
+        assertThat(findCompleteNotifications(caregiverId)).hasSize(1);
+        final OutboxMessage message = outboxMessageRepository.findById(messageId).orElseThrow();
+        assertThat(message.getStatus()).isEqualTo(OutboxStatus.PROCESSED);
+    }
 
     private List<Notification> findCompleteNotifications(final Long caregiverId) {
         return notificationRepository.findAll().stream()
@@ -124,8 +147,6 @@ class MedicationCompleteOutboxRelayIdempotencyTest {
                 .filter(n -> n.getCategory() == NotificationCategory.MEDICATION_COMPLETE)
                 .toList();
     }
-
-    // --- fixtures ---
 
     private Long seedSenior() {
         return transactionTemplate.execute(status -> {

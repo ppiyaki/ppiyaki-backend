@@ -9,14 +9,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface OutboxMessageRepository extends JpaRepository<OutboxMessage, Long> {
 
-    /**
-     * relay가 처리할 PENDING 메시지를 조회한다.
-     * 단일 인스턴스 기준 단순 폴링이며, 멀티 인스턴스로 확장 시 FOR UPDATE SKIP LOCKED로 클레임이 필요하다.
-     *
-     * <p>relay는 event_type별로 존재하므로 자기 타입의 메시지만 조회해야 한다.
-     * 필터가 없으면 다른 타입의 relay가 추가됐을 때 서로 메시지를 뺏어
-     * "Unsupported eventType" 실패로 attempts만 소모시키게 된다.
-     */
     @Query(value = """
             SELECT *
             FROM outbox_message
