@@ -144,15 +144,15 @@
        add constraint uk_caregiver_senior unique (caregiver_id, senior_id);
 
     create table notifications (
-        target_date date,
+        target_date date not null default '1900-01-01',
         created_at datetime(6),
         id bigint not null auto_increment,
         read_at datetime(6),
-        schedule_id bigint,
-        senior_id bigint,
+        schedule_id bigint not null default 0,
+        senior_id bigint not null default 0,
         updated_at datetime(6),
         user_id bigint not null,
-        meal_slot varchar(16),
+        meal_slot varchar(16) not null default 'NONE',
         category varchar(32) not null,
         title varchar(255) not null,
         body TEXT not null,

@@ -183,7 +183,8 @@ class MedicationDelayDispatcherTest {
                         + "\n• 타이레놀500mg 1정"
                         + "\n• 비타민C 2캡슐"
                         + "\n• 위장약");
-        assertThat(notificationCaptor.getValue().getScheduleId()).isNull();
+        // MEDICATION_DELAY는 단일 schedule_id가 없어 dedup 자연키에 sentinel(0)이 채워진다.
+        assertThat(notificationCaptor.getValue().getScheduleId()).isEqualTo(Notification.SENTINEL_ID);
 
         final ArgumentCaptor<PushPayload> payloadCaptor = ArgumentCaptor.forClass(PushPayload.class);
         verify(pushSender, times(1)).send(eq("token-xyz"), payloadCaptor.capture());

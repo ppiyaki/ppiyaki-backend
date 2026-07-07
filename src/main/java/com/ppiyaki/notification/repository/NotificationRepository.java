@@ -2,8 +2,10 @@ package com.ppiyaki.notification.repository;
 
 import com.ppiyaki.notification.Notification;
 import com.ppiyaki.notification.NotificationCategory;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -50,7 +52,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             """)
     int markReminderTaken(
             @Param("userId") final Long userId,
-            @Param("targetDate") final java.time.LocalDate targetDate,
+            @Param("targetDate") final LocalDate targetDate,
             @Param("mealSlot") final String mealSlot,
             @Param("takenAt") final LocalDateTime takenAt
     );
@@ -58,7 +60,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     boolean existsByUserIdAndCategoryAndTargetDateAndMealSlot(
             final Long userId,
             final NotificationCategory category,
-            final java.time.LocalDate targetDate,
+            final LocalDate targetDate,
             final String mealSlot
     );
 
@@ -66,7 +68,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             final Long userId,
             final NotificationCategory category,
             final Long seniorId,
-            final java.time.LocalDate targetDate,
+            final LocalDate targetDate,
             final Long scheduleId
     );
 
@@ -74,11 +76,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             final Long userId,
             final NotificationCategory category,
             final Long seniorId,
-            final java.time.LocalDate targetDate,
+            final LocalDate targetDate,
             final String mealSlot
     );
 
-    java.util.Optional<Notification> findFirstByUserIdAndCategoryAndSeniorIdOrderByCreatedAtDesc(
+    Optional<Notification> findFirstByUserIdAndCategoryAndSeniorIdOrderByCreatedAtDesc(
             final Long userId,
             final NotificationCategory category,
             final Long seniorId
