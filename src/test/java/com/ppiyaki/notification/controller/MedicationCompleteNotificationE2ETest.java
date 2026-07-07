@@ -79,6 +79,9 @@ class MedicationCompleteNotificationE2ETest {
     @BeforeEach
     void setUp() {
         RestAssured.port = port;
+        // 공유 H2(mem, ddl-auto=update)라 다른 테스트가 남긴 outbox row가 relay.poll()에
+        // 클레임되거나 payload 검증에 섞이지 않게 비운다.
+        outboxMessageRepository.deleteAll();
     }
 
     @Test
@@ -107,8 +110,10 @@ class MedicationCompleteNotificationE2ETest {
         assertThat(completed.get(0).getBody()).contains("님이 아침 복약을 완료했어요");
 
         // 처리된 outbox 메시지는 PROCESSED로 마킹된다 (해당 시니어 payload 기준)
+        // seniorId 뒤에 구분자(,)까지 포함해 매칭한다. 단순 prefix 매칭이면 다른 테스트가 남긴
+        // 더 긴 seniorId(예: 999911) payload가 오탐될 수 있다.
         final List<OutboxMessage> processed = outboxMessageRepository.findAll().stream()
-                .filter(m -> m.getPayload() != null && m.getPayload().contains("\"seniorId\":" + seniorId))
+                .filter(m -> m.getPayload() != null && m.getPayload().contains("\"seniorId\":" + seniorId + ","))
                 .toList();
         assertThat(processed).hasSize(1);
         assertThat(processed.get(0).getStatus()).isEqualTo(OutboxStatus.PROCESSED);

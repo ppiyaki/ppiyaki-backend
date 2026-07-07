@@ -53,13 +53,13 @@ class OutboxFindClaimableTest {
     }
 
     @Test
-    @DisplayName("PENDING이면서 next_attempt_at<=now인 메시지만 클레임된다 (미래 예약·PROCESSED·FAILED 제외)")
-    void findClaimable_filtersByStatusAndNextAttemptAt() {
-        // given — 상태/시각이 다른 4종의 메시지
+    @DisplayName("PENDING이면서 event_type 일치, next_attempt_at<=now인 메시지만 클레임된다 (미래 예약·PROCESSED·FAILED·타 event_type 제외)")
+    void findClaimable_filtersByStatusEventTypeAndNextAttemptAt() {
+        // given: 상태/시각/이벤트 타입이 다른 5종의 메시지
         final LocalDateTime now = LocalDateTime.now(clock);
         final LocalDateTime past = now.minusHours(1);
 
-        // 1) PENDING + next_attempt_at 과거 → 클레임 대상
+        // 1) PENDING + next_attempt_at 과거 + 요청 event_type → 클레임 대상
         final Long claimableId = save(OutboxMessage.create("MEDICATION_COMPLETE", "claimable", past));
         // 2) PENDING + next_attempt_at 미래(백오프로 예약됨) → 제외
         final Long futureId = save(OutboxMessage.create("MEDICATION_COMPLETE", "future", now.plusHours(1)));
@@ -73,13 +73,15 @@ class OutboxFindClaimableTest {
             failed.recordFailure("boom", past);
         }
         final Long failedId = save(failed);
+        // 5) PENDING + 과거지만 다른 event_type → 제외 (다른 타입 relay의 메시지를 뺏지 않는다)
+        final Long otherTypeId = save(OutboxMessage.create("OTHER_EVENT", "other-type", past));
 
         // when — findClaimable은 FOR UPDATE 쿼리이므로 트랜잭션 안에서 호출
         final List<Long> claimedIds = findClaimableIds(10);
 
-        // then — PENDING + next_attempt_at<=now인 1건만
+        // then: PENDING + event_type 일치 + next_attempt_at<=now인 1건만
         assertThat(claimedIds).containsExactly(claimableId);
-        assertThat(claimedIds).doesNotContain(futureId, processedId, failedId);
+        assertThat(claimedIds).doesNotContain(futureId, processedId, failedId, otherTypeId);
     }
 
     @Test
@@ -113,7 +115,7 @@ class OutboxFindClaimableTest {
 
     private List<Long> findClaimableIds(final int limit) {
         return transactionTemplate.execute(status -> outboxMessageRepository
-                .findClaimable(LocalDateTime.now(clock), limit).stream()
+                .findClaimable(OutboxService.MEDICATION_COMPLETE, LocalDateTime.now(clock), limit).stream()
                 .map(OutboxMessage::getId)
                 .toList());
     }
