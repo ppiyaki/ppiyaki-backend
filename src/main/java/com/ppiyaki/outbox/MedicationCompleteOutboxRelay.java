@@ -26,8 +26,11 @@ import org.springframework.transaction.annotation.Transactional;
  * {@link MedicationCompleteDispatcher}로 알림을 발행한다.
  *
  * <p>트랜잭션 경계: {@code findClaimable}이 FOR UPDATE SKIP LOCKED이므로
- * claim + dispatch + 상태 변경(markProcessed/recordFailure)이 <b>한 트랜잭션</b> 안에 있어야
- * 처리 중 row lock이 유지되어 멀티 인스턴스 중복 처리가 방지된다.
+ * claim과 상태 변경(markProcessed/recordFailure)은 <b>한 트랜잭션</b>(processBatch) 안에 있어야
+ * 처리 중 row lock이 유지되어 멀티 인스턴스 중복 처리가 방지된다. 반면 dispatch
+ * ({@code dispatchCompletedSlots})는 poison 메시지 격리를 위해 REQUIRES_NEW의 메시지 단위
+ * 별도 트랜잭션에서 수행된다({@link #processBatch()} 참고). 이 구조로 dispatch 동안
+ * relay 스레드는 DB 커넥션 2개(클레임 tx + dispatch tx)를 점유한다.
  * {@code @Scheduled} 진입점에 {@code @Transactional}을 직접 걸면 self-invocation으로
  * 프록시를 우회할 수 있어, 진입점 {@link #poll()}과 트랜잭션 메서드 {@link #processBatch()}를 분리하고
  * {@code @Lazy} self 주입 프록시를 경유해 호출한다.
@@ -89,6 +92,17 @@ public class MedicationCompleteOutboxRelay {
 
     /**
      * PENDING 메시지 한 배치를 클레임해 처리한다. 이 메서드의 트랜잭션이 claim 락의 수명이다.
+     * 자기 이벤트 타입({@link OutboxService#MEDICATION_COMPLETE})의 메시지만 클레임한다.
+     *
+     * <p><b>poison-batch 격리</b>: dispatch({@code dispatchCompletedSlots})는 REQUIRES_NEW로
+     * 메시지 단위의 별도 트랜잭션에서 수행된다. dispatch가 실패해도 그 내부 트랜잭션만 롤백되고
+     * 이 클레임 트랜잭션은 rollback-only로 마킹되지 않으므로, catch 블록의 recordFailure
+     * (attempts 증가/백오프/데드레터)와 같은 배치의 다른 메시지의 markProcessed가 정상 커밋된다.
+     * dispatch가 REQUIRED로 이 트랜잭션에 합류하면 실패 1건이 참여 트랜잭션을 rollback-only로
+     * 만들어(UnexpectedRollbackException) 배치 전체가 롤백되고 attempts도 오르지 않는다.
+     *
+     * <p><b>커넥션 비용</b>: dispatch가 진행되는 동안 relay 스레드가 DB 커넥션 2개를 점유한다
+     * (이 클레임 트랜잭션 1개 + dispatch의 REQUIRES_NEW 트랜잭션 1개).
      *
      * <p>개별 메시지 실패는 recordFailure로 기록만 하고 예외를 전파하지 않는다
      * (한 건 실패가 배치 전체를 롤백시키지 않게). 상태 변경은 JPA dirty checking으로 반영된다.
@@ -101,7 +115,7 @@ public class MedicationCompleteOutboxRelay {
     @Transactional
     public List<PushCommand> processBatch() {
         final List<OutboxMessage> messages = outboxMessageRepository
-                .findClaimable(LocalDateTime.now(clock), batchSize);
+                .findClaimable(OutboxService.MEDICATION_COMPLETE, LocalDateTime.now(clock), batchSize);
         if (messages.isEmpty()) {
             return List.of();
         }

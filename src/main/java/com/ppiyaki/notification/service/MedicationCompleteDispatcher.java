@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
@@ -65,10 +66,23 @@ public class MedicationCompleteDispatcher {
      * 끼니(아침/점심/저녁)별로 그 끼니에 속한 모든 schedule이 인증되면 보호자 알림함에
      * MEDICATION_COMPLETE record를 저장하고, 커밋 이후 발송할 FCM 푸시 명령 목록을 반환한다.
      *
-     * <p>Outbox relay({@code MedicationCompleteOutboxRelay.processBatch})의 트랜잭션에서 호출되며,
-     * 기본 전파(REQUIRED)로 그 트랜잭션에 합류한다. outbox claim 락 · 알림 저장 · outbox 상태 변경이
-     * 하나의 트랜잭션으로 원자적으로 커밋되게 하기 위함이다.
-     * (과거 {@code AFTER_COMMIT} 리스너에서 호출되던 시절의 REQUIRES_NEW는 outbox 도입으로 제거.)
+     * <p><b>전파: REQUIRES_NEW (poison-batch 격리)</b>. Outbox relay
+     * ({@code MedicationCompleteOutboxRelay.processBatch})의 클레임 트랜잭션에서 호출되지만,
+     * 합류(REQUIRED)하지 않고 메시지 단위의 새 트랜잭션을 연다. 합류하면 이 메서드의
+     * RuntimeException이 참여 트랜잭션을 rollback-only로 마킹해
+     * (globalRollbackOnParticipationFailure) relay의 catch + recordFailure가 무력화되고,
+     * processBatch 커밋 시 UnexpectedRollbackException으로 배치 전체가 롤백되어
+     * attempts 증가/백오프/데드레터가 전부 동작하지 않기 때문이다. REQUIRES_NEW에서는
+     * 실패가 이 내부 트랜잭션만 롤백시키고 예외로 전파되므로, relay의 외부(클레임) 트랜잭션이
+     * recordFailure를 정상 커밋할 수 있다. 유니크 제약 위반이 커밋 시점이 아니라 이 트랜잭션
+     * 경계 안에서 표면화되도록 record 저장은 {@code saveAndFlush}로 즉시 flush한다.
+     *
+     * <p><b>비용</b>: dispatch가 진행되는 동안 relay 스레드가 DB 커넥션 2개를 점유한다
+     * (외부 클레임 트랜잭션 1개 + 이 REQUIRES_NEW 트랜잭션 1개). 커넥션 풀 사이즈 산정 시 고려할 것.
+     *
+     * <p><b>부분 커밋 주의</b>: 이 메서드가 성공하면 알림 record는 그 시점에 커밋된다. 이후 relay의
+     * 외부 트랜잭션이 롤백되어 메시지가 PENDING으로 남더라도, 재처리 시 exists 선체크 + 유니크 제약으로
+     * record는 중복 저장되지 않고, 푸시 명령은 새로 저장된 record에 대해서만 만들어지므로 중복 푸시도 없다.
      *
      * <p><b>트랜잭션 경계</b>: 이 메서드는 <b>알림함 record 저장까지만</b> 트랜잭션 안에서 수행한다.
      * 외부 네트워크 호출인 FCM 발송은 DB 커넥션/트랜잭션을 점유하지 않도록 여기서 하지 않고,
@@ -78,7 +92,7 @@ public class MedicationCompleteDispatcher {
      *
      * @return 커밋 이후 발송할 푸시 명령 목록 (발송 대상이 없으면 빈 리스트)
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public List<PushCommand> dispatchCompletedSlots(final Long seniorId, final LocalDate targetDate) {
         final List<MedicationSchedule> schedules = scheduleRepository.findActiveByOwnerAndDate(seniorId, targetDate);
         if (schedules.isEmpty()) {
@@ -146,7 +160,9 @@ public class MedicationCompleteDispatcher {
                     caregiverId, NotificationCategory.MEDICATION_COMPLETE, seniorId, targetDate, slot.name())) {
                 continue;
             }
-            final Notification saved = notificationRepository.save(Notification.createForMedicationComplete(
+            // saveAndFlush: 유니크 제약 위반(동시 relay 경쟁 등)이 커밋 시점이 아니라
+            // 이 REQUIRES_NEW 트랜잭션 안에서 즉시 표면화되어 relay의 recordFailure 경로를 타게 한다.
+            final Notification saved = notificationRepository.saveAndFlush(Notification.createForMedicationComplete(
                     caregiverId, seniorId, title, body, targetDate, slot.name()));
             log.info("MEDICATION_COMPLETE notification created (id={}, caregiver={}, senior={}, date={}, slot={})",
                     saved.getId(), caregiverId, seniorId, targetDate, slot);
