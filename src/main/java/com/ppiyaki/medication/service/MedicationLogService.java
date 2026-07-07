@@ -18,6 +18,7 @@ import com.ppiyaki.medication.repository.MedicationScheduleRepository;
 import com.ppiyaki.medicine.Medicine;
 import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.notification.repository.NotificationRepository;
+import com.ppiyaki.outbox.OutboxService;
 import com.ppiyaki.user.domain.CareMode;
 import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.repository.CareRelationRepository;
@@ -68,6 +69,7 @@ public class MedicationLogService {
     private final NcpStorageProperties storageProperties;
     private final S3Client s3Client;
     private final ApplicationEventPublisher eventPublisher;
+    private final OutboxService outboxService;
     private final NotificationRepository notificationRepository;
     private final MeterRegistry meterRegistry;
 
@@ -82,6 +84,7 @@ public class MedicationLogService {
             final NcpStorageProperties storageProperties,
             final S3Client s3Client,
             final ApplicationEventPublisher eventPublisher,
+            final OutboxService outboxService,
             final NotificationRepository notificationRepository,
             final MeterRegistry meterRegistry
     ) {
@@ -95,6 +98,7 @@ public class MedicationLogService {
         this.storageProperties = storageProperties;
         this.s3Client = s3Client;
         this.eventPublisher = eventPublisher;
+        this.outboxService = outboxService;
         this.notificationRepository = notificationRepository;
         this.meterRegistry = meterRegistry;
     }
@@ -184,7 +188,12 @@ public class MedicationLogService {
         if (confirmedTaken) {
             // 이벤트는 처음 TAKEN 전환 시에만 발행 (중복 포인트/뱃지 방지)
             if (previousStatus != LogStatus.TAKEN) {
-                eventPublisher.publishEvent(new MedicationTakenEvent(seniorId, request.targetDate()));
+                final MedicationTakenEvent takenEvent = new MedicationTakenEvent(seniorId, request.targetDate());
+                // 펫포인트: 인메모리 이벤트 유지 (유실 허용 계층)
+                eventPublisher.publishEvent(takenEvent);
+                // 보호자 알림: Transactional Outbox 경유 (복약로그 저장과 같은 트랜잭션에서 INSERT →
+                // 커밋되면 relay가 반드시 발행. 신뢰도 계층화)
+                outboxService.enqueue(OutboxService.MEDICATION_COMPLETE, takenEvent);
             }
             // 알림 완료 처리는 로그 상태와 무관하게(이미 TAKEN이어도 알림이 미완료면) 시도 (멱등성 보장).
             // 시니어 본인 인증/보호자 대리 인증 모두 시니어의 알림이 대상 (userId=seniorId).

@@ -10,6 +10,10 @@ import com.ppiyaki.medicine.repository.MedicineRepository;
 import com.ppiyaki.notification.Notification;
 import com.ppiyaki.notification.NotificationCategory;
 import com.ppiyaki.notification.repository.NotificationRepository;
+import com.ppiyaki.outbox.MedicationCompleteOutboxRelay;
+import com.ppiyaki.outbox.OutboxMessage;
+import com.ppiyaki.outbox.OutboxStatus;
+import com.ppiyaki.outbox.repository.OutboxMessageRepository;
 import com.ppiyaki.user.domain.CareMode;
 import com.ppiyaki.user.domain.CareRelation;
 import com.ppiyaki.user.domain.User;
@@ -40,9 +44,12 @@ import org.springframework.transaction.support.TransactionTemplate;
         "ncp.storage.region=kr-standard",
         "ncp.storage.access-key=test-access-key",
         "ncp.storage.secret-key=test-secret-key",
-        "ncp.storage.bucket-name=ppiyaki-test"
+        "ncp.storage.bucket-name=ppiyaki-test",
+        // 백그라운드 @Scheduled 릴레이가 테스트 도중 끼어들지 않게 initial delay를 크게 잡고,
+        // 테스트에서 relay.poll()을 직접 호출해 결정적으로 처리한다.
+        "outbox.relay.initial-delay-ms=3600000"
 })
-@DisplayName("끼니별 복약 완료 알림 발송 E2E (MEDICATION_COMPLETE)")
+@DisplayName("끼니별 복약 완료 알림 발송 E2E (MEDICATION_COMPLETE, Outbox relay 경유)")
 class MedicationCompleteNotificationE2ETest {
 
     @LocalServerPort
@@ -62,6 +69,10 @@ class MedicationCompleteNotificationE2ETest {
     private JwtProvider jwtProvider;
     @Autowired
     private TransactionTemplate transactionTemplate;
+    @Autowired
+    private MedicationCompleteOutboxRelay relay;
+    @Autowired
+    private OutboxMessageRepository outboxMessageRepository;
 
     private static long userSequence = 900000L;
 
@@ -71,7 +82,7 @@ class MedicationCompleteNotificationE2ETest {
     }
 
     @Test
-    @DisplayName("끼니의 모든 schedule 인증 시 보호자 알림함에 MEDICATION_COMPLETE row가 끼니 단위로 저장된다 (AFTER_COMMIT 커밋 보장)")
+    @DisplayName("끼니의 모든 schedule 인증 시 outbox 메시지가 적재되고, relay 처리 후 보호자 알림함에 MEDICATION_COMPLETE row가 끼니 단위로 저장된다")
     void slotComplete_persistsNotificationForCaregiver() {
         // given — 시니어 + 보호자 연동 + BREAKFAST schedule 1정
         final Long seniorId = seedSenior();
@@ -82,16 +93,25 @@ class MedicationCompleteNotificationE2ETest {
         final Long scheduleId = seedSchedule(medicineId, MealSlot.BREAKFAST);
         final LocalDate today = LocalDate.now();
 
-        // when — 시니어가 BREAKFAST schedule TAKEN 인증 → 아침 끼니 완료
+        // when — 시니어가 BREAKFAST schedule TAKEN 인증 → 아침 끼니 완료 (API 커밋 = outbox INSERT 커밋)
         certifyTaken(seniorToken, scheduleId, today);
+        // 알림은 이제 비동기(outbox relay) 경로 — 테스트에서는 relay를 직접 호출해 결정적으로 처리
+        relay.poll();
 
-        // then — 보호자 알림함에 아침 완료 알림 1건 (AFTER_COMMIT 리스너 저장이 실제 커밋되어야 함)
+        // then — 보호자 알림함에 아침 완료 알림 1건
         final List<Notification> completed = findCompleteNotifications(caregiverId);
         assertThat(completed).hasSize(1);
         assertThat(completed.get(0).getSeniorId()).isEqualTo(seniorId);
         assertThat(completed.get(0).getTargetDate()).isEqualTo(today);
         assertThat(completed.get(0).getMealSlot()).isEqualTo(MealSlot.BREAKFAST.name());
         assertThat(completed.get(0).getBody()).contains("님이 아침 복약을 완료했어요");
+
+        // 처리된 outbox 메시지는 PROCESSED로 마킹된다 (해당 시니어 payload 기준)
+        final List<OutboxMessage> processed = outboxMessageRepository.findAll().stream()
+                .filter(m -> m.getPayload() != null && m.getPayload().contains("\"seniorId\":" + seniorId))
+                .toList();
+        assertThat(processed).hasSize(1);
+        assertThat(processed.get(0).getStatus()).isEqualTo(OutboxStatus.PROCESSED);
     }
 
     @Test
@@ -108,8 +128,9 @@ class MedicationCompleteNotificationE2ETest {
         seedSchedule(medicineId, MealSlot.BREAKFAST);
         final LocalDate today = LocalDate.now();
 
-        // when — BREAKFAST 2개 schedule 중 1건만 (사진 없이) 인증
+        // when — BREAKFAST 2개 schedule 중 1건만 (사진 없이) 인증 후 relay 처리
         certifyTaken(seniorToken, scheduleA, today);
+        relay.poll();
 
         // then — 끼니 전체로 전파되어 완료 알림 1건 발송
         assertThat(findCompleteNotifications(caregiverId))
@@ -129,20 +150,23 @@ class MedicationCompleteNotificationE2ETest {
         final Long lunchScheduleId = seedSchedule(medicineId, MealSlot.LUNCH);
         final LocalDate today = LocalDate.now();
 
-        // 아침 완료 → 아침 알림 1건
+        // 아침 완료 → relay 처리 → 아침 알림 1건
         certifyTaken(seniorToken, breakfastScheduleId, today);
+        relay.poll();
         assertThat(findCompleteNotifications(caregiverId))
                 .extracting(Notification::getMealSlot)
                 .containsExactlyInAnyOrder(MealSlot.BREAKFAST.name());
 
-        // 점심 완료 → 점심 알림 추가 (총 2건)
+        // 점심 완료 → relay 처리 → 점심 알림 추가 (총 2건)
         certifyTaken(seniorToken, lunchScheduleId, today);
+        relay.poll();
         assertThat(findCompleteNotifications(caregiverId))
                 .extracting(Notification::getMealSlot)
                 .containsExactlyInAnyOrder(MealSlot.BREAKFAST.name(), MealSlot.LUNCH.name());
 
-        // 아침 재인증(멱등 호출) → 중복 발송 없음 (여전히 2건)
+        // 아침 재인증(멱등 호출) → outbox 재적재 없음 + relay 재실행에도 중복 발송 없음 (여전히 2건)
         certifyTaken(seniorToken, breakfastScheduleId, today);
+        relay.poll();
         assertThat(findCompleteNotifications(caregiverId)).hasSize(2);
     }
 

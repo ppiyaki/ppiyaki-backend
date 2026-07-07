@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
@@ -70,10 +69,12 @@ public class MedicationCompleteDispatcher {
     /**
      * 끼니(아침/점심/저녁)별로 그 끼니에 속한 모든 schedule이 인증되면 보호자에게 완료 알림을 보낸다.
      *
-     * <p>{@code AFTER_COMMIT} 이벤트 리스너에서 호출되므로, 이미 커밋된 트랜잭션에 합류해 INSERT가 유실되는 것을
-     * 막기 위해 {@link Propagation#REQUIRES_NEW}로 독립 트랜잭션을 연다.
+     * <p>Outbox relay({@code MedicationCompleteOutboxRelay.processBatch})의 트랜잭션에서 호출되며,
+     * 기본 전파(REQUIRED)로 그 트랜잭션에 합류한다. outbox claim 락 · 알림 저장 · outbox 상태 변경이
+     * 하나의 트랜잭션으로 원자적으로 커밋되게 하기 위함이다.
+     * (과거 {@code AFTER_COMMIT} 리스너에서 호출되던 시절의 REQUIRES_NEW는 outbox 도입으로 제거.)
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public int dispatchCompletedSlots(final Long seniorId, final LocalDate targetDate) {
         final List<MedicationSchedule> schedules = scheduleRepository.findActiveByOwnerAndDate(seniorId, targetDate);
         if (schedules.isEmpty()) {
