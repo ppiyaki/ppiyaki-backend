@@ -16,10 +16,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * Transactional Outbox 메시지. 도메인 트랜잭션과 같은 트랜잭션에서 INSERT되고({@link OutboxService#enqueue}),
- * 별도 relay({@link MedicationCompleteOutboxRelay})가 PENDING row를 폴링해 발행한다.
- */
 @Getter
 @Entity
 @Table(
@@ -38,11 +34,6 @@ public class OutboxMessage extends BaseTimeEntity {
     @Column(name = "event_type", nullable = false, length = 64)
     private String eventType;
 
-    /**
-     * 직렬화된 이벤트 JSON을 담는 불투명 blob. relay가 통째로 읽어 역직렬화만 하고
-     * DB에서 JSON 경로 쿼리를 하지 않으므로 네이티브 JSON 타입이 아닌 TEXT로 저장한다.
-     * (네이티브 JSON 타입은 H2/MySQL의 바인딩 semantics가 달라 이식성 문제를 유발한다.)
-     */
     @Column(name = "payload", columnDefinition = "TEXT")
     private String payload;
 
@@ -74,10 +65,6 @@ public class OutboxMessage extends BaseTimeEntity {
         this.nextAttemptAt = Objects.requireNonNull(nextAttemptAt, "nextAttemptAt must not be null");
     }
 
-    /**
-     * status=PENDING, attempts=0, nextAttemptAt=now로 생성.
-     * 테스트 용이성을 위해 now를 파라미터로 받는다(도메인 내부 LocalDateTime.now() 금지).
-     */
     public static OutboxMessage create(final String eventType, final String payload, final LocalDateTime now) {
         return new OutboxMessage(eventType, payload, now);
     }
@@ -88,11 +75,6 @@ public class OutboxMessage extends BaseTimeEntity {
         this.lastError = null;
     }
 
-    /**
-     * 발행 실패 기록. attempts를 증가시키고 maxAttempts에 도달하면 FAILED(데드레터),
-     * 아니면 PENDING을 유지하며 nextAttemptAt을 지수 백오프(now + 2^attempts초)로 미룬다.
-     * maxAttempts=5 기준 재시도 간격은 2, 4, 8, 16초다.
-     */
     public void recordFailure(final String error, final LocalDateTime now) {
         Objects.requireNonNull(now, "now must not be null");
         this.attempts++;
@@ -101,7 +83,6 @@ public class OutboxMessage extends BaseTimeEntity {
             this.status = OutboxStatus.FAILED;
             return;
         }
-        // 여기 도달 시 attempts < maxAttempts이므로 시프트 오버플로 걱정이 없다.
         this.nextAttemptAt = now.plusSeconds(1L << this.attempts);
     }
 }
