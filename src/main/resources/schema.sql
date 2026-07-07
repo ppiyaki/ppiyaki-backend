@@ -176,7 +176,7 @@
         status varchar(16) not null,
         event_type varchar(64) not null,
         last_error TEXT,
-        payload JSON,
+        payload TEXT,
         primary key (id)
     ) engine=InnoDB;
 

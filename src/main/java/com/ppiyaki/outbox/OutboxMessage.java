@@ -17,8 +17,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * Transactional Outbox 메시지. 도메인 트랜잭션과 같은 트랜잭션에서 INSERT되고,
- * 별도 relay가 PENDING row를 클레임해 발행한다(다음 단계에서 wiring).
+ * Transactional Outbox 메시지. 도메인 트랜잭션과 같은 트랜잭션에서 INSERT되고({@link OutboxService#enqueue}),
+ * 별도 relay({@link MedicationCompleteOutboxRelay})가 PENDING row를 클레임해 발행한다.
  */
 @Getter
 @Entity
@@ -42,7 +42,12 @@ public class OutboxMessage extends BaseTimeEntity {
     @Column(name = "event_type", nullable = false, length = 64)
     private String eventType;
 
-    @Column(name = "payload", columnDefinition = "JSON")
+    /**
+     * 직렬화된 이벤트 JSON을 담는 불투명 blob. relay가 통째로 읽어 역직렬화만 하고
+     * DB에서 JSON 경로 쿼리를 하지 않으므로 네이티브 JSON 타입이 아닌 TEXT로 저장한다.
+     * (네이티브 JSON 타입은 H2/MySQL의 바인딩 semantics가 달라 이식성 문제를 유발한다.)
+     */
+    @Column(name = "payload", columnDefinition = "TEXT")
     private String payload;
 
     @Enumerated(EnumType.STRING)
