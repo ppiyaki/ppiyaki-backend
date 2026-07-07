@@ -165,6 +165,23 @@
     alter table notifications
        add constraint uk_notifications_dedup unique (user_id, category, senior_id, target_date, meal_slot, schedule_id);
 
+    create table outbox_message (
+        attempts integer not null,
+        max_attempts integer not null,
+        created_at datetime(6),
+        id bigint not null auto_increment,
+        next_attempt_at datetime(6) not null,
+        processed_at datetime(6),
+        updated_at datetime(6),
+        status varchar(16) not null,
+        event_type varchar(64) not null,
+        last_error TEXT,
+        payload JSON,
+        primary key (id)
+    ) engine=InnoDB;
+
+    create index idx_outbox_message_status_next_attempt on outbox_message (status, next_attempt_at);
+
     create table oauth_identities (
         created_at datetime(6),
         id bigint not null auto_increment,
