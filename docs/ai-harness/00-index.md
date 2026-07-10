@@ -38,6 +38,7 @@
   - `docs/features/care-relation-invite.md`: 보호자 연동 초대 코드
   - `docs/features/pet-gamification.md`: 펫(삐약이) 게이미피케이션 시스템
   - `docs/features/chat-quick-messages.md`: 단발 채팅 API (텍스트/음성, 임시 세션 자동 생성)
+  - `docs/features/user-timezone.md`: 사용자별 타임존 지원 (알림 현지 시간 발송)
 - `docs/decisions/`: Architecture Decision Records (ADR). 횡단 결정의 영속 이력
 - `docs/error-codes.md`: API 에러 코드 목록 (프론트엔드 참고용, ErrorCode enum과 동기화)
 - `CLAUDE.md`: Claude Code 세션 자동 로드 룰 요약
