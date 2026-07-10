@@ -2,7 +2,7 @@
 feature: 사용자별 타임존 지원
 slug: user-timezone
 status: draft
-owner: @dohyeon
+owner: "@dohyeon"
 scope: user
 related_issues: [464]
 related_prs: []
@@ -25,17 +25,17 @@ last_reviewed: 2026-07-09
 ### 기능 요구사항
 - [ ] User 엔티티에 `timezone` 필드 추가 (IANA 타임존 ID, 기본값 `Asia/Seoul`)
 - [ ] 본인 타임존 조회/수정 API 제공 (기존 `PUT /api/v1/users/me` 확장 또는 별도 엔드포인트)
-- [ ] 보호자가 연동된 시니어의 타임존을 수정할 수 있다
+- [ ] 보호자가 연동된 시니어의 타임존을 수정할 수 있다 (`PUT /api/v1/users/{seniorId}` — 보호자 역할 + 활성 `CareRelation` 존재 필수, 연동된 해당 시니어만 수정 가능. 관계 없으면 403 `CARE_001`, 시니어 미존재 시 404)
 - [ ] 유효하지 않은 타임존 ID 입력 시 400 응답
-- [ ] MedicationReminderScheduler가 사용자별 타임존 기준으로 현재 시간을 비교한다
-- [ ] MedicationDelayScheduler가 사용자별 타임존 기준으로 지연 판정한다
+- [ ] MedicationReminderScheduler가 사용자별 타임존 기준으로 `LocalDate`와 `LocalTime`을 계산하여 현재 시간을 비교한다
+- [ ] MedicationDelayScheduler가 사용자별 타임존 기준으로 `LocalDate`와 `LocalTime`을 계산하여 지연 판정한다
 - [ ] FamilySafetyScheduler는 절대 시간(마지막 활동 시각) 기반이므로 타임존 영향 없음 확인
 - [ ] 선택 가능한 타임존 목록 조회 API 제공 (`GET /api/v1/timezones`)
 - [ ] `GET /api/v1/users/me` 응답에 `timezone` 노출
 
 ### 비기능 요구사항
 - 스케줄러 실행 주기(매 분)는 유지. 사용자 수 증가 시 타임존별 그룹핑으로 쿼리 최적화 고려.
-- 기존 사용자 데이터 마이그레이션 불필요 (DB 기본값으로 처리).
+- 스키마 마이그레이션(컬럼 추가)은 필요하나, 기존 행의 데이터 백필은 DB 기본값(`'Asia/Seoul'`)으로 자동 처리되어 별도 데이터 마이그레이션 스크립트 불필요.
 
 ## 4) 범위 / 비범위 (중요)
 ### 포함
@@ -57,20 +57,22 @@ last_reviewed: 2026-07-09
 - 식사시간(`breakfastTime` 등)은 기존 `LocalTime` 유지 — 사용자 현지 시간 기준으로 해석
 
 ### 5-2) API 엔드포인트
+
 | Method | Path | 설명 | 인증 | Req | Res |
 |---|---|---|---|---|---|
 | GET | /api/v1/timezones | 선택 가능한 타임존 목록 조회 | 불필요 | - | `List<TimezoneResponse>` |
 | PUT | /api/v1/users/me | 본인 프로필 수정 (기존 API에 `timezone` 필드 추가) | 필수 | `ProfileUpdateRequest` + `timezone` | `UserMeResponse` |
-| PUT | /api/v1/users/{seniorId} | 보호자가 시니어 정보 수정 (기존 API에 `timezone` 추가) | 필수 | `SeniorProfileUpdateRequest` + `timezone` | `UserMeResponse` |
+| PUT | /api/v1/users/{seniorId} | 보호자가 시니어 정보 수정 (기존 API에 `timezone` 추가) | 필수(보호자 역할 + 활성 CareRelation) | `SeniorProfileUpdateRequest` + `timezone` | `UserMeResponse` |
 
-- `TimezoneResponse(id, label, utcOffset)` — 예: `("Asia/Seoul", "서울 (UTC+9)", "+09:00")`
+- `TimezoneResponse(id, label)` — `id`는 IANA 타임존 ID (예: `"Asia/Seoul"`), `label`은 표시용 (예: `"서울 (UTC+9)"`)
+- 클라이언트는 `id`(IANA ID)를 기준으로 저장/표시한다. `label`은 표시 보조용이며 오프셋은 서버 현재 시각 기준으로 계산된다.
 - 목록은 서버가 제공하는 고정 리스트. 사용자가 이 중에서 선택하여 설정한다.
 
 ### 5-3) 외부 연동
 - 없음
 
 ### 5-4) 데이터 흐름 / 시퀀스
-```
+```text
 [매 분 스케줄러 실행]
   → 활성 MedicationSchedule 조회 (User fetch join)
   → 각 사용자별: LocalTime.now(ZoneId.of(user.timezone))으로 현재 현지 시간 계산
@@ -90,7 +92,8 @@ last_reviewed: 2026-07-09
 ## 7) 테스트 전략
 - 도메인 단위 테스트: `User.getZoneId()` 정상/잘못된 타임존 케이스
 - 서비스 단위 테스트: 스케줄러가 다른 타임존 사용자에게 올바른 시점에 알림 발송하는지 검증 (Clock mock)
-- E2E (RestAssured): 타임존 설정 API 성공, 유효하지 않은 타임존 400, 미인증 401
+- E2E (RestAssured): 타임존 설정 API 성공, 유효하지 않은 타임존 400, 미인증 401, 보호자-시니어 연동 없이 수정 시 403, 시니어 미존재 시 404
+- 날짜 경계 테스트: 사용자 타임존의 자정 전후에서 지연 대상 날짜가 올바르게 판정되는지 검증
 
 ## 8) 오픈 질문
 
