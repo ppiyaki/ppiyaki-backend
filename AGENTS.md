@@ -92,7 +92,7 @@
 ## 5) 워크플로우 5줄 요약
 1. **이슈부터** — `.github/ISSUE_TEMPLATE/task.md`로 생성, 제목은 "동사 원형 + 목적어".
 2. **브랜치** — `develop`에서 `<type>/<요약>-#<이슈번호>` 분기.
-3. **커밋** — AngularJS 컨벤션(`type: 제목`).
+3. **커밋** — Conventional Commits(`type: 제목`).
 4. **푸시 전 검증** — `./gradlew checkstyleMain spotlessCheck test` 통과.
 5. **PR** — 템플릿의 `AS-IS`/`TO-BE` 채우고 라벨 부여 후 리뷰 요청 → Squash merge.
 
@@ -110,10 +110,10 @@ docker compose up -d
 # 포맷 자동 수정
 ./gradlew spotlessApply
 
-# GitHub CLI 흐름
-gh issue create --title "..." --label "task,type:*,scope:*"
-gh pr create --base develop --title "type(scope): 제목" --body "..."
-gh pr edit <num> --add-label "type:*,scope:*,ai-generated"
+# GitHub CLI 흐름 (type:*, scope:*는 실제 값으로 대체)
+gh issue create --title "..." --label "task,type:feat,scope:user"
+gh pr create --base develop --title "feat(user): 제목" --body "..."
+gh pr edit <num> --add-label "type:feat,scope:user,ai-generated"
 gh pr merge <num> --squash --delete-branch
 ```
 
