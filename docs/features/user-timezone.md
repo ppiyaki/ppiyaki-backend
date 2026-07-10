@@ -1,12 +1,12 @@
 ---
 feature: 사용자별 타임존 지원
 slug: user-timezone
-status: draft
+status: approved
 owner: "@dohyeon"
 scope: user
 related_issues: [464]
 related_prs: []
-last_reviewed: 2026-07-09
+last_reviewed: 2026-07-10
 ---
 
 # 사용자별 타임존 지원
@@ -24,8 +24,8 @@ last_reviewed: 2026-07-09
 ## 3) 요구사항
 ### 기능 요구사항
 - [ ] User 엔티티에 `timezone` 필드 추가 (IANA 타임존 ID, 기본값 `Asia/Seoul`)
-- [ ] 본인 타임존 조회/수정 API 제공 (기존 `PUT /api/v1/users/me` 확장 또는 별도 엔드포인트)
-- [ ] 보호자가 연동된 시니어의 타임존을 수정할 수 있다 (`PUT /api/v1/users/{seniorId}` — 보호자 역할 + 활성 `CareRelation` 존재 필수, 연동된 해당 시니어만 수정 가능. 관계 없으면 403 `CARE_001`, 시니어 미존재 시 404)
+- [ ] 본인 타임존 수정 API 제공 (`PUT /api/v1/users/me/timezone`, 별도 엔드포인트)
+- [ ] 보호자가 연동된 시니어의 타임존을 수정할 수 있다 (`PUT /api/v1/users/{seniorId}/timezone` — 보호자 역할 + 활성 `CareRelation` 존재 필수, 연동된 해당 시니어만 수정 가능. 관계 없으면 403 `CARE_001`, 시니어 미존재 시 404)
 - [ ] 유효하지 않은 타임존 ID 입력 시 400 응답
 - [ ] MedicationReminderScheduler가 사용자별 타임존 기준으로 `LocalDate`와 `LocalTime`을 계산하여 현재 시간을 비교한다
 - [ ] MedicationDelayScheduler가 사용자별 타임존 기준으로 `LocalDate`와 `LocalTime`을 계산하여 지연 판정한다
@@ -61,9 +61,10 @@ last_reviewed: 2026-07-09
 | Method | Path | 설명 | 인증 | Req | Res |
 |---|---|---|---|---|---|
 | GET | /api/v1/timezones | 선택 가능한 타임존 목록 조회 | 불필요 | - | `List<TimezoneResponse>` |
-| PUT | /api/v1/users/me | 본인 프로필 수정 (기존 API에 `timezone` 필드 추가) | 필수 | `ProfileUpdateRequest` + `timezone` | `UserMeResponse` |
-| PUT | /api/v1/users/{seniorId} | 보호자가 시니어 정보 수정 (기존 API에 `timezone` 추가) | 필수(보호자 역할 + 활성 CareRelation) | `SeniorProfileUpdateRequest` + `timezone` | `UserMeResponse` |
+| PUT | /api/v1/users/me/timezone | 본인 타임존 수정 | 필수 | `TimezoneUpdateRequest` | `UserMeResponse` |
+| PUT | /api/v1/users/{seniorId}/timezone | 보호자가 연동 시니어 타임존 수정 | 필수(보호자 역할 + 활성 CareRelation) | `TimezoneUpdateRequest` | `UserMeResponse` |
 
+- `TimezoneUpdateRequest(timezone)` — IANA 타임존 ID 1개 필드. 서버 제공 목록에 없는 값이면 400.
 - `TimezoneResponse(id, label)` — `id`는 IANA 타임존 ID (예: `"Asia/Seoul"`), `label`은 표시용 (예: `"서울 (UTC+9)"`)
 - 클라이언트는 `id`(IANA ID)를 기준으로 저장/표시한다. `label`은 표시 보조용이며 오프셋은 서버 현재 시각 기준으로 계산된다.
 - 목록은 서버가 제공하는 고정 리스트. 사용자가 이 중에서 선택하여 설정한다.
@@ -96,11 +97,10 @@ last_reviewed: 2026-07-09
 - 날짜 경계 테스트: 사용자 타임존의 자정 전후에서 지연 대상 날짜가 올바르게 판정되는지 검증
 
 ## 8) 오픈 질문
-
-| # | 질문 | 선택지 | 담당/기한 |
-|---|---|---|---|
-| Q1 | 타임존 설정을 기존 프로필 수정 API에 합칠지, 별도 엔드포인트로 뺄지 | (a) 기존 PUT /me 확장 / (b) PUT /me/timezone 신설 | @dohyeon / 2026-07-10 |
-| Q2 | 보호자와 시니어의 타임존을 독립 관리할지, 시니어 기준으로 통일할지 | (a) 각자 독립 / (b) 시니어 기준 통일 | @dohyeon / 2026-07-10 |
+> 없음 (아래 결정 로그로 해소).
 
 ## 9) 결정 로그
 - 2026-07-09: 초안 작성 (status=draft). 타임존 저장 방식은 IANA ID(A안) 채택 — 서머타임 자동 대응을 위해.
+- 2026-07-10: Q1 해소 — 별도 엔드포인트(`PUT /me/timezone`, `PUT /{seniorId}/timezone`) 신설(b안). 프로필 수정과 관심사 분리. / 사용자 확인.
+- 2026-07-10: Q2 해소 — 타임존은 User 필드이므로 보호자/시니어 각자 저장되나, 복약 알림 발송 판정은 **시니어의 타임존만** 사용(보호자 타임존은 알림 로직에서 미사용). / 사용자 확인.
+- 2026-07-10: status=approved. 구현 착수 가능.

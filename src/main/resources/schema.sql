@@ -258,6 +258,7 @@
         nickname varchar(255),
         password varchar(255),
         profile_image_object_key varchar(255),
+        timezone varchar(40) not null default 'Asia/Seoul',
         auth_provider enum ('INVITE_ONLY','KAKAO','LOCAL') not null,
         care_mode enum ('AUTONOMOUS','MANAGED') not null,
         gender enum ('FEMALE','MALE','OTHER','UNKNOWN'),

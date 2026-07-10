@@ -5,6 +5,7 @@ import com.ppiyaki.user.controller.dto.CareModeUpdateRequest;
 import com.ppiyaki.user.controller.dto.MealTimesUpdateRequest;
 import com.ppiyaki.user.controller.dto.ProfileUpdateRequest;
 import com.ppiyaki.user.controller.dto.SeniorProfileUpdateRequest;
+import com.ppiyaki.user.controller.dto.TimezoneUpdateRequest;
 import com.ppiyaki.user.controller.dto.UserMeResponse;
 import com.ppiyaki.user.service.UserService;
 import jakarta.validation.Valid;
@@ -68,6 +69,23 @@ public class UserController {
             @Valid @RequestBody final MealTimesUpdateRequest request
     ) {
         return ResponseEntity.ok(userService.updateMealTimesForSenior(requesterId, seniorId, request));
+    }
+
+    @PutMapping("/me/timezone")
+    public ResponseEntity<UserMeResponse> updateMyTimezone(
+            @AuthenticationPrincipal final Long userId,
+            @Valid @RequestBody final TimezoneUpdateRequest request
+    ) {
+        return ResponseEntity.ok(userService.updateMyTimezone(userId, request));
+    }
+
+    @PutMapping("/{seniorId}/timezone")
+    public ResponseEntity<UserMeResponse> updateSeniorTimezone(
+            @AuthenticationPrincipal final Long requesterId,
+            @PathVariable final Long seniorId,
+            @Valid @RequestBody final TimezoneUpdateRequest request
+    ) {
+        return ResponseEntity.ok(userService.updateSeniorTimezone(requesterId, seniorId, request));
     }
 
     @DeleteMapping("/me")

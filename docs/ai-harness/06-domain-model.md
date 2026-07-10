@@ -80,6 +80,7 @@
 | 리포트 | Report | 보호자용 복약 리포트 (스키마 미정) |
 | 채팅 세션 | Chat Session | AI 챗봇과의 대화 단위. 마지막 메시지 후 5분 경과 시 만료 |
 | 채팅 메시지 | Chat Message | 세션 내 개별 메시지. 사용자(USER) 또는 AI 응답(ASSISTANT) |
+| 타임존 | Timezone | 사용자의 IANA 타임존 ID (`users.timezone`, 기본값 `Asia/Seoul`). 복약 알림 발송 판정은 **시니어의 타임존** 기준 현지 시간으로 계산. 서버 제공 목록(`SupportedTimezone`)에서만 선택 가능 |
 | 안부 알림 | Wellbeing Ping | 시니어가 보호자에게 1-tap으로 "잘 지내요" 신호를 보내는 능동적 알림. `NotificationCategory.WELLBEING_PING`. 푸시만 발송하며 `notifications` row를 만들지 않는다. Redis 기반 쿨다운 1분(보호자 수신자별 독립). 시스템 자동 발송인 가족 안전망 알림(`FAMILY_SAFETY`)과는 트리거 주체가 다르다 |
 | 처방전 검토 요청 알림 | Prescription Review Request Notification | careMode=MANAGED 시니어가 처방전을 등록한 직후 활성 보호자 전원에게 발송하는 푸시 + `notifications` row. `NotificationCategory.PRESCRIPTION_REVIEW_REQUEST`. `PrescriptionService.processAndCreate` AFTER_COMMIT에서 `PrescriptionReviewRequestedEvent` 발행 → `PrescriptionReviewRequestDispatcher`가 처리. `notification_settings.prescription_review_request_enabled=false`면 해당 보호자 skip. DUR 위험 검출 시 발송되는 `DUR_WARNING`과는 독립적인 카테고리 |
 
@@ -112,6 +113,7 @@
 | breakfast_time | time nullable | 시니어 식사 시간대(아침). Java는 `LocalTime`. 미설정 가능. Phase 1: 클라이언트가 schedule 등록 시 활용. Phase 2~3: 슬롯 매핑/자동 생성 (별도 spec). 변경 권한: 시니어 본인(`PUT /api/v1/users/me/meal-times`) 또는 연결된 보호자(`PUT /api/v1/users/{seniorId}/meal-times`, CareRelation 검증) |
 | lunch_time | time nullable | 시니어 식사 시간대(점심). 동일 |
 | dinner_time | time nullable | 시니어 식사 시간대(저녁). 동일 |
+| timezone | varchar(40) | IANA 타임존 ID (기본값 `Asia/Seoul`). 복약 알림 발송 판정 시 시니어의 타임존으로 현지 시간 계산. 서버 제공 목록(`SupportedTimezone` enum) 내 값만 허용. 변경 권한: 본인(`PUT /api/v1/users/me/timezone`) 또는 연결된 보호자(`PUT /api/v1/users/{seniorId}/timezone`, CareRelation 검증). 상세: `docs/features/user-timezone.md` |
 | notification_mode | varchar nullable | 알림 프리셋. Java는 `NotificationMode` enum(`BASIC_ALERT`/`INTENSIVE_CARE`). 시니어에만 적용. 온보딩 시 설정, 이후 개별 조정 가능 |
 | created_at / updated_at | timestamp | `BaseTimeEntity` |
 
@@ -431,6 +433,7 @@ erDiagram
         time breakfast_time "nullable"
         time lunch_time "nullable"
         time dinner_time "nullable"
+        varchar timezone "IANA ID, default Asia/Seoul"
         timestamp created_at
         timestamp updated_at
     }

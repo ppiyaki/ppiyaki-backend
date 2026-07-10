@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.Objects;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -23,6 +24,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor(access = AccessLevel.PACKAGE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User extends BaseTimeEntity {
+
+    public static final String DEFAULT_TIMEZONE = "Asia/Seoul";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -73,6 +76,9 @@ public class User extends BaseTimeEntity {
 
     @Column(name = "dinner_time")
     private LocalTime dinnerTime;
+
+    @Column(name = "timezone", nullable = false, length = 40)
+    private String timezone = DEFAULT_TIMEZONE;
 
     @Column(name = "last_active_at")
     private java.time.LocalDateTime lastActiveAt;
@@ -152,6 +158,14 @@ public class User extends BaseTimeEntity {
         this.breakfastTime = Objects.requireNonNull(breakfastTime, "breakfastTime must not be null");
         this.lunchTime = Objects.requireNonNull(lunchTime, "lunchTime must not be null");
         this.dinnerTime = Objects.requireNonNull(dinnerTime, "dinnerTime must not be null");
+    }
+
+    public void updateTimezone(final String timezone) {
+        this.timezone = Objects.requireNonNull(timezone, "timezone must not be null");
+    }
+
+    public ZoneId getZoneId() {
+        return ZoneId.of(this.timezone);
     }
 
     public void touchActiveAt(final java.time.LocalDateTime now) {

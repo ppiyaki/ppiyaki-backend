@@ -11,6 +11,7 @@ public record UserMeResponse(
         String profileImageUrl,
         boolean isOnboarded,
         String careMode,
+        String timezone,
         MealTimesResponse mealTimes
 ) {
 
@@ -21,6 +22,6 @@ public record UserMeResponse(
         final String careModeName = user.getCareMode() != null ? user.getCareMode().name() : null;
         final MealTimesResponse mealTimes = MealTimesResponse.from(user);
         return new UserMeResponse(user.getId(), user.getNickname(), roleName, genderName,
-                user.getProfileImage(), profileImageUrl, onboarded, careModeName, mealTimes);
+                user.getProfileImage(), profileImageUrl, onboarded, careModeName, user.getTimezone(), mealTimes);
     }
 }

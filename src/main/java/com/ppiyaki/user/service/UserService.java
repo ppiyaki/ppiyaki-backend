@@ -7,9 +7,11 @@ import com.ppiyaki.user.controller.dto.CareModeResponse;
 import com.ppiyaki.user.controller.dto.MealTimesUpdateRequest;
 import com.ppiyaki.user.controller.dto.ProfileUpdateRequest;
 import com.ppiyaki.user.controller.dto.SeniorProfileUpdateRequest;
+import com.ppiyaki.user.controller.dto.TimezoneUpdateRequest;
 import com.ppiyaki.user.controller.dto.UserMeResponse;
 import com.ppiyaki.user.domain.CareMode;
 import com.ppiyaki.user.domain.CareRelation;
+import com.ppiyaki.user.domain.SupportedTimezone;
 import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.domain.UserRole;
 import com.ppiyaki.user.repository.CareRelationRepository;
@@ -120,6 +122,39 @@ public class UserService {
         senior.updateNickname(request.nickname());
         senior.updateGender(request.gender());
         return toUserMeResponse(senior);
+    }
+
+    @Transactional
+    public UserMeResponse updateMyTimezone(final Long userId, final TimezoneUpdateRequest request) {
+        final User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        validateTimezone(request.timezone());
+        user.updateTimezone(request.timezone());
+        return toUserMeResponse(user);
+    }
+
+    @Transactional
+    public UserMeResponse updateSeniorTimezone(
+            final Long requesterId,
+            final Long seniorId,
+            final TimezoneUpdateRequest request
+    ) {
+        final User senior = userRepository.findById(seniorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        careRelationRepository.findByCaregiverIdAndSeniorIdAndDeletedAtIsNull(requesterId, seniorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CARE_RELATION_NOT_FOUND));
+
+        validateTimezone(request.timezone());
+        senior.updateTimezone(request.timezone());
+        return toUserMeResponse(senior);
+    }
+
+    private void validateTimezone(final String timezone) {
+        if (!SupportedTimezone.isSupported(timezone)) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "Unsupported timezone: " + timezone);
+        }
     }
 
     private UserMeResponse toUserMeResponse(final User user) {
