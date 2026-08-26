@@ -80,7 +80,8 @@ public class DurWarningDispatcher {
                 continue;
             }
             if (notificationRepository.existsByUserIdAndCategoryAndSeniorIdAndTargetDateAndScheduleId(
-                    caregiverId, NotificationCategory.DUR_WARNING, seniorId, null, medicineId)) {
+                    caregiverId, NotificationCategory.DUR_WARNING, seniorId,
+                    Notification.SENTINEL_TARGET_DATE, medicineId)) {
                 continue;
             }
 

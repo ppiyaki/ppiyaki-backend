@@ -71,6 +71,8 @@ class MedicationLogServicePhase2Test {
     @Mock
     private ApplicationEventPublisher eventPublisher;
     @Mock
+    private com.ppiyaki.outbox.OutboxService outboxService;
+    @Mock
     private com.ppiyaki.notification.repository.NotificationRepository notificationRepository;
     @Spy
     private MeterRegistry meterRegistry = new SimpleMeterRegistry();

@@ -59,6 +59,8 @@ class MedicationLogServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
     @Mock
+    private com.ppiyaki.outbox.OutboxService outboxService;
+    @Mock
     private com.ppiyaki.notification.repository.NotificationRepository notificationRepository;
     @org.mockito.Spy
     private io.micrometer.core.instrument.MeterRegistry meterRegistry = new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
@@ -98,6 +100,9 @@ class MedicationLogServiceTest {
         assertThat(saved.getStatus()).isEqualTo(LogStatus.TAKEN);
         assertThat(saved.getSeniorId()).isEqualTo(SENIOR_ID);
         verify(eventPublisher).publishEvent(any(MedicationTakenEvent.class));
+        // 첫 TAKEN 확정 시 알림용 outbox 적재도 같은 지점에서 1회 발생
+        verify(outboxService).enqueue(
+                eq(com.ppiyaki.outbox.OutboxService.MEDICATION_COMPLETE), any(MedicationTakenEvent.class));
     }
 
     @Test
@@ -194,6 +199,7 @@ class MedicationLogServiceTest {
 
         // then
         verify(eventPublisher, never()).publishEvent(any(MedicationTakenEvent.class));
+        verify(outboxService, never()).enqueue(any(), any());
     }
 
     @Test
