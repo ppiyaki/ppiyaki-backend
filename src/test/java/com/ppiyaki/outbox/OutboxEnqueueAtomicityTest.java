@@ -61,8 +61,8 @@ class OutboxEnqueueAtomicityTest {
 
         final MedicationTakenEvent event = new MedicationTakenEvent(999902L, LocalDate.now());
 
-        transactionTemplate.executeWithoutResult(status ->
-                outboxService.enqueue(OutboxService.MEDICATION_COMPLETE, event));
+        transactionTemplate.executeWithoutResult(status -> outboxService.enqueue(OutboxService.MEDICATION_COMPLETE,
+                event));
 
         assertThat(outboxMessageRepository.count()).isEqualTo(1);
         final OutboxMessage saved = outboxMessageRepository.findAll().get(0);
@@ -77,8 +77,7 @@ class OutboxEnqueueAtomicityTest {
 
         final MedicationTakenEvent event = new MedicationTakenEvent(999903L, LocalDate.now());
 
-        assertThatThrownBy(() ->
-                outboxService.enqueue(OutboxService.MEDICATION_COMPLETE, event))
+        assertThatThrownBy(() -> outboxService.enqueue(OutboxService.MEDICATION_COMPLETE, event))
                 .isInstanceOf(IllegalTransactionStateException.class);
 
         assertThat(outboxMessageRepository.count()).isZero();

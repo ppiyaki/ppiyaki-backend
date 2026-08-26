@@ -1,5 +1,8 @@
 package com.ppiyaki.notification.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.ppiyaki.common.auth.JwtProvider;
 import com.ppiyaki.medication.domain.DosageUnit;
 import com.ppiyaki.medication.domain.MealSlot;
@@ -20,9 +23,6 @@ import com.ppiyaki.user.domain.User;
 import com.ppiyaki.user.domain.UserRole;
 import com.ppiyaki.user.repository.CareRelationRepository;
 import com.ppiyaki.user.repository.UserRepository;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import java.math.BigDecimal;
@@ -189,8 +189,8 @@ class MedicationCompleteNotificationE2ETest {
                 caregiverId, seniorId, "완료", "아침 복약 완료", today, MealSlot.BREAKFAST.name()));
 
         assertThatThrownBy(() -> notificationRepository.saveAndFlush(
-                        Notification.createForMedicationComplete(
-                                caregiverId, seniorId, "완료2", "아침 복약 완료2", today, MealSlot.BREAKFAST.name())))
+                Notification.createForMedicationComplete(
+                        caregiverId, seniorId, "완료2", "아침 복약 완료2", today, MealSlot.BREAKFAST.name())))
                 .isInstanceOf(DataIntegrityViolationException.class);
 
         final long persisted = notificationRepository.findAll().stream()

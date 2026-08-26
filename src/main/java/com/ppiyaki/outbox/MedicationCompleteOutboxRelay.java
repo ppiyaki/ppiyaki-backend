@@ -24,8 +24,7 @@ public class MedicationCompleteOutboxRelay {
     }
 
     @Scheduled(
-            fixedDelayString = "${outbox.relay.fixed-delay-ms:2000}",
-            initialDelayString = "${outbox.relay.initial-delay-ms:5000}"
+            fixedDelayString = "${outbox.relay.fixed-delay-ms:2000}", initialDelayString = "${outbox.relay.initial-delay-ms:5000}"
     )
     public void poll() {
 
