@@ -21,7 +21,7 @@ public record NotificationItemResponse(
         // dedup sentinel은 내부 저장용이므로 API 응답에서는 기존 계약대로 null로 되돌린다.
         final Long seniorId = notification.getSeniorId() != null
                 && notification.getSeniorId() == Notification.SENTINEL_ID
-                ? null : notification.getSeniorId();
+                        ? null : notification.getSeniorId();
         final String mealSlot = Notification.SENTINEL_MEAL_SLOT.equals(notification.getMealSlot())
                 ? null : notification.getMealSlot();
         return new NotificationItemResponse(

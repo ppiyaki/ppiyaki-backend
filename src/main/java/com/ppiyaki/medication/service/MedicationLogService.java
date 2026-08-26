@@ -213,7 +213,8 @@ public class MedicationLogService {
                 "transition", transition,
                 "is_proxy", String.valueOf(isProxy)).increment();
 
-        return MedicationLogResponse.from(medicationLog, photoUrlAssembler.toFullUrl(medicationLog.getPhotoObjectKey()));
+        return MedicationLogResponse.from(medicationLog, photoUrlAssembler.toFullUrl(medicationLog
+                .getPhotoObjectKey()));
     }
 
     private static String resolveTransition(final LogStatus current, final LogStatus previous) {
