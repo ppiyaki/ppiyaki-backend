@@ -59,3 +59,18 @@ jobs:
             }' -f p="$PROJECT_ID" -f i="$ITEM_ID" -f f="$STATUS_FIELD" -f o="$OPT" \
             --jq '.data.updateProjectV2ItemFieldValue.projectV2Item.id' > /dev/null
           echo "Status = $LABEL 설정 완료"
+
+      - name: 실패 알림
+        if: ${{ failure() }}
+        env:
+          BOT: ${{ secrets.DISCORD_BOT_TOKEN }}
+          CH: "1545362536105254954"
+          REPO: ${{ github.repository }}
+          WF: ${{ github.workflow }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -z "${BOT:-}" ] && exit 0
+          MSG="⚠️ **$WF** 실패"$'\n'"레포 $REPO"$'\n'"$RUN"
+          jq -n --arg m "$MSG" '{content:$m, allowed_mentions:{parse:[]}}' > /tmp/a.json
+          curl -sS -X POST -H "Authorization: Bot $BOT" -H "Content-Type: application/json" -A curl \
+            "https://discord.com/api/v10/channels/$CH/messages" --data @/tmp/a.json > /dev/null
