@@ -81,7 +81,13 @@ jobs:
           THREAD_ID="$(printf '%s' "$BODY" | sed -nE "s/.*${MARKER_RE}.*/\1/p" | head -1)"
 
           if [ "$ACTION" = "opened" ] || [ -z "$THREAD_ID" ]; then
-            NAME="$(printf '%s #%s %s' "$PREFIX" "$NUM" "$TITLE" | cut -c1-95)"
+            # 제목이 길면 제목만 자르고 번호는 항상 끝에 남긴다 (포럼 제목 100자 상한)
+            SUFFIX=" #$NUM"
+            HEAD="$PREFIX "
+            AVAIL=$(( 100 - ${#HEAD} - ${#SUFFIX} ))
+            # cut -c 는 구현에 따라 바이트 단위라 한글이 깨진다. 파이썬으로 문자 단위 절단.
+            SHORT="$(TITLE="$TITLE" AVAIL="$AVAIL" python3 -c 'import os; t=os.environ["TITLE"]; n=int(os.environ["AVAIL"]); print(t if len(t)<=n else t[:n-1]+"\u2026")')"
+            NAME="${HEAD}${SHORT}${SUFFIX}"
             SNIP="$(printf '%s' "$BODY" | sed -E 's/<!--.*-->//g' | head -c 1500)"
             [ -z "$SNIP" ] && SNIP="_본문 없음_"
             TAGS="$(build_tags)"
