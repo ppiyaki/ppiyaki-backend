@@ -1,41 +1,61 @@
 name: 프로젝트 자동 등록
 
-# 새 이슈를 "삐약이 백로그" 프로젝트에 넣고 Status를 Backlog로 둔다.
+# 이슈를 "삐약이 백로그" 프로젝트에 넣고 Status 를 상태에 맞게 둔다.
+#
+# GitHub 내장 자동화(Item closed)는 닫힐 때 Done 으로 보내주지만
+# 다시 열었을 때 되돌리는 자동화가 없다. 그래서 열림·닫힘·재오픈을
+# 모두 여기서 처리해 한 곳에서 관리한다.
 
 on:
   issues:
-    types: [opened]
+    types: [opened, closed, reopened]
+
+concurrency:
+  group: project-status-${{ github.event.issue.number }}
+  cancel-in-progress: false
 
 jobs:
-  add:
+  sync:
     runs-on: ubuntu-latest
     if: ${{ !github.event.issue.pull_request }}
     steps:
-      - name: 프로젝트에 추가
+      - name: 프로젝트 반영
         env:
           GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
           ISSUE_ID: ${{ github.event.issue.node_id }}
+          ACTION: ${{ github.event.action }}
+          NUM: ${{ github.event.issue.number }}
           PROJECT_ID: PVT_kwDOD9XfVM4BiaWJ
           STATUS_FIELD: PVTSSF_lADOD9XfVM4BiaWJzhhSgzY
-          BACKLOG_OPTION: "274325a8"
+          OPT_BACKLOG: "274325a8"
+          OPT_TODO: "9e01b834"
+          OPT_DONE: "d02f49a3"
         run: |
-          set -euo pipefail
+          set -uo pipefail
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "PROJECT_TOKEN 시크릿이 없습니다. 건너뜁니다."
-            exit 0
+            echo "PROJECT_TOKEN 이 없어 건너뜁니다."; exit 0
           fi
 
+          # 이미 들어 있으면 그 item 이 돌아오고, 없으면 새로 추가된다(멱등).
           ITEM_ID=$(gh api graphql -f query='
             mutation($p:ID!, $c:ID!){
               addProjectV2ItemById(input:{projectId:$p, contentId:$c}){ item { id } }
             }' -f p="$PROJECT_ID" -f c="$ISSUE_ID" --jq '.data.addProjectV2ItemById.item.id')
-          echo "추가된 item: $ITEM_ID"
+          if [ -z "$ITEM_ID" ]; then echo "item 획득 실패"; exit 1; fi
+          echo "이슈 #$NUM → item $ITEM_ID"
+
+          case "$ACTION" in
+            opened)   OPT="$OPT_BACKLOG"; LABEL="Backlog" ;;
+            closed)   OPT="$OPT_DONE";    LABEL="Done" ;;
+            reopened) OPT="$OPT_TODO";    LABEL="Todo" ;;
+            *)        echo "처리 대상 아님"; exit 0 ;;
+          esac
 
           gh api graphql -f query='
             mutation($p:ID!, $i:ID!, $f:ID!, $o:String!){
               updateProjectV2ItemFieldValue(input:{
-                projectId:$p, itemId:$i, fieldId:$f,
-                value:{singleSelectOptionId:$o}
+                projectId:$p, itemId:$i, fieldId:$f, value:{singleSelectOptionId:$o}
               }){ projectV2Item { id } }
-            }' -f p="$PROJECT_ID" -f i="$ITEM_ID" -f f="$STATUS_FIELD" -f o="$BACKLOG_OPTION" --jq '.data.updateProjectV2ItemFieldValue.projectV2Item.id'
-          echo "Status = Backlog 설정 완료"
+            }' -f p="$PROJECT_ID" -f i="$ITEM_ID" -f f="$STATUS_FIELD" -f o="$OPT" \
+            --jq '.data.updateProjectV2ItemFieldValue.projectV2Item.id' > /dev/null
+          echo "Status = $LABEL 설정 완료"
