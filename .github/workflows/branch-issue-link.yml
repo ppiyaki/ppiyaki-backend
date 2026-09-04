@@ -1,0 +1,106 @@
+name: 브랜치로 이슈 연동
+
+# 브랜치 이름 끝의 -#123 으로 이슈를 찾아 두 가지를 한다.
+#   push        → 진행중으로 표시
+#   PR 머지      → 이슈 닫기 (닫기 키워드를 깜빡해도 닫히도록)
+# 담당자 배정은 "하겠다는 의도"지만 푸시는 "실제로 손댔다는 사실"이라
+# 진행 상태의 근거로 더 정확하다.
+#
+# 이 레포 관례: fix/notification-mealslot-#455, feat/user-me-caremode-#433
+
+on:
+  push:
+    branches-ignore: [develop, main]
+  pull_request:
+    types: [closed]
+
+permissions:
+  issues: write
+
+jobs:
+  mark:
+    if: ${{ github.event_name == 'push' && !github.event.deleted }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 진행중 표시
+        env:
+          BOT: ${{ secrets.DISCORD_BOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref_name }}
+          PROJECT_ID: PVT_kwDOD9XfVM4BiaWJ
+          STATUS_FIELD: PVTSSF_lADOD9XfVM4BiaWJzhhSgzY
+          OPT_INPROGRESS: "6c3e6f76"
+          T_BACKLOG: "1483364420011950110"
+          T_DOING: "1545358689467236406"
+          T_DONE: "1483364439058157620"
+        run: |
+          set -uo pipefail
+          NUM="$(printf '%s' "$REF" | sed -nE 's/.*-#([0-9]+)$/\1/p')"
+          if [ -z "$NUM" ]; then
+            echo "브랜치 '$REF' 에 -#번호 가 없습니다. 건너뜁니다."; exit 0
+          fi
+          echo "브랜치 $REF → 이슈 #$NUM"
+
+          STATE="$(gh issue view "$NUM" --repo "$REPO" --json state --jq '.state' 2>/dev/null || echo "")"
+          if [ "$STATE" != "OPEN" ]; then
+            echo "이슈 #$NUM 상태가 '$STATE' 라 건너뜁니다."; exit 0
+          fi
+
+          # ── 프로젝트 Status = In Progress
+          if [ -n "${GH_TOKEN:-}" ]; then
+            IID="$(gh issue view "$NUM" --repo "$REPO" --json id --jq '.id')"
+            ITEM="$(gh api graphql -f query='
+              mutation($p:ID!,$c:ID!){ addProjectV2ItemById(input:{projectId:$p,contentId:$c}){ item { id } } }' \
+              -f p="$PROJECT_ID" -f c="$IID" --jq '.data.addProjectV2ItemById.item.id' 2>/dev/null || true)"
+            if [ -n "$ITEM" ]; then
+              gh api graphql -f query='
+                mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){
+                  updateProjectV2ItemFieldValue(input:{projectId:$p,itemId:$i,fieldId:$f,
+                    value:{singleSelectOptionId:$o}}){ projectV2Item { id } } }' \
+                -f p="$PROJECT_ID" -f i="$ITEM" -f f="$STATUS_FIELD" -f o="$OPT_INPROGRESS" >/dev/null 2>&1 \
+                && echo "Status = In Progress"
+            fi
+          fi
+
+          # ── 디스코드 스레드 태그
+          if [ -z "${BOT:-}" ]; then echo "봇 토큰 없음. 태그는 건너뜁니다."; exit 0; fi
+          TH="$(gh issue view "$NUM" --repo "$REPO" --json body --jq '.body' \
+                | sed -nE 's/.*<!-- discord-thread: ([0-9]+) -->.*/\1/p' | head -1)"
+          if [ -z "$TH" ]; then echo "스레드 마커가 없습니다."; exit 0; fi
+
+          API=https://discord.com/api/v10
+          AUTH=(-H "Authorization: Bot $BOT" -H "Content-Type: application/json" -A curl)
+          CUR="$(curl -sS "${AUTH[@]}" "$API/channels/$TH")"
+          # 상태 태그는 서로 배타적이다. 기존 상태 태그를 걷어내고 진행중만 남긴다.
+          NEW="$(printf '%s' "$CUR" | jq -c --arg d "$T_DOING" --arg a "$T_BACKLOG" --arg b "$T_DONE" \
+            '((.applied_tags // []) - [$a,$b,$d]) + [$d] | .[0:5]')"
+          echo "태그 $(printf '%s' "$CUR" | jq -c '.applied_tags // []') → $NEW"
+          jq -n --argjson t "$NEW" '{archived:false, applied_tags:$t}' > /tmp/p.json
+          curl -sS -X PATCH "${AUTH[@]}" "$API/channels/$TH" --data @/tmp/p.json \
+            | jq -r 'if .id then "스레드 갱신 완료" else "실패: \(.message)" end'
+
+  close:
+    # 브랜치 이름에 -#번호 가 있으면 PR 머지 시 그 이슈를 닫는다.
+    # 이슈가 닫히면 기존 워크플로가 디스코드 태그·프로젝트 Status 를 이어서 정리한다.
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 연관 이슈 닫기
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -uo pipefail
+          NUM="$(printf '%s' "$HEAD_REF" | sed -nE 's/.*-#([0-9]+)$/\1/p')"
+          if [ -z "$NUM" ]; then
+            echo "브랜치 '$HEAD_REF' 에 -#번호 가 없습니다. 건너뜁니다."; exit 0
+          fi
+          STATE="$(gh issue view "$NUM" --repo "$REPO" --json state --jq '.state' 2>/dev/null || echo "")"
+          if [ "$STATE" != "OPEN" ]; then
+            echo "이슈 #$NUM 상태가 '$STATE' 라 건너뜁니다."; exit 0
+          fi
+          gh issue close "$NUM" --repo "$REPO" -c "PR #${PR} 머지로 닫습니다."
+          echo "이슈 #$NUM 닫음"
