@@ -80,6 +80,21 @@ jobs:
           curl -sS -X PATCH "${AUTH[@]}" "$API/channels/$TH" --data @/tmp/p.json \
             | jq -r 'if .id then "스레드 갱신 완료" else "실패: \(.message)" end'
 
+      - name: 실패 알림
+        if: ${{ failure() }}
+        env:
+          BOT: ${{ secrets.DISCORD_BOT_TOKEN }}
+          CH: "1545362536105254954"
+          REPO: ${{ github.repository }}
+          WF: ${{ github.workflow }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -z "${BOT:-}" ] && exit 0
+          MSG="⚠️ **$WF** 실패"$'\n'"레포 $REPO"$'\n'"$RUN"
+          jq -n --arg m "$MSG" '{content:$m, allowed_mentions:{parse:[]}}' > /tmp/a.json
+          curl -sS -X POST -H "Authorization: Bot $BOT" -H "Content-Type: application/json" -A curl \
+            "https://discord.com/api/v10/channels/$CH/messages" --data @/tmp/a.json > /dev/null
+
   close:
     # 브랜치 이름에 -#번호 가 있으면 PR 머지 시 그 이슈를 닫는다.
     # 이슈가 닫히면 기존 워크플로가 디스코드 태그·프로젝트 Status 를 이어서 정리한다.
@@ -148,3 +163,18 @@ jobs:
               echo "스레드 완료 처리 및 보관"
             fi
           fi
+
+      - name: 실패 알림
+        if: ${{ failure() }}
+        env:
+          BOT: ${{ secrets.DISCORD_BOT_TOKEN }}
+          CH: "1545362536105254954"
+          REPO: ${{ github.repository }}
+          WF: ${{ github.workflow }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -z "${BOT:-}" ] && exit 0
+          MSG="⚠️ **$WF** 실패"$'\n'"레포 $REPO"$'\n'"$RUN"
+          jq -n --arg m "$MSG" '{content:$m, allowed_mentions:{parse:[]}}' > /tmp/a.json
+          curl -sS -X POST -H "Authorization: Bot $BOT" -H "Content-Type: application/json" -A curl \
+            "https://discord.com/api/v10/channels/$CH/messages" --data @/tmp/a.json > /dev/null
