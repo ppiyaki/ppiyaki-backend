@@ -77,10 +77,14 @@ jobs:
             printf '[%s]' "$out" | jq -c '.[0:5]'
           }
 
+          # 이벤트 페이로드의 본문은 낡을 수 있다. opened 와 labeled 가 거의 동시에
+          # 오면 두 실행이 모두 "마커 없음"으로 보고 스레드를 중복 생성한다.
+          # 그래서 마커는 항상 API 로 현재 본문을 다시 읽어 판단한다.
+          BODY="$(gh issue view "$NUM" --repo "$REPO" --json body --jq '.body')"
           MARKER_RE='<!-- discord-thread: ([0-9]+) -->'
           THREAD_ID="$(printf '%s' "$BODY" | sed -nE "s/.*${MARKER_RE}.*/\1/p" | head -1)"
 
-          if [ "$ACTION" = "opened" ] || [ -z "$THREAD_ID" ]; then
+          if [ -z "$THREAD_ID" ]; then
             # 제목이 길면 제목만 자르고 번호는 항상 끝에 남긴다 (포럼 제목 100자 상한)
             SUFFIX=" #$NUM"
             HEAD="$PREFIX "
