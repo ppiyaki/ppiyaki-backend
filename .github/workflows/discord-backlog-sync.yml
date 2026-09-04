@@ -25,6 +25,8 @@ env:
   TAG_BUG: "1483364468686716999"       # 버그
   TAG_FEAT: "1483364506594709526"      # 신규 기능
   TAG_ENHANCE: "1483364536684777622"   # 기능 개선
+  TAG_BE: "1545297365148373024"        # BE
+  TAG_FE: "1545297365148373025"        # FE
 
 jobs:
   sync:
@@ -52,15 +54,16 @@ jobs:
 
           # 레포 이름에서 BE/FE 접두어
           case "$REPO" in
-            *frontend*) PREFIX="[FE]" ;;
-            *backend*)  PREFIX="[BE]" ;;
-            *)          PREFIX="[--]" ;;
+            *frontend*) PREFIX="[FE]"; TAG_SIDE="$TAG_FE" ;;
+            *backend*)  PREFIX="[BE]"; TAG_SIDE="$TAG_BE" ;;
+            *)          PREFIX="[--]"; TAG_SIDE="" ;;
           esac
 
           # GitHub 라벨 → 포럼 태그 (셸만 사용, 중첩 heredoc 회피)
           build_tags () {
             local out=""
-            if [ "$STATE" = "closed" ]; then out="\"$TAG_DONE\""; else out="\"$TAG_PENDING\""; fi
+            [ -n "$TAG_SIDE" ] && out="\"$TAG_SIDE\","
+            if [ "$STATE" = "closed" ]; then out="$out\"$TAG_DONE\""; else out="$out\"$TAG_PENDING\""; fi
             case ",$LABELS," in
               *,type:fix,*|*,bug,*)                out="$out,\"$TAG_BUG\"" ;;
             esac
@@ -70,7 +73,8 @@ jobs:
             case ",$LABELS," in
               *,type:refactor,*)                   out="$out,\"$TAG_ENHANCE\"" ;;
             esac
-            printf '[%s]' "$out"
+            # 디스코드는 스레드당 태그 5개가 상한. 넘치면 뒤에서 자른다.
+            printf '[%s]' "$out" | jq -c '.[0:5]'
           }
 
           MARKER_RE='<!-- discord-thread: ([0-9]+) -->'
