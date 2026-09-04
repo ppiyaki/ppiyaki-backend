@@ -34,6 +34,12 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ !github.event.issue.pull_request }}
     steps:
+      - name: 매핑 파일만 체크아웃
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/discord-users.json
+          sparse-checkout-cone-mode: false
+
       - name: 디스코드 동기화
         env:
           BOT: ${{ secrets.DISCORD_BOT_TOKEN }}
@@ -100,7 +106,12 @@ jobs:
             [ -z "$SNIP" ] && SNIP="_본문 없음_"
             TAGS="$(build_tags)"
             # GitHub 로그인 → Discord 사용자 id. 없으면 멘션 없이 진행한다.
-            DUSER="$(jq -r --arg u "$USER" '.[$u] // ""' .github/discord-users.json 2>/dev/null)"
+            DUSER=""
+            if [ -f .github/discord-users.json ]; then
+              DUSER="$(jq -r --arg u "$USER" '.[$u] // ""' .github/discord-users.json 2>/dev/null || true)"
+            fi
+            [ "$DUSER" = "null" ] && DUSER=""
+            echo "작성자 $USER → discord ${DUSER:-(미등록)}"
             if [ -n "$DUSER" ]; then AUTHOR="<@${DUSER}>"; else AUTHOR="$USER"; fi
             MSG="$(printf '%s\n\n%s\n\n작성 %s' "$URL" "$SNIP" "$AUTHOR")"
             if [ -n "$DUSER" ]; then
