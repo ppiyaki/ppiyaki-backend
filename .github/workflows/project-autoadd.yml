@@ -1,0 +1,41 @@
+name: 프로젝트 자동 등록
+
+# 새 이슈를 "삐약이 백로그" 프로젝트에 넣고 Status를 Backlog로 둔다.
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.issue.pull_request }}
+    steps:
+      - name: 프로젝트에 추가
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          ISSUE_ID: ${{ github.event.issue.node_id }}
+          PROJECT_ID: PVT_kwDOD9XfVM4BiaWJ
+          STATUS_FIELD: PVTSSF_lADOD9XfVM4BiaWJzhhSgzY
+          BACKLOG_OPTION: "274325a8"
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "PROJECT_TOKEN 시크릿이 없습니다. 건너뜁니다."
+            exit 0
+          fi
+
+          ITEM_ID=$(gh api graphql -f query='
+            mutation($p:ID!, $c:ID!){
+              addProjectV2ItemById(input:{projectId:$p, contentId:$c}){ item { id } }
+            }' -f p="$PROJECT_ID" -f c="$ISSUE_ID" --jq '.data.addProjectV2ItemById.item.id')
+          echo "추가된 item: $ITEM_ID"
+
+          gh api graphql -f query='
+            mutation($p:ID!, $i:ID!, $f:ID!, $o:String!){
+              updateProjectV2ItemFieldValue(input:{
+                projectId:$p, itemId:$i, fieldId:$f,
+                value:{singleSelectOptionId:$o}
+              }){ projectV2Item { id } }
+            }' -f p="$PROJECT_ID" -f i="$ITEM_ID" -f f="$STATUS_FIELD" -f o="$BACKLOG_OPTION" --jq '.data.updateProjectV2ItemFieldValue.projectV2Item.id'
+          echo "Status = Backlog 설정 완료"
