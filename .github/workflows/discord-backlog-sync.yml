@@ -27,6 +27,7 @@ env:
   TAG_ENHANCE: "1483364536684777622"   # 기능 개선
   TAG_BE: "1545297365148373024"        # BE
   TAG_FE: "1545297365148373025"        # FE
+  TAG_AI: "1545302239147597956"        # AI
 
 jobs:
   sync:
@@ -73,6 +74,9 @@ jobs:
             case ",$LABELS," in
               *,type:refactor,*)                   out="$out,\"$TAG_ENHANCE\"" ;;
             esac
+            case ",$LABELS," in
+              *,scope:ai,*)                        out="$out,\"$TAG_AI\"" ;;
+            esac
             # 디스코드는 스레드당 태그 5개가 상한. 넘치면 뒤에서 자른다.
             printf '[%s]' "$out" | jq -c '.[0:5]'
           }
@@ -95,15 +99,29 @@ jobs:
             SNIP="$(printf '%s' "$BODY" | sed -E 's/<!--.*-->//g' | head -c 1500)"
             [ -z "$SNIP" ] && SNIP="_본문 없음_"
             TAGS="$(build_tags)"
-            jq -n --arg name "$NAME" --arg msg "$(printf '%s\n\n%s\n\n작성 %s' "$URL" "$SNIP" "$USER")" \
-                  --argjson tags "$TAGS" \
-              '{name:$name, applied_tags:$tags, message:{content:$msg, allowed_mentions:{parse:[]}}}' > /tmp/p.json
+            # GitHub 로그인 → Discord 사용자 id. 없으면 멘션 없이 진행한다.
+            DUSER="$(jq -r --arg u "$USER" '.[$u] // ""' .github/discord-users.json 2>/dev/null)"
+            if [ -n "$DUSER" ]; then AUTHOR="<@${DUSER}>"; else AUTHOR="$USER"; fi
+            MSG="$(printf '%s\n\n%s\n\n작성 %s' "$URL" "$SNIP" "$AUTHOR")"
+            if [ -n "$DUSER" ]; then
+              jq -n --arg name "$NAME" --arg msg "$MSG" --argjson tags "$TAGS" --arg u "$DUSER" \
+                '{name:$name, applied_tags:$tags, message:{content:$msg, allowed_mentions:{users:[$u]}}}' > /tmp/p.json
+            else
+              jq -n --arg name "$NAME" --arg msg "$MSG" --argjson tags "$TAGS" \
+                '{name:$name, applied_tags:$tags, message:{content:$msg, allowed_mentions:{parse:[]}}}' > /tmp/p.json
+            fi
             RESP="$(curl -sS -X POST "${AUTH[@]}" "$API/channels/$FORUM_ID/threads" --data @/tmp/p.json)"
             NEW_ID="$(printf '%s' "$RESP" | jq -r '.id // empty')"
             if [ -n "$NEW_ID" ]; then
               echo "스레드 생성: $NEW_ID"
               printf '%s\n\n<!-- discord-thread: %s -->' "$BODY" "$NEW_ID" > /tmp/body.md
               gh issue edit "$NUM" --repo "$REPO" --body-file /tmp/body.md
+              # 스레드 멤버로 넣어야 이후 댓글 알림을 받는다. 멘션은 첫 글에만 유효.
+              if [ -n "$DUSER" ]; then
+                CODE=$(curl -sS -o /dev/null -w '%{http_code}' -X PUT "${AUTH[@]}" \
+                  "$API/channels/$NEW_ID/thread-members/$DUSER")
+                echo "작성자 스레드 구독 → HTTP $CODE"
+              fi
             else
               echo "생성 실패:"; printf '%s\n' "$RESP" | head -c 500; exit 1
             fi
