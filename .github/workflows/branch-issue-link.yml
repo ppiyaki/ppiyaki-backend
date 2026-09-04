@@ -89,9 +89,17 @@ jobs:
       - name: 연관 이슈 닫기
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          BOT: ${{ secrets.DISCORD_BOT_TOKEN }}
           REPO: ${{ github.repository }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR: ${{ github.event.pull_request.number }}
+          PROJECT_ID: PVT_kwDOD9XfVM4BiaWJ
+          STATUS_FIELD: PVTSSF_lADOD9XfVM4BiaWJzhhSgzY
+          OPT_DONE: "d02f49a3"
+          T_BACKLOG: "1483364420011950110"
+          T_DOING: "1545358689467236406"
+          T_DONE: "1483364439058157620"
         run: |
           set -uo pipefail
           NUM="$(printf '%s' "$HEAD_REF" | sed -nE 's/.*-#([0-9]+)$/\1/p')"
@@ -104,3 +112,39 @@ jobs:
           fi
           gh issue close "$NUM" --repo "$REPO" -c "PR #${PR} 머지로 닫습니다."
           echo "이슈 #$NUM 닫음"
+
+          # GITHUB_TOKEN 으로 만든 이벤트는 새 워크플로를 트리거하지 않는다(재귀 방지).
+          # 그래서 issues.closed 핸들러가 돌지 않으므로 마무리를 여기서 직접 한다.
+          if [ -n "${PROJECT_TOKEN:-}" ]; then
+            IID="$(gh issue view "$NUM" --repo "$REPO" --json id --jq '.id')"
+            ITEM="$(GH_TOKEN="$PROJECT_TOKEN" gh api graphql -f query='
+              mutation($p:ID!,$c:ID!){ addProjectV2ItemById(input:{projectId:$p,contentId:$c}){ item { id } } }' \
+              -f p="$PROJECT_ID" -f c="$IID" --jq '.data.addProjectV2ItemById.item.id' 2>/dev/null || true)"
+            if [ -n "$ITEM" ]; then
+              GH_TOKEN="$PROJECT_TOKEN" gh api graphql -f query='
+                mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){
+                  updateProjectV2ItemFieldValue(input:{projectId:$p,itemId:$i,fieldId:$f,
+                    value:{singleSelectOptionId:$o}}){ projectV2Item { id } } }' \
+                -f p="$PROJECT_ID" -f i="$ITEM" -f f="$STATUS_FIELD" -f o="$OPT_DONE" >/dev/null 2>&1 \
+                && echo "Status = Done"
+            fi
+          fi
+
+          if [ -n "${BOT:-}" ]; then
+            TH="$(gh issue view "$NUM" --repo "$REPO" --json body --jq '.body' \
+                  | sed -nE 's/.*<!-- discord-thread: ([0-9]+) -->.*/\1/p' | head -1)"
+            if [ -n "$TH" ]; then
+              API=https://discord.com/api/v10
+              AUTH=(-H "Authorization: Bot $BOT" -H "Content-Type: application/json" -A curl)
+              CUR="$(curl -sS "${AUTH[@]}" "$API/channels/$TH")"
+              NEW="$(printf '%s' "$CUR" | jq -c --arg d "$T_DONE" --arg a "$T_BACKLOG" --arg b "$T_DOING" \
+                '((.applied_tags // []) - [$a,$b,$d]) + [$d] | .[0:5]')"
+              echo "태그 $(printf '%s' "$CUR" | jq -c '.applied_tags // []') -> $NEW"
+              jq -n '{content:"PR 머지로 닫혔습니다."}' > /tmp/m.json
+              curl -sS -X POST "${AUTH[@]}" "$API/channels/$TH/messages" --data @/tmp/m.json > /dev/null
+              jq -n --argjson t "$NEW" '{archived:false, applied_tags:$t}' > /tmp/p.json
+              curl -sS -X PATCH "${AUTH[@]}" "$API/channels/$TH" --data @/tmp/p.json > /dev/null
+              curl -sS -X PATCH "${AUTH[@]}" "$API/channels/$TH" -d '{"archived":true}' > /dev/null
+              echo "스레드 완료 처리 및 보관"
+            fi
+          fi
