@@ -22,12 +22,13 @@ env:
   FORUM_ID: "1483364125584130048"      # 전체-백로그
   TAG_PENDING: "1483364420011950110"   # 미반영
   TAG_DONE: "1483364439058157620"      # 완료
-  TAG_BUG: "1483364468686716999"       # 버그
-  TAG_FEAT: "1483364506594709526"      # 신규 기능
-  TAG_ENHANCE: "1483364536684777622"   # 기능 개선
+  TAG_BUG: "1483364468686716999"       # fix
+  TAG_FEAT: "1483364506594709526"      # feat
+  TAG_ENHANCE: "1483364536684777622"   # refactor
   TAG_BE: "1545297365148373024"        # BE
   TAG_FE: "1545297365148373025"        # FE
   TAG_AI: "1545302239147597956"        # AI
+  TAG_CHORE: "1545307372497543169"     # chore
 
 jobs:
   sync:
@@ -79,6 +80,9 @@ jobs:
             esac
             case ",$LABELS," in
               *,type:refactor,*)                   out="$out,\"$TAG_ENHANCE\"" ;;
+            esac
+            case ",$LABELS," in
+              *,type:chore,*)                      out="$out,\"$TAG_CHORE\"" ;;
             esac
             case ",$LABELS," in
               *,scope:ai,*)                        out="$out,\"$TAG_AI\"" ;;
